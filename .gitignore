@@ -38,6 +38,9 @@ venv.bak/
 *~
 .DS_Store
 
+# Screenshots and images
+*.png
+
 # Environment variables
 .env
 config/.env
@@ -65,3 +68,4 @@ content_output/
 generated_content/
 stuff/
 node_modules/
+labshock/
