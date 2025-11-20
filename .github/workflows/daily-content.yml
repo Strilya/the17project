@@ -1,0 +1,94 @@
+name: Daily Instagram Content Generation
+
+# This workflow runs daily at 8:00 AM EST (1:00 PM UTC during standard time, 12:00 PM UTC during daylight saving)
+# It generates Instagram content for The17Project using Claude AI, saves to Google Sheets, and notifies via Slack
+
+on:
+  # Scheduled run: Every day at 8:00 AM EST (13:00 UTC)
+  # Note: GitHub Actions uses UTC time
+  # EST = UTC-5 (winter), EDT = UTC-4 (summer)
+  # Adjust accordingly: 8 AM EST = 1 PM UTC (winter) or 12 PM UTC (summer)
+  schedule:
+    - cron: '0 13 * * *'  # 8:00 AM EST (1:00 PM UTC during standard time)
+
+  # Manual trigger for testing
+  workflow_dispatch:
+
+# Environment variables available to all jobs
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  generate-content:
+    name: Generate and Post Instagram Content
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Step 2: Set up Python environment
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'  # Cache pip dependencies for faster runs
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Verify environment setup
+      - name: Verify environment
+        run: |
+          python --version
+          pip list
+          echo "Working directory: $(pwd)"
+          echo "Python path: $(which python)"
+
+      # Step 5: Run the content generation workflow
+      - name: Generate Instagram content
+        env:
+          # Anthropic Claude API key (stored in GitHub Secrets)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Google Sheets configuration (stored in GitHub Secrets)
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+
+          # Slack configuration (stored in GitHub Secrets)
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+
+          # Optional: Content generation settings
+          CONTENT_TEMPERATURE: '0.8'
+          CONTENT_MAX_TOKENS: '1000'
+          TIMEZONE: 'America/New_York'
+        run: |
+          echo "Starting content generation workflow..."
+          python src/main.py
+
+      # Step 6: Upload logs as artifacts (for debugging)
+      - name: Upload logs
+        if: always()  # Run even if previous steps fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-generation-logs-${{ github.run_number }}
+          path: |
+            content_generation.log
+            *.log
+          retention-days: 30
+
+      # Step 7: Notify on failure (optional - sends GitHub notification)
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Content generation workflow failed"
+          echo "Check logs for details"
+          echo "Run number: ${{ github.run_number }}"
+          echo "Triggered by: ${{ github.event_name }}"
