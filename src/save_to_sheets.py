@@ -218,22 +218,56 @@ class SheetsManager:
         try:
             logger.info("Saving content to Google Sheets...")
 
+            # DEBUG: Log the exact content structure being saved
+            logger.info(f"Content structure received: {json.dumps(content, indent=2, default=str)}")
+            logger.info(f"Caption type: {type(content.get('caption')).__name__}")
+            logger.info(f"Hashtags type: {type(content.get('hashtags')).__name__}")
+            logger.info(f"Image_description type: {type(content.get('image_description')).__name__}")
+
             # Extract and format data
             timestamp = content.get("generated_at", datetime.now().isoformat())
             date_formatted = datetime.fromisoformat(timestamp).strftime("%Y-%m-%d")
+
+            # DEFENSIVE: Handle hashtags whether it's a list OR a string
+            hashtags_raw = content.get("hashtags", [])
+            if isinstance(hashtags_raw, list):
+                # Expected case: join list items with spaces
+                hashtags_formatted = " ".join(str(tag) for tag in hashtags_raw)
+            elif isinstance(hashtags_raw, str):
+                # Fallback: already a string, use as-is
+                hashtags_formatted = hashtags_raw
+            else:
+                # Unexpected type: convert to string representation
+                logger.warning(f"Unexpected hashtags type: {type(hashtags_raw)}, converting to string")
+                hashtags_formatted = str(hashtags_raw)
+
+            # DEFENSIVE: Ensure caption and image_description are strings
+            caption_formatted = str(content.get("caption", ""))
+            image_desc_formatted = str(content.get("image_description", ""))
 
             # Prepare row data matching column structure:
             # A: Date, B: Caption, C: Hashtags, D: Image_description,
             # E: Status (empty), F: Posted_Date (empty), G: Engagement_notes (empty)
             row = [
                 date_formatted,
-                content["caption"],
-                " ".join(content["hashtags"]),
-                content["image_description"],
+                caption_formatted,
+                hashtags_formatted,
+                image_desc_formatted,
                 "",  # Status (empty)
                 "",  # Posted_Date (empty)
                 ""   # Engagement_notes (empty)
             ]
+
+            # DEBUG: Log the exact row being written
+            logger.info(f"Row being written (7 columns expected):")
+            logger.info(f"  [0] Date: {row[0]}")
+            logger.info(f"  [1] Caption: {row[1][:50]}..." if len(row[1]) > 50 else f"  [1] Caption: {row[1]}")
+            logger.info(f"  [2] Hashtags: {row[2][:50]}..." if len(row[2]) > 50 else f"  [2] Hashtags: {row[2]}")
+            logger.info(f"  [3] Image_desc: {row[3][:50]}..." if len(row[3]) > 50 else f"  [3] Image_desc: {row[3]}")
+            logger.info(f"  [4] Status: '{row[4]}'")
+            logger.info(f"  [5] Posted_Date: '{row[5]}'")
+            logger.info(f"  [6] Engagement_notes: '{row[6]}'")
+            logger.info(f"Row length: {len(row)} columns")
 
             # Append row to worksheet
             self.worksheet.append_row(row, value_input_option='RAW')
@@ -303,22 +337,54 @@ def main():
         python src/save_to_sheets.py
     """
     try:
-        # Sample content for testing
-        test_content = {
-            "caption": "Test caption for The17Project 🔮",
-            "hashtags": ["#test", "#the17project", "#angelnumbers"],
-            "image_description": "Purple background with gold text",
+        print("\n" + "="*70)
+        print("TESTING GOOGLE SHEETS INTEGRATION")
+        print("="*70)
+
+        # Test Case 1: Hashtags as LIST (expected format)
+        print("\n--- Test Case 1: Hashtags as LIST ---")
+        test_content_list = {
+            "caption": "Test caption for The17Project - testing list format",
+            "hashtags": ["#test", "#the17project", "#angelnumbers", "#manifestation"],
+            "image_description": "Purple background with gold text - test image",
             "generated_at": datetime.now().isoformat(),
-            "model": "gpt-4o-mini",
+            "model": "claude-3-haiku",
             "tokens_used": 250
         }
 
-        # Initialize manager and save
-        manager = SheetsManager()
-        manager.save_content(test_content)
+        print(f"Input hashtags type: {type(test_content_list['hashtags']).__name__}")
+        print(f"Input hashtags value: {test_content_list['hashtags']}")
 
-        print("\n✅ Content saved to Google Sheets successfully!")
+        # Test Case 2: Hashtags as STRING (fallback format)
+        print("\n--- Test Case 2: Hashtags as STRING (defensive test) ---")
+        test_content_string = {
+            "caption": "Test caption - testing string format",
+            "hashtags": "#test #the17project #angelnumbers #manifestation",
+            "image_description": "Purple background with gold text - string test",
+            "generated_at": datetime.now().isoformat(),
+            "model": "claude-3-haiku",
+            "tokens_used": 250
+        }
+
+        print(f"Input hashtags type: {type(test_content_string['hashtags']).__name__}")
+        print(f"Input hashtags value: {test_content_string['hashtags']}")
+
+        # Choose which test to run (use list format for actual test)
+        print("\n--- Running actual save with LIST format ---")
+        manager = SheetsManager()
+        manager.save_content(test_content_list)
+
+        print("\n" + "="*70)
+        print("SUCCESS: Content saved to Google Sheets!")
         print(f"Sheet URL: https://docs.google.com/spreadsheets/d/{manager.sheet_id}")
+        print("="*70)
+        print("\nPlease verify in Google Sheets:")
+        print("  - Column A (Date): Should have date formatted as YYYY-MM-DD")
+        print("  - Column B (Caption): Should have caption text")
+        print("  - Column C (Hashtags): Should have hashtags separated by spaces")
+        print("  - Column D (Image_description): Should have image description")
+        print("  - Columns E, F, G: Should be empty")
+        print("="*70)
 
     except Exception as e:
         logger.error(f"Test failed: {e}")

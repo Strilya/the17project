@@ -194,6 +194,20 @@ class ContentGenerator:
             # Claude should return structured JSON based on our prompt
             content = json.loads(content_text)
 
+            # DEBUG: Log the raw structure of what Claude returned
+            logger.info(f"Raw content structure from Claude: {json.dumps(content, indent=2)}")
+            logger.info(f"Hashtags type: {type(content.get('hashtags')).__name__}")
+            logger.info(f"Hashtags value: {content.get('hashtags')}")
+
+            # CRITICAL FIX: Ensure hashtags is always a list
+            # If Claude returns a string, split it into a list
+            if isinstance(content.get("hashtags"), str):
+                logger.warning("Hashtags returned as STRING, converting to list...")
+                # Split by spaces or commas, filter empty strings
+                hashtags_str = content["hashtags"]
+                content["hashtags"] = [tag.strip() for tag in hashtags_str.replace(",", " ").split() if tag.strip()]
+                logger.info(f"Converted hashtags to list: {content['hashtags']}")
+
             # Validate that the content has all required fields
             # This catches any malformed responses early
             self._validate_content(content)
