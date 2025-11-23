@@ -163,7 +163,7 @@ class ContentGenerator:
             # Use claude-3-5-sonnet-20241022 model (latest and most capable)
             logger.info("Calling Claude AI API (claude-3-5-sonnet-20241022)...")
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",  # Use the latest Claude 3.5 Sonnet model
+                model="claude-3-5-sonnet-20240620",  # Use the latest Claude 3.5 Sonnet model
                 max_tokens=self.max_tokens,  # Limit response length
                 temperature=self.temperature,  # Control creativity/randomness
                 messages=[
