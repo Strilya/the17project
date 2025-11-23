@@ -9,26 +9,48 @@ Main functionality:
 - Includes content preview (caption snippet, hashtag count)
 - Provides links to Google Sheets for full content
 - Handles errors and provides fallback notifications
+- Gracefully handles missing Slack configuration (optional integration)
 """
 
+# Import os module to access environment variables
 import os
+# Import logging module to track execution and debug issues
 import logging
+# Import datetime to add timestamps to notifications
 from datetime import datetime
+# Import typing utilities for type hints
 from typing import Dict, Any, Optional
 
+# Import Slack WebClient for API communication
 from slack_sdk import WebClient
+# Import SlackApiError for error handling
 from slack_sdk.errors import SlackApiError
+# Import dotenv to load environment variables
 from dotenv import load_dotenv
 
-# Configure logging
+# Configure logging to output INFO level messages with timestamps
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+# Create a logger instance for this module
 logger = logging.getLogger(__name__)
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
+
+
+def is_slack_configured() -> bool:
+    """
+    Check if Slack integration is properly configured.
+
+    Returns:
+        True if SLACK_BOT_TOKEN is set, False otherwise
+    """
+    # Check if the bot token environment variable exists and is not empty
+    token = os.getenv("SLACK_BOT_TOKEN")
+    # Return True only if token exists and is not an empty string
+    return bool(token and token.strip())
 
 
 class SlackNotifier:
@@ -40,6 +62,7 @@ class SlackNotifier:
     2. Message formatting with rich blocks
     3. Sending notifications to specified channels
     4. Error handling and retry logic
+    5. Graceful handling when Slack is not configured (optional integration)
     """
 
     def __init__(self, bot_token: Optional[str] = None, channel_id: Optional[str] = None):
@@ -47,21 +70,36 @@ class SlackNotifier:
         Initialize the SlackNotifier.
 
         Args:
-            bot_token: Slack Bot OAuth token
+            bot_token: Slack Bot OAuth token (optional - if not provided, Slack is disabled)
             channel_id: Default channel ID for notifications
-        """
-        self.bot_token = bot_token or os.getenv("SLACK_BOT_TOKEN")
-        if not self.bot_token:
-            raise ValueError("Slack bot token not found. Set SLACK_BOT_TOKEN environment variable.")
 
+        Note:
+            If bot_token is not provided and SLACK_BOT_TOKEN env var is not set,
+            the notifier will be initialized in disabled mode and all send methods
+            will return success without actually sending messages.
+        """
+        # Get bot token from parameter or environment variable
+        self.bot_token = bot_token or os.getenv("SLACK_BOT_TOKEN")
+        # Get channel ID from parameter or environment variable
         self.channel_id = channel_id or os.getenv("SLACK_CHANNEL_ID", "#content-automation")
 
-        # Initialize Slack client
+        # Track whether Slack is enabled (token is available)
+        self.enabled = bool(self.bot_token and self.bot_token.strip())
+
+        # If Slack is not configured, log warning and return early
+        if not self.enabled:
+            logger.warning("Slack bot token not found. Slack notifications are DISABLED.")
+            logger.warning("Set SLACK_BOT_TOKEN environment variable to enable Slack notifications.")
+            self.client = None
+            return
+
+        # Initialize Slack client with the bot token
         self.client = WebClient(token=self.bot_token)
 
-        # Verify connection
+        # Verify connection to Slack API
         self._verify_connection()
 
+        # Log successful initialization
         logger.info("SlackNotifier initialized successfully")
 
     def _verify_connection(self) -> None:
@@ -102,11 +140,16 @@ class SlackNotifier:
             sheet_url: URL to Google Sheets (optional)
 
         Returns:
-            Slack API response dictionary
+            Slack API response dictionary, or empty dict with 'skipped' key if disabled
 
         Raises:
-            SlackApiError: If message sending fails
+            SlackApiError: If message sending fails (only when Slack is enabled)
         """
+        # If Slack is not enabled, return early with a "skipped" response
+        if not self.enabled:
+            logger.info("Slack notification skipped (Slack not configured)")
+            return {"skipped": True, "reason": "Slack not configured"}
+
         try:
             logger.info("Sending Slack notification...")
 
@@ -232,8 +275,13 @@ class SlackNotifier:
             error_message: Description of the error
 
         Returns:
-            Slack API response dictionary
+            Slack API response dictionary, or empty dict with 'skipped' key if disabled
         """
+        # If Slack is not enabled, return early with a "skipped" response
+        if not self.enabled:
+            logger.info("Slack error notification skipped (Slack not configured)")
+            return {"skipped": True, "reason": "Slack not configured"}
+
         try:
             blocks = [
                 {
@@ -283,8 +331,13 @@ class SlackNotifier:
             message: Message text
 
         Returns:
-            Slack API response dictionary
+            Slack API response dictionary, or empty dict with 'skipped' key if disabled
         """
+        # If Slack is not enabled, return early with a "skipped" response
+        if not self.enabled:
+            logger.info("Slack message skipped (Slack not configured)")
+            return {"skipped": True, "reason": "Slack not configured"}
+
         try:
             response = self.client.chat_postMessage(
                 channel=self.channel_id,
