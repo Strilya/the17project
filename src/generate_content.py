@@ -160,10 +160,10 @@ class ContentGenerator:
             full_prompt = f"{self.config['system_prompt']}\n\n{self.config['content_generation_prompt']}"
 
             # Call Claude AI API with the constructed prompt
-            # Use claude-3-5-sonnet-20241022 model (latest and most capable)
-            logger.info("Calling Claude AI API (claude-3-5-sonnet-20241022)...")
+            # Use claude-3-haiku-20240307 model (fast and reliable)
+            logger.info("Calling Claude AI API (claude-3-haiku-20240307)...")
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",  # Use the latest Claude 3.5 Sonnet model
+                model="claude-3-haiku-20240307",  # Use Claude 3 Haiku - widely accessible
                 max_tokens=self.max_tokens,  # Limit response length
                 temperature=self.temperature,  # Control creativity/randomness
                 messages=[
@@ -191,7 +191,7 @@ class ContentGenerator:
             # Add metadata to the content dictionary
             # This helps track when and how content was generated
             content["generated_at"] = datetime.now().isoformat()  # Current timestamp
-            content["model"] = "claude-3-5-sonnet-20241022"  # Model name
+            content["model"] = "claude-3-haiku-20240307"  # Model name
             content["tokens_used"] = response.usage.input_tokens + response.usage.output_tokens  # Total tokens
 
             # Log success with useful statistics
