@@ -70,8 +70,10 @@ class ContentAutomation:
         try:
             # Initialize content generator (required)
             # This handles AI content generation using Claude AI
-            self.content_generator = ContentGenerator()
-            logger.info("✓ Content generator initialized")
+            # use_first_post=True (default) generates introduction post
+            # Change to use_first_post=False after first post is published
+            self.content_generator = ContentGenerator(use_first_post=True)
+            logger.info("✓ Content generator initialized (FIRST POST MODE)")
 
             # Initialize Google Sheets manager (required)
             # This handles saving content to the tracking spreadsheet

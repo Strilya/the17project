@@ -184,16 +184,13 @@ class SheetsManager:
             worksheet: gspread Worksheet object
         """
         headers = [
-            "Timestamp",
             "Date",
             "Caption",
             "Hashtags",
-            "Image Description",
-            "Model",
-            "Tokens Used",
+            "Image_description",
             "Status",
-            "Posted Date",
-            "Notes"
+            "Posted_Date",
+            "Engagement_notes"
         ]
 
         worksheet.append_row(headers)
@@ -225,18 +222,17 @@ class SheetsManager:
             timestamp = content.get("generated_at", datetime.now().isoformat())
             date_formatted = datetime.fromisoformat(timestamp).strftime("%Y-%m-%d")
 
-            # Prepare row data
+            # Prepare row data matching column structure:
+            # A: Date, B: Caption, C: Hashtags, D: Image_description,
+            # E: Status (empty), F: Posted_Date (empty), G: Engagement_notes (empty)
             row = [
-                timestamp,
                 date_formatted,
                 content["caption"],
-                " ".join(content["hashtags"]),  # Join hashtags with spaces
+                " ".join(content["hashtags"]),
                 content["image_description"],
-                content.get("model", "gpt-4o-mini"),
-                content.get("tokens_used", ""),
-                "Generated",  # Status
-                "",  # Posted date (empty initially)
-                ""   # Notes (empty initially)
+                "",  # Status (empty)
+                "",  # Posted_Date (empty)
+                ""   # Engagement_notes (empty)
             ]
 
             # Append row to worksheet
@@ -285,12 +281,12 @@ class SheetsManager:
             notes: Optional notes to add
         """
         try:
-            # Update status column (column 8)
-            self.worksheet.update_cell(row_number, 8, status)
+            # Update status column (column E = 5)
+            self.worksheet.update_cell(row_number, 5, status)
 
-            # Update notes if provided
+            # Update notes if provided (column G = 7)
             if notes:
-                self.worksheet.update_cell(row_number, 10, notes)
+                self.worksheet.update_cell(row_number, 7, notes)
 
             logger.info(f"Updated row {row_number} status to: {status}")
 
