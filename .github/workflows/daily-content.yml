@@ -71,6 +71,9 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
 
+          # Pexels API key for video backgrounds (stored in GitHub Secrets)
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+
           # Optional: Content generation settings
           CONTENT_TEMPERATURE: '0.8'
           CONTENT_MAX_TOKENS: '1000'

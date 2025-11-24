@@ -26,16 +26,19 @@ from PIL import Image, ImageDraw, ImageFont
 # MoviePy for video composition (version 2.x)
 try:
     # Try moviepy 2.x imports
-    from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips
+    from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, VideoFileClip, ColorClip
 except ImportError:
     # Fallback to moviepy 1.x imports
-    from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips
+    from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, VideoFileClip, ColorClip
 
 # gTTS for text-to-speech
 from gtts import gTTS
 
 # NumPy for array operations
 import numpy as np
+
+# BackgroundManager for Pexels video backgrounds
+from background_manager import BackgroundManager
 
 # Configure logging
 logging.basicConfig(
@@ -87,6 +90,9 @@ class VideoGenerator:
 
         # Create output folders
         self._create_output_folders()
+
+        # Initialize background manager for Pexels video backgrounds
+        self.background_manager = BackgroundManager()
 
         logger.info("VideoGenerator initialized successfully")
         logger.info(f"Resolution: {self.width}x{self.height} @ {self.fps}fps")
@@ -323,6 +329,153 @@ class VideoGenerator:
             logger.error(f"Failed to generate voiceover: {e}")
             raise
 
+    def _create_background_clip(self, category: str, duration: float):
+        """
+        Create background video clip or gradient fallback.
+
+        Args:
+            category: Content category for color/video selection
+            duration: Duration in seconds
+
+        Returns:
+            MoviePy clip for background
+        """
+        palette = self.color_palettes[category]
+
+        # Try to get video background
+        bg_video_path = self.background_manager.get_background_video(category)
+
+        if bg_video_path and os.path.exists(bg_video_path):
+            logger.info(f"Using video background: {bg_video_path}")
+
+            try:
+                # Load background video
+                background = VideoFileClip(bg_video_path)
+
+                # Resize to fit our dimensions (1080x1920)
+                if background.h != self.height:
+                    background = background.resized(height=self.height)
+
+                if background.w > self.width:
+                    # Crop to center if too wide
+                    x_center = background.w / 2
+                    background = background.cropped(x1=x_center - self.width/2, x2=x_center + self.width/2)
+
+                # Loop if shorter than duration
+                if background.duration < duration:
+                    # Calculate how many loops needed
+                    n_loops = int(duration / background.duration) + 1
+                    background = background.looped(n_loops)
+
+                # Trim to exact duration
+                background = background.subclipped(0, duration)
+
+                # Add semi-transparent color overlay to maintain brand colors
+                overlay_color = self._hex_to_rgb(palette["gradient_start"])
+                overlay = ColorClip(
+                    size=(self.width, self.height),
+                    color=overlay_color,
+                    duration=duration
+                ).with_opacity(0.4)
+
+                # Composite background + overlay
+                base_clip = CompositeVideoClip([background, overlay])
+
+                logger.info("Video background created with color overlay")
+                return base_clip
+
+            except Exception as e:
+                logger.error(f"Failed to load video background: {e}")
+                logger.info("Falling back to gradient")
+
+        # Fallback to gradient
+        logger.info("Using gradient background")
+        gradient_img = self._create_gradient_background(category)
+        return ImageClip(np.array(gradient_img), duration=duration)
+
+    def _hex_to_rgb(self, hex_color: str) -> tuple:
+        """Convert hex color to RGB tuple."""
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+    def _create_transparent_text_overlay(
+        self,
+        text: str,
+        category: str,
+        scene_type: str
+    ) -> Image.Image:
+        """
+        Create transparent text overlay (RGBA with transparent background).
+
+        Args:
+            text: Text to display
+            category: Content category for color palette
+            scene_type: Type of scene (hook, meaning, action, cta)
+
+        Returns:
+            PIL Image (RGBA) with transparent background and text
+        """
+        # Create transparent RGBA image
+        img = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        palette = self.color_palettes[category]
+
+        # Load fonts
+        try:
+            primary_font = ImageFont.truetype(
+                "/System/Library/Fonts/Helvetica.ttc",
+                self.fonts["primary"]["size"][scene_type]
+            )
+        except:
+            primary_font = ImageFont.load_default()
+            logger.warning("Using default fonts (custom fonts not found)")
+
+        # Text colors
+        primary_color = self._hex_to_rgb(palette["primary_text"])
+
+        # Word wrap for long text
+        words = text.split()
+        lines = []
+        current_line = []
+
+        for word in words:
+            test_line = ' '.join(current_line + [word])
+            bbox = draw.textbbox((0, 0), test_line, font=primary_font)
+            if bbox[2] - bbox[0] < self.width - 100:
+                current_line.append(word)
+            else:
+                if current_line:
+                    lines.append(' '.join(current_line))
+                current_line = [word]
+        if current_line:
+            lines.append(' '.join(current_line))
+
+        # Calculate total text height
+        line_height = self.fonts["primary"]["size"][scene_type] + 20
+        total_height = len(lines) * line_height
+
+        # Starting Y position (centered vertically)
+        start_y = (self.height - total_height) // 2
+
+        # Draw each line centered with outline for readability
+        for i, line in enumerate(lines):
+            bbox = draw.textbbox((0, 0), line, font=primary_font)
+            text_width = bbox[2] - bbox[0]
+            x = (self.width - text_width) // 2
+            y = start_y + (i * line_height)
+
+            # Draw text with black outline for better readability
+            outline_color = (0, 0, 0, 255)
+            for offset_x, offset_y in [(-3, -3), (-3, 3), (3, -3), (3, 3)]:
+                draw.text((x + offset_x, y + offset_y), line, font=primary_font, fill=outline_color)
+
+            # Draw main text
+            primary_color_rgba = primary_color + (255,)  # Add alpha channel
+            draw.text((x, y), line, font=primary_font, fill=primary_color_rgba)
+
+        return img
+
     def generate_reel(
         self,
         content: Dict[str, Any],
@@ -355,12 +508,18 @@ class VideoGenerator:
 
             output_path = Path(self.video_settings["output_folder"]) / output_filename
 
-            # Create scenes
-            scenes = []
+            # Step 1: Create background clip (video or gradient) for full 17 seconds
+            logger.info("Creating background...")
+            total_duration = sum(self.scene_timings.values())
+            background_clip = self._create_background_clip(category, total_duration)
+
+            # Step 2: Create text overlays for each scene
+            text_overlays = []
             audio_files = []
+            current_time = 0
 
             for scene_type in ["hook", "meaning", "action", "cta"]:
-                logger.info(f"Creating {scene_type} scene...")
+                logger.info(f"Creating {scene_type} text overlay...")
 
                 # Get text for this scene
                 scene_text = content.get(scene_type, "")
@@ -368,36 +527,38 @@ class VideoGenerator:
                     logger.warning(f"No text for {scene_type} scene, using placeholder")
                     scene_text = f"{scene_type.upper()}"
 
-                # Create scene image
-                scene_img = self._create_text_scene(
+                # Create transparent text overlay
+                text_img = self._create_transparent_text_overlay(
                     text=scene_text,
                     category=category,
                     scene_type=scene_type
                 )
 
-                # Save scene image temporarily
-                temp_img_path = Path("output") / f"temp_{scene_type}.png"
+                # Save temporarily
+                temp_img_path = Path("output") / f"temp_{scene_type}_transparent.png"
                 temp_img_path.parent.mkdir(exist_ok=True)
-                scene_img.save(temp_img_path)
+                text_img.save(temp_img_path)
 
-                # Create video clip from image
+                # Create clip with timing
                 duration = self.scene_timings[scene_type]
-                # MoviePy 2.x uses duration parameter in constructor
-                clip = ImageClip(str(temp_img_path), duration=duration)
 
-                # Skip fade transitions for now (moviepy 2.x API is different)
-                # TODO: Add fade transitions with moviepy 2.x API
+                # For MoviePy 2.x, create ImageClip and set start time
+                text_clip = ImageClip(str(temp_img_path), duration=duration, is_mask=False)
+                text_clip = text_clip.with_start(current_time)
 
-                scenes.append(clip)
+                text_overlays.append(text_clip)
 
                 # Generate voiceover for this scene
                 audio_path = Path(self.audio_settings["output_folder"]) / f"temp_{scene_type}.mp3"
                 self._generate_voiceover(scene_text, str(audio_path))
                 audio_files.append(str(audio_path))
 
-            # Concatenate all scenes
+                current_time += duration
+
+            # Step 3: Composite background + all text overlays
             logger.info("Compositing final video...")
-            final_video = concatenate_videoclips(scenes, method="compose")
+            all_clips = [background_clip] + text_overlays
+            final_video = CompositeVideoClip(all_clips)
 
             # Load and concatenate audio
             audio_clips = []
@@ -436,17 +597,24 @@ class VideoGenerator:
 
             # Clean up temporary files
             for scene_type in ["hook", "meaning", "action", "cta"]:
+                # Clean up old temp files (if any)
                 temp_img = Path("output") / f"temp_{scene_type}.png"
                 if temp_img.exists():
                     temp_img.unlink()
+
+                # Clean up new transparent temp files
+                temp_img_transparent = Path("output") / f"temp_{scene_type}_transparent.png"
+                if temp_img_transparent.exists():
+                    temp_img_transparent.unlink()
 
                 temp_audio = Path(self.audio_settings["output_folder"]) / f"temp_{scene_type}.mp3"
                 if temp_audio.exists():
                     temp_audio.unlink()
 
             # Close clips
-            for clip in scenes:
+            for clip in text_overlays:
                 clip.close()
+            background_clip.close()
             final_video.close()
 
             logger.info(f"Video generated successfully: {output_path}")

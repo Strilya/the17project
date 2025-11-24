@@ -1,4 +1,23 @@
 {
+  "background_videos": {
+    "enabled": true,
+    "source": "pexels",
+    "fallback_to_gradient": true,
+    "cache_enabled": true,
+    "cache_dir": "output/background_cache",
+    "max_cache_size": 50,
+    "categories": {
+      "angel_numbers": ["space nebula purple", "galaxy purple", "cosmic purple stars", "spiritual purple light"],
+      "productivity": ["blue abstract motion", "technology blue", "focus blue particles", "minimal blue wave"],
+      "manifestation": ["pink rose gold", "pink clouds sunset", "rose petals falling", "pink abstract energy"],
+      "spiritual_growth": ["meditation purple", "spiritual awakening light", "third eye indigo", "consciousness energy"]
+    },
+    "video_settings": {
+      "orientation": "portrait",
+      "size": "large",
+      "per_page": 10
+    }
+  },
   "video_settings": {
     "resolution": [1080, 1920],
     "fps": 30,
