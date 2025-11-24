@@ -50,6 +50,7 @@ config/credentials.json
 config/service-account.json
 *.json
 !config/prompts.json
+!config/topic_tracker.json
 !package.json
 
 # Logs

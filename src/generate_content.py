@@ -127,16 +127,53 @@ class ContentGenerator:
             # Re-raise the exception with context
             raise
 
-    def generate_content(self) -> Dict[str, Any]:
+    def _build_topic_specific_prompt(self, topic: Dict[str, str]) -> str:
+        """
+        Build a topic-specific prompt for content generation.
+
+        Args:
+            topic: Dictionary with 'type' and 'value' keys
+                   Example: {"type": "angel_numbers", "value": "717"}
+
+        Returns:
+            Complete prompt string with topic-specific instructions
+        """
+        topic_type = topic.get("type", "")
+        topic_value = topic.get("value", "")
+
+        # Get the base template
+        template = self.config.get("topic_specific_prompt", "")
+
+        # Get topic-specific instructions based on category
+        topic_instructions = self.config.get("topic_instructions", {})
+        instructions = topic_instructions.get(topic_type, "")
+
+        # Replace placeholders in the template
+        prompt = template.replace("{TOPIC}", topic_value)
+        prompt = prompt.replace("{CATEGORY}", topic_type)
+        prompt = prompt.replace("{TOPIC_INSTRUCTIONS}", instructions.replace("{TOPIC}", topic_value))
+
+        # Combine with system prompt
+        full_prompt = f"{self.config['system_prompt']}\n\n{prompt}"
+
+        logger.info(f"Built topic-specific prompt for: {topic_value} ({topic_type})")
+
+        return full_prompt
+
+    def generate_content(self, specific_topic: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         Generate Instagram content using Claude AI API.
 
         This method:
-        1. Constructs the prompt from configuration
-        2. Calls Claude AI API with claude-3-5-sonnet model
+        1. Constructs the prompt from configuration (with optional specific topic)
+        2. Calls Claude AI API with claude-3-haiku model
         3. Parses the JSON response
         4. Validates the content structure
-        5. Adds metadata (timestamp, etc.)
+        5. Adds metadata (timestamp, topic info, etc.)
+
+        Args:
+            specific_topic: Optional dict with 'type' and 'value' keys
+                           Example: {"type": "angel_numbers", "value": "717"}
 
         Returns:
             Dictionary containing:
@@ -145,6 +182,8 @@ class ContentGenerator:
                 - image_description: Canva design instructions
                 - generated_at: Timestamp
                 - model: Model used for generation
+                - topic: The specific topic used (if provided)
+                - category: The topic category (if provided)
 
         Raises:
             Exception: If API call fails or response is invalid
@@ -154,11 +193,14 @@ class ContentGenerator:
             # Log the start of content generation
             logger.info("Starting content generation with Claude AI...")
 
-            # Construct the full prompt by combining system and user prompts
-            # System prompt sets the AI's role and behavior
-            # User prompt contains the specific content request
-            logger.info("Using content generation prompt for daily content")
-            full_prompt = f"{self.config['system_prompt']}\n\n{self.config['content_generation_prompt']}"
+            # Build the prompt based on whether a specific topic was provided
+            if specific_topic:
+                full_prompt = self._build_topic_specific_prompt(specific_topic)
+                logger.info(f"Using topic-specific prompt for: {specific_topic['value']} ({specific_topic['type']})")
+            else:
+                # Fallback to generic prompt if no topic provided
+                logger.info("Using fallback prompt (no specific topic provided)")
+                full_prompt = f"{self.config['system_prompt']}\n\n{self.config.get('fallback_prompt', self.config.get('content_generation_prompt', ''))}"
 
             # Call Claude AI API with the constructed prompt
             # Use claude-3-haiku-20240307 model (fast and reliable)
@@ -208,6 +250,11 @@ class ContentGenerator:
             content["generated_at"] = datetime.now().isoformat()  # Current timestamp
             content["model"] = "claude-3-haiku-20240307"  # Model name
             content["tokens_used"] = response.usage.input_tokens + response.usage.output_tokens  # Total tokens
+
+            # Add topic info if a specific topic was used
+            if specific_topic:
+                content["topic"] = specific_topic.get("value", "")
+                content["category"] = specific_topic.get("type", "")
 
             # Log success with useful statistics
             logger.info("Content generated successfully")

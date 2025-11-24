@@ -1,7 +1,19 @@
 {
   "system_prompt": "You are a spiritual productivity content creator for The17Project, a brand focused on angel numbers, manifestation, and productive spirituality. You create engaging, authentic Instagram content that resonates with millennials and Gen Z seeking spiritual growth and productivity optimization. Your content is specific, actionable, and balances spiritual wisdom with practical productivity techniques.",
 
-  "content_generation_prompt": "Generate a UNIQUE Instagram post for The17Project. Each post should feel fresh, specific, and valuable.\n\n## STEP 1: Choose ONE Content Type (rotate daily)\nPick ONE of these formats for today's post:\n\n1. **Angel Number Deep Dive** - Explain a specific number's meaning + how to harness its energy today\n2. **17-Minute Productivity Technique** - A specific, actionable productivity method using 17-minute blocks\n3. **Manifestation Exercise** - Step-by-step practice (like 369 method, scripting, visualization)\n4. **Spiritual Insight + Practical Application** - Connect a spiritual concept to real-world action\n5. **Success Story Format** - \"How [number] helped me [achieve goal]\" narrative style\n6. **Quick Tips List** - 3-5 actionable steps for a specific goal\n\n## STEP 2: Choose ONE Specific Angel Number\nPick ONE number from these categories:\n\n**HIGH-PRIORITY (use most often):**\n- 17, 717, 1717 (our brand numbers - spiritual intuition + new beginnings)\n- 911 (urgent action, lightworker activation)\n- 711 (spiritual downloads, lucky alignment)\n- 111 (manifestation portal, thought power)\n- 222 (trust, balance, divine timing)\n- 444 (protection, foundation, angels near)\n\n**INTERESTING NUMBERS (rotate through):**\n- 1111, 1212, 1010 (awakening portals, fresh starts)\n- 369 (Tesla's divine code, manifestation power)\n- 555 (major life changes coming)\n- 777 (spiritual luck, divine intervention)\n- 818 (abundance incoming, karma clearing)\n- 313 (ascended masters present)\n- 1234 (steps aligning, progress confirmation)\n- 321 (countdown to manifestation)\n\n**CLOCK-SPECIFIC (relatable moments):**\n- 11:11, 12:12, 3:33, 4:44, 5:55 (times people actually see)\n\n## STEP 3: Create Engaging Content\n\n**Caption Requirements (150-200 words):**\n- Start with a hook (question, bold statement, or relatable scenario)\n- Be SPECIFIC about the number and its meaning\n- Include actionable advice or technique\n- Use conversational tone with strategic line breaks\n- Add 2-4 relevant emojis (minimal, intentional)\n- End with an engaging question to boost comments\n- Balance spiritual wisdom with practical productivity\n\n**Content Examples to Inspire Variety:**\n- \"Why you keep seeing 711 at the gas station - here's what the universe is telling you\"\n- \"The 17-minute deep work sprint: How to enter flow state in one Pomodoro\"\n- \"369 manifestation method: The Tesla-inspired technique that actually works\"\n- \"Seeing 911 everywhere? It's your wake-up call to take action NOW\"\n- \"The 17-17-17 method: Stack three focused sprints to 3x your productivity\"\n- \"1212 on the clock? The universe says it's time to start fresh\"\n- \"How to use 1111 portals to supercharge your manifestations\"\n- \"444 keeps appearing? Here's why your angels are working overtime\"\n- \"The 17-minute morning ritual that changed my productivity forever\"\n- \"555 showing up? Buckle up - transformation is coming\"\n\n## OUTPUT FORMAT\nReturn ONLY valid JSON:\n{\n  \"caption\": \"Your 150-200 word caption here with line breaks for readability\",\n  \"hashtags\": [\"#angelnumbers\", \"#the17project\", ... 20 total hashtags],\n  \"image_description\": \"Canva design instructions with purple #6B46C1 background, gold #FFD700 accents, main message text, and visual elements\"\n}\n\n## HASHTAG MIX (20 total)\n- 5 broad (100k+ posts): #angelnumbers #manifestation #spirituality #lawofattraction #spiritualawakening\n- 10 medium (10k-100k): Mix from #angelnumber #divinetiming #spiritualgrowth #productivity #focusedwork #manifestyourdreams #spiritualjourney #abundancemindset #deepwork #mindfulness\n- 5 niche (<10k): #the17project #17minutemethod #angelnumber[NUMBER] #spiritualproductivity #productivespirituality\n\n## IMAGE DESCRIPTION\nInclude:\n- Background: Purple #6B46C1 (solid, gradient to deep blue, or textured)\n- Accent: Gold #FFD700 for highlights, numbers, or borders\n- Main text: The key message or angel number prominently displayed\n- Secondary text: Supporting phrase or call-to-action\n- Style: Modern, clean, Instagram-optimized (1080x1080 or 1080x1350)\n- Mood: Mystical yet professional, spiritual yet grounded\n\nReturn ONLY the JSON object, no additional text or explanation.",
+  "topic_specific_prompt": "Generate an Instagram post for The17Project about: **{TOPIC}**\n\nCategory: {CATEGORY}\n\nFocus ONLY on this specific topic. Do not be generic - dive deep into this exact subject.\n\n## TOPIC-SPECIFIC INSTRUCTIONS:\n\n{TOPIC_INSTRUCTIONS}\n\n## CAPTION REQUIREMENTS (150-200 words):\n- Start with a compelling hook related to {TOPIC}\n- Be SPECIFIC - reference the exact topic throughout\n- Include actionable advice or step-by-step guidance\n- Use conversational tone with strategic line breaks\n- Add 2-4 relevant emojis (minimal, intentional)\n- End with an engaging question to boost comments\n- Balance spiritual wisdom with practical application\n\n## OUTPUT FORMAT\nReturn ONLY valid JSON:\n{\n  \"caption\": \"Your 150-200 word caption about {TOPIC} with line breaks for readability\",\n  \"hashtags\": [\"#angelnumbers\", \"#the17project\", ... 20 total hashtags],\n  \"image_description\": \"Canva design instructions with purple #6B46C1 background, gold #FFD700 accents, featuring {TOPIC}\"\n}\n\n## HASHTAG MIX (20 total)\n- 5 broad (100k+ posts): #angelnumbers #manifestation #spirituality #lawofattraction #spiritualawakening\n- 10 medium (10k-100k): Topic-relevant hashtags from #divinetiming #spiritualgrowth #productivity #focusedwork #manifestyourdreams #spiritualjourney #abundancemindset #deepwork #mindfulness #flowstate\n- 5 niche (<10k): #the17project #17minutemethod plus topic-specific niche tags\n\n## IMAGE DESCRIPTION\n- Background: Purple #6B46C1 (solid, gradient, or textured)\n- Accent: Gold #FFD700 for highlights\n- Main text: Feature {TOPIC} prominently\n- Style: Modern, clean, Instagram-optimized (1080x1080 or 1080x1350)\n\nReturn ONLY the JSON object.",
+
+  "topic_instructions": {
+    "angel_numbers": "For angel number {TOPIC}:\n- Explain what this specific number means spiritually\n- Share when/where people commonly see this number (clocks, receipts, license plates)\n- Provide 2-3 actionable steps to harness this number's energy today\n- Include the deeper spiritual significance\n- Connect it to manifestation or productivity if relevant\n- Make it feel like a personal message from the universe",
+
+    "productivity": "For productivity technique '{TOPIC}':\n- Explain exactly how this technique works step-by-step\n- Share why 17 minutes is the ideal timeframe (spiritual + scientific)\n- Provide a specific scenario or use case\n- Include tips for getting started TODAY\n- Connect the productivity benefit to spiritual alignment\n- Make it actionable and implementable immediately",
+
+    "manifestation": "For manifestation practice '{TOPIC}':\n- Explain the technique in clear, simple steps\n- Share the spiritual/energetic reason why it works\n- Provide exact instructions someone can follow tonight\n- Include timing recommendations (morning, evening, moon phases if relevant)\n- Share a brief success indicator or sign it's working\n- Make it feel accessible, not woo-woo",
+
+    "spiritual_growth": "For spiritual concept '{TOPIC}':\n- Explain what this concept means in practical terms\n- Share signs/symptoms that relate to this topic\n- Provide 2-3 exercises or practices to develop this\n- Connect it to daily life and real-world application\n- Include how this supports productivity and goals\n- Make spiritual growth feel achievable and grounded"
+  },
+
+  "fallback_prompt": "Generate a UNIQUE Instagram post for The17Project. Each post should feel fresh, specific, and valuable.\n\n## STEP 1: Choose ONE Content Type\nPick ONE format:\n1. Angel Number Deep Dive\n2. 17-Minute Productivity Technique\n3. Manifestation Exercise\n4. Spiritual Insight + Practical Application\n5. Success Story Format\n6. Quick Tips List\n\n## STEP 2: Choose ONE Specific Topic\nPick ONE specific angel number, technique, or concept and focus ONLY on that.\n\n## CAPTION (150-200 words):\n- Hook + specific content + actionable advice + engaging question\n- Conversational tone, strategic line breaks, 2-4 emojis\n\n## OUTPUT FORMAT\nReturn ONLY valid JSON:\n{\n  \"caption\": \"Your caption here\",\n  \"hashtags\": [20 hashtags],\n  \"image_description\": \"Canva instructions with purple #6B46C1 and gold #FFD700\"\n}\n\nReturn ONLY the JSON object.",
 
   "hashtag_categories": {
     "broad": ["#angelnumbers", "#manifestation", "#spirituality", "#lawofattraction", "#spiritualawakening", "#productivity", "#mindfulness"],
@@ -42,23 +54,49 @@
       "1212": "Fresh start energy, new cycle beginning",
       "369": "Tesla's sacred code - manifestation amplifier",
       "818": "Abundance flowing, karma clearing",
-      "1234": "Your steps are aligning perfectly"
+      "1234": "Your steps are aligning perfectly",
+      "1010": "New beginnings and spiritual awakening",
+      "313": "Ascended masters are guiding you",
+      "321": "Countdown to your manifestation",
+      "11:11": "The universe's favorite wake-up call",
+      "12:12": "Completion and new cycles",
+      "3:33": "Divine support is all around you"
     },
     "productivity_methods": [
-      "17-minute deep work sprints",
-      "17-17-17 triple focus blocks",
-      "17-minute morning ritual",
-      "17-minute declutter sessions",
-      "17-minute intention setting",
-      "17-minute visualization practice"
+      "17-minute deep work sessions",
+      "17-17-17 method (3 blocks of 17 mins)",
+      "Morning 17-minute ritual",
+      "Evening 17-minute wind-down",
+      "17-minute power naps",
+      "17-minute meditation",
+      "17-minute planning session",
+      "17-minute learning sprints",
+      "17-minute exercise bursts",
+      "17-minute creative sessions"
     ],
     "manifestation_techniques": [
-      "369 method (3x morning, 6x afternoon, 9x night)",
+      "369 manifestation method",
+      "17-second visualization technique",
+      "Morning manifestation ritual",
+      "New moon manifestation",
+      "Full moon release ritual",
       "Scripting your ideal day",
       "Vision board creation",
-      "Gratitude amplification",
-      "Future self visualization",
-      "Angel number journaling"
+      "Gratitude manifestation",
+      "Affirmation techniques",
+      "Energy alignment practices"
+    ],
+    "spiritual_growth_topics": [
+      "Intuition development",
+      "Synchronicity recognition",
+      "Energy awareness",
+      "Chakra alignment",
+      "Spiritual awakening signs",
+      "Divine timing",
+      "Soul purpose discovery",
+      "Higher self connection",
+      "Mindfulness practices",
+      "Spiritual protection"
     ]
   }
 }

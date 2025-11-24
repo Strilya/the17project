@@ -32,6 +32,8 @@ from save_to_sheets import SheetsManager
 # SlackNotifier handles Slack notifications (optional integration)
 # is_slack_configured checks if Slack credentials are available
 from send_slack_notification import SlackNotifier, is_slack_configured
+# TopicManager handles intelligent topic rotation and tracking
+from topic_manager import TopicManager
 
 # Configure logging
 logging.basicConfig(
@@ -68,6 +70,11 @@ class ContentAutomation:
         logger.info(f"Starting automation at {datetime.now().isoformat()}")
 
         try:
+            # Initialize topic manager (required)
+            # This handles intelligent topic rotation and tracking
+            self.topic_manager = TopicManager()
+            logger.info("✓ Topic manager initialized")
+
             # Initialize content generator (required)
             # This handles AI content generation using Claude AI
             self.content_generator = ContentGenerator()
@@ -122,13 +129,26 @@ class ContentAutomation:
         }
 
         try:
-            # Step 1: Generate content using Claude AI
+            # Step 1: Get next topic from rotation
             logger.info("\n" + "-"*70)
-            logger.info("STEP 1: Generating content with Claude AI")
+            logger.info("STEP 1: Selecting topic from rotation")
             logger.info("-"*70)
 
-            # Call the content generator to create Instagram content
-            content = self.content_generator.generate_content()
+            # Get the next topic from the topic manager
+            specific_topic = self.topic_manager.get_next_topic()
+            logger.info(f"Selected topic: {specific_topic['value']} (category: {specific_topic['type']})")
+
+            # Store topic info in workflow result
+            workflow_result["topic"] = specific_topic["value"]
+            workflow_result["category"] = specific_topic["type"]
+
+            # Step 2: Generate content using Claude AI with specific topic
+            logger.info("\n" + "-"*70)
+            logger.info("STEP 2: Generating content with Claude AI")
+            logger.info("-"*70)
+
+            # Call the content generator with the specific topic
+            content = self.content_generator.generate_content(specific_topic)
             # Mark content generation as successful
             workflow_result["content_generated"] = True
             # Store the generated content in the result
@@ -136,13 +156,17 @@ class ContentAutomation:
 
             logger.info("✅ Content generated successfully")
 
-            # Step 2: Save to Google Sheets
+            # Step 3: Save to Google Sheets with topic tracking
             logger.info("\n" + "-"*70)
-            logger.info("STEP 2: Saving to Google Sheets")
+            logger.info("STEP 3: Saving to Google Sheets")
             logger.info("-"*70)
 
-            # Save the content to Google Sheets for tracking
-            self.sheets_manager.save_content(content)
+            # Save the content to Google Sheets with topic tracking
+            self.sheets_manager.save_content(
+                content=content,
+                topic=specific_topic["value"],
+                category=specific_topic["type"]
+            )
             # Mark sheets saving as successful
             workflow_result["saved_to_sheets"] = True
 
@@ -152,9 +176,21 @@ class ContentAutomation:
 
             logger.info("✅ Content saved to Google Sheets")
 
-            # Step 3: Send Slack notification (optional)
+            # Step 4: Mark topic as used in tracker
             logger.info("\n" + "-"*70)
-            logger.info("STEP 3: Sending Slack notification")
+            logger.info("STEP 4: Updating topic tracker")
+            logger.info("-"*70)
+
+            # Mark the topic as used so it won't be repeated
+            self.topic_manager.mark_topic_used(
+                topic=specific_topic["value"],
+                category=specific_topic["type"]
+            )
+            logger.info(f"✅ Topic '{specific_topic['value']}' marked as used")
+
+            # Step 5: Send Slack notification (optional)
+            logger.info("\n" + "-"*70)
+            logger.info("STEP 5: Sending Slack notification")
             logger.info("-"*70)
 
             # Check if Slack notifier is available
@@ -185,6 +221,7 @@ class ContentAutomation:
             logger.info("\n" + "="*70)
             logger.info("✨ WORKFLOW COMPLETED SUCCESSFULLY")
             logger.info("="*70)
+            logger.info(f"Topic: {specific_topic['value']} ({specific_topic['type']})")
             logger.info(f"Caption length: {len(content['caption'])} characters")
             logger.info(f"Hashtags: {len(content['hashtags'])}")
             logger.info(f"Tokens used: {content.get('tokens_used', 'N/A')}")

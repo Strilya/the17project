@@ -1,0 +1,62 @@
+{
+  "topics": {
+    "angel_numbers": {
+      "high_priority": ["17", "717", "1717", "911", "711", "111", "222", "444"],
+      "interesting": ["1111", "1212", "1010", "369", "555", "777", "818", "313", "1234", "321", "11:11", "12:12", "3:33"],
+      "used": [],
+      "last_used_date": null
+    },
+    "productivity": {
+      "techniques": [
+        "17-minute deep work sessions",
+        "17-17-17 method (3 blocks of 17 mins)",
+        "Morning 17-minute ritual",
+        "Evening 17-minute wind-down",
+        "17-minute power naps",
+        "17-minute meditation",
+        "17-minute planning session",
+        "17-minute learning sprints",
+        "17-minute exercise bursts",
+        "17-minute creative sessions"
+      ],
+      "used": [],
+      "last_used_date": null
+    },
+    "manifestation": {
+      "practices": [
+        "369 manifestation method",
+        "17-second visualization technique",
+        "Morning manifestation ritual",
+        "New moon manifestation",
+        "Full moon release ritual",
+        "Scripting your ideal day",
+        "Vision board creation",
+        "Gratitude manifestation",
+        "Affirmation techniques",
+        "Energy alignment practices"
+      ],
+      "used": [],
+      "last_used_date": null
+    },
+    "spiritual_growth": {
+      "topics": [
+        "Intuition development",
+        "Synchronicity recognition",
+        "Energy awareness",
+        "Chakra alignment",
+        "Spiritual awakening signs",
+        "Divine timing",
+        "Soul purpose discovery",
+        "Higher self connection",
+        "Mindfulness practices",
+        "Spiritual protection"
+      ],
+      "used": [],
+      "last_used_date": null
+    }
+  },
+  "content_history": [],
+  "last_reset_date": null,
+  "current_category_index": 0,
+  "category_order": ["angel_numbers", "productivity", "manifestation", "spiritual_growth"]
+}

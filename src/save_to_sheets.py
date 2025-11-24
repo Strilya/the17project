@@ -184,45 +184,49 @@ class SheetsManager:
             worksheet: gspread Worksheet object
         """
         headers = [
-            "Date",
-            "Caption",
-            "Hashtags",
-            "Image_description",
-            "Status",
-            "Posted_Date",
-            "Engagement_notes"
+            "Date",              # A
+            "Caption",           # B
+            "Hashtags",          # C
+            "Image_description", # D
+            "Topic",             # E - NEW: The specific topic used
+            "Category",          # F - NEW: Topic category (angel_numbers, productivity, etc.)
+            "Status",            # G
+            "Posted_Date",       # H
+            "Likes",             # I - NEW: For manual tracking
+            "Comments",          # J - NEW: For manual tracking
+            "Saves",             # K - NEW: For manual tracking
+            "Engagement_notes"   # L
         ]
 
         worksheet.append_row(headers)
-        logger.info("Created header row in worksheet")
+        logger.info("Created header row in worksheet (12 columns)")
 
-    def save_content(self, content: Dict[str, Any]) -> None:
+    def save_content(self, content: Dict[str, Any], topic: str = "", category: str = "") -> None:
         """
         Save generated content to Google Sheets.
 
         This method appends a new row to the worksheet with:
-        - Timestamp of generation
         - Date (formatted)
         - Caption text
         - Hashtags (joined as string)
         - Image description
-        - Model used
-        - Tokens consumed
-        - Status (defaults to "Generated")
+        - Topic (the specific topic used for generation)
+        - Category (topic category: angel_numbers, productivity, etc.)
+        - Status, Posted_Date, Likes, Comments, Saves, Engagement_notes (empty for now)
 
         Args:
             content: Dictionary containing generated content
                 Required keys: caption, hashtags, image_description
-                Optional keys: generated_at, model, tokens_used
+                Optional keys: generated_at, model, tokens_used, topic, category
+            topic: The specific topic used (e.g., "717", "17-minute deep work")
+            category: The topic category (e.g., "angel_numbers", "productivity")
         """
         try:
             logger.info("Saving content to Google Sheets...")
 
             # DEBUG: Log the exact content structure being saved
             logger.info(f"Content structure received: {json.dumps(content, indent=2, default=str)}")
-            logger.info(f"Caption type: {type(content.get('caption')).__name__}")
-            logger.info(f"Hashtags type: {type(content.get('hashtags')).__name__}")
-            logger.info(f"Image_description type: {type(content.get('image_description')).__name__}")
+            logger.info(f"Topic: {topic}, Category: {category}")
 
             # Extract and format data
             timestamp = content.get("generated_at", datetime.now().isoformat())
@@ -245,28 +249,39 @@ class SheetsManager:
             caption_formatted = str(content.get("caption", ""))
             image_desc_formatted = str(content.get("image_description", ""))
 
-            # Prepare row data matching column structure:
+            # Get topic info from content if not provided as parameters
+            topic_value = topic or content.get("topic", "")
+            category_value = category or content.get("category", "")
+
+            # Prepare row data matching column structure (12 columns):
             # A: Date, B: Caption, C: Hashtags, D: Image_description,
-            # E: Status (empty), F: Posted_Date (empty), G: Engagement_notes (empty)
+            # E: Topic, F: Category, G: Status, H: Posted_Date,
+            # I: Likes, J: Comments, K: Saves, L: Engagement_notes
             row = [
-                date_formatted,
-                caption_formatted,
-                hashtags_formatted,
-                image_desc_formatted,
-                "",  # Status (empty)
-                "",  # Posted_Date (empty)
-                ""   # Engagement_notes (empty)
+                date_formatted,        # A: Date
+                caption_formatted,     # B: Caption
+                hashtags_formatted,    # C: Hashtags
+                image_desc_formatted,  # D: Image_description
+                topic_value,           # E: Topic (NEW)
+                category_value,        # F: Category (NEW)
+                "",                    # G: Status (empty)
+                "",                    # H: Posted_Date (empty)
+                "",                    # I: Likes (empty, manual entry)
+                "",                    # J: Comments (empty, manual entry)
+                "",                    # K: Saves (empty, manual entry)
+                ""                     # L: Engagement_notes (empty)
             ]
 
             # DEBUG: Log the exact row being written
-            logger.info(f"Row being written (7 columns expected):")
+            logger.info(f"Row being written (12 columns):")
             logger.info(f"  [0] Date: {row[0]}")
             logger.info(f"  [1] Caption: {row[1][:50]}..." if len(row[1]) > 50 else f"  [1] Caption: {row[1]}")
             logger.info(f"  [2] Hashtags: {row[2][:50]}..." if len(row[2]) > 50 else f"  [2] Hashtags: {row[2]}")
             logger.info(f"  [3] Image_desc: {row[3][:50]}..." if len(row[3]) > 50 else f"  [3] Image_desc: {row[3]}")
-            logger.info(f"  [4] Status: '{row[4]}'")
-            logger.info(f"  [5] Posted_Date: '{row[5]}'")
-            logger.info(f"  [6] Engagement_notes: '{row[6]}'")
+            logger.info(f"  [4] Topic: '{row[4]}'")
+            logger.info(f"  [5] Category: '{row[5]}'")
+            logger.info(f"  [6] Status: '{row[6]}'")
+            logger.info(f"  [7-11] Empty analytics columns")
             logger.info(f"Row length: {len(row)} columns")
 
             # Append row to worksheet
@@ -315,12 +330,12 @@ class SheetsManager:
             notes: Optional notes to add
         """
         try:
-            # Update status column (column E = 5)
-            self.worksheet.update_cell(row_number, 5, status)
+            # Update status column (column G = 7, was E = 5 before new columns)
+            self.worksheet.update_cell(row_number, 7, status)
 
-            # Update notes if provided (column G = 7)
+            # Update notes if provided (column L = 12, was G = 7 before)
             if notes:
-                self.worksheet.update_cell(row_number, 7, notes)
+                self.worksheet.update_cell(row_number, 12, notes)
 
             logger.info(f"Updated row {row_number} status to: {status}")
 
@@ -341,49 +356,44 @@ def main():
         print("TESTING GOOGLE SHEETS INTEGRATION")
         print("="*70)
 
-        # Test Case 1: Hashtags as LIST (expected format)
-        print("\n--- Test Case 1: Hashtags as LIST ---")
-        test_content_list = {
-            "caption": "Test caption for The17Project - testing list format",
+        # Test content with topic tracking
+        print("\n--- Test: Content with Topic Tracking ---")
+        test_content = {
+            "caption": "Test caption for The17Project - testing topic tracking",
             "hashtags": ["#test", "#the17project", "#angelnumbers", "#manifestation"],
             "image_description": "Purple background with gold text - test image",
             "generated_at": datetime.now().isoformat(),
             "model": "claude-3-haiku",
-            "tokens_used": 250
+            "tokens_used": 250,
+            "topic": "717",
+            "category": "angel_numbers"
         }
 
-        print(f"Input hashtags type: {type(test_content_list['hashtags']).__name__}")
-        print(f"Input hashtags value: {test_content_list['hashtags']}")
+        print(f"Topic: {test_content['topic']}")
+        print(f"Category: {test_content['category']}")
+        print(f"Hashtags type: {type(test_content['hashtags']).__name__}")
 
-        # Test Case 2: Hashtags as STRING (fallback format)
-        print("\n--- Test Case 2: Hashtags as STRING (defensive test) ---")
-        test_content_string = {
-            "caption": "Test caption - testing string format",
-            "hashtags": "#test #the17project #angelnumbers #manifestation",
-            "image_description": "Purple background with gold text - string test",
-            "generated_at": datetime.now().isoformat(),
-            "model": "claude-3-haiku",
-            "tokens_used": 250
-        }
-
-        print(f"Input hashtags type: {type(test_content_string['hashtags']).__name__}")
-        print(f"Input hashtags value: {test_content_string['hashtags']}")
-
-        # Choose which test to run (use list format for actual test)
-        print("\n--- Running actual save with LIST format ---")
+        # Run the save test
+        print("\n--- Running save with topic tracking ---")
         manager = SheetsManager()
-        manager.save_content(test_content_list)
+        manager.save_content(
+            content=test_content,
+            topic=test_content["topic"],
+            category=test_content["category"]
+        )
 
         print("\n" + "="*70)
         print("SUCCESS: Content saved to Google Sheets!")
         print(f"Sheet URL: https://docs.google.com/spreadsheets/d/{manager.sheet_id}")
         print("="*70)
-        print("\nPlease verify in Google Sheets:")
-        print("  - Column A (Date): Should have date formatted as YYYY-MM-DD")
-        print("  - Column B (Caption): Should have caption text")
-        print("  - Column C (Hashtags): Should have hashtags separated by spaces")
-        print("  - Column D (Image_description): Should have image description")
-        print("  - Columns E, F, G: Should be empty")
+        print("\nPlease verify in Google Sheets (12 columns):")
+        print("  - Column A (Date): YYYY-MM-DD")
+        print("  - Column B (Caption): Caption text")
+        print("  - Column C (Hashtags): Hashtags separated by spaces")
+        print("  - Column D (Image_description): Image description")
+        print("  - Column E (Topic): '717'")
+        print("  - Column F (Category): 'angel_numbers'")
+        print("  - Columns G-L: Empty (Status, Posted_Date, Likes, Comments, Saves, Notes)")
         print("="*70)
 
     except Exception as e:
