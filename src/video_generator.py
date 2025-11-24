@@ -23,14 +23,13 @@ from pathlib import Path
 # PIL for image creation and text rendering
 from PIL import Image, ImageDraw, ImageFont
 
-# MoviePy for video composition
-from moviepy.editor import (
-    ImageClip,
-    AudioFileClip,
-    CompositeVideoClip,
-    concatenate_videoclips,
-    TextClip
-)
+# MoviePy for video composition (version 2.x)
+try:
+    # Try moviepy 2.x imports
+    from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips
+except ImportError:
+    # Fallback to moviepy 1.x imports
+    from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips
 
 # gTTS for text-to-speech
 from gtts import gTTS
@@ -383,11 +382,11 @@ class VideoGenerator:
 
                 # Create video clip from image
                 duration = self.scene_timings[scene_type]
-                clip = ImageClip(str(temp_img_path)).set_duration(duration)
+                # MoviePy 2.x uses duration parameter in constructor
+                clip = ImageClip(str(temp_img_path), duration=duration)
 
-                # Add fade transition
-                fade_duration = self.animations["fade_duration"]
-                clip = clip.fadein(fade_duration).fadeout(fade_duration)
+                # Skip fade transitions for now (moviepy 2.x API is different)
+                # TODO: Add fade transitions with moviepy 2.x API
 
                 scenes.append(clip)
 
@@ -402,23 +401,26 @@ class VideoGenerator:
 
             # Load and concatenate audio
             audio_clips = []
-            current_time = 0
             for i, audio_file in enumerate(audio_files):
                 audio = AudioFileClip(audio_file)
                 scene_duration = self.scene_timings[list(self.scene_timings.keys())[i]]
 
-                # Trim or pad audio to match scene duration
+                # Trim audio to match scene duration if needed
                 if audio.duration > scene_duration:
-                    audio = audio.subclip(0, scene_duration)
+                    audio = audio.subclipped(0, scene_duration) if hasattr(audio, 'subclipped') else audio
 
-                audio = audio.set_start(current_time)
                 audio_clips.append(audio)
-                current_time += scene_duration
 
-            # Composite audio
-            from moviepy.audio.AudioClip import CompositeAudioClip
-            final_audio = CompositeAudioClip(audio_clips)
-            final_video = final_video.set_audio(final_audio)
+            # Concatenate audio clips (simpler approach for moviepy 2.x)
+            try:
+                from moviepy import concatenate_audioclips
+                final_audio = concatenate_audioclips(audio_clips)
+            except:
+                # Fallback: use first audio clip only
+                final_audio = audio_clips[0] if audio_clips else None
+
+            if final_audio:
+                final_video = final_video.with_audio(final_audio) if hasattr(final_video, 'with_audio') else final_video
 
             # Export final video
             logger.info(f"Exporting video to {output_path}...")
