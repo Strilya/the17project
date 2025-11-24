@@ -7,10 +7,38 @@
     "cache_dir": "output/background_cache",
     "max_cache_size": 50,
     "categories": {
-      "angel_numbers": ["space nebula purple", "galaxy purple", "cosmic purple stars", "spiritual purple light"],
-      "productivity": ["blue abstract motion", "technology blue", "focus blue particles", "minimal blue wave"],
-      "manifestation": ["pink rose gold", "pink clouds sunset", "rose petals falling", "pink abstract energy"],
-      "spiritual_growth": ["meditation purple", "spiritual awakening light", "third eye indigo", "consciousness energy"]
+      "angel_numbers": [
+        "purple nebula space",
+        "starry night sky timelapse",
+        "aurora borealis purple",
+        "milky way galaxy purple",
+        "cosmic meditation stars",
+        "spiritual light rays purple"
+      ],
+      "productivity": [
+        "peaceful sunrise meditation",
+        "golden hour nature peaceful",
+        "zen garden stones water",
+        "minimal blue sky clouds",
+        "focus morning light nature",
+        "tranquil forest sunlight"
+      ],
+      "manifestation": [
+        "purple sunset clouds peaceful",
+        "pink clouds sunset dreamy",
+        "golden light rays spiritual",
+        "rose gold sunset magic",
+        "candles meditation peaceful",
+        "glowing crystals spiritual"
+      ],
+      "spiritual_growth": [
+        "meditation purple spiritual",
+        "spiritual light rays peaceful",
+        "aurora borealis meditation",
+        "cosmic energy stars",
+        "zen peaceful nature water",
+        "mystical forest light rays"
+      ]
     },
     "video_settings": {
       "orientation": "portrait",
@@ -26,9 +54,9 @@
     "output_folder": "output/reels"
   },
   "scene_timings": {
-    "hook": 3,
+    "hook": 2,
     "meaning": 5,
-    "action": 5,
+    "action": 6,
     "cta": 4
   },
   "color_palettes": {
