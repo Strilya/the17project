@@ -40,6 +40,9 @@ import numpy as np
 # BackgroundManager for Pexels video backgrounds
 from background_manager import BackgroundManager
 
+# AudioGenerator for optimized voiceovers
+from audio_generator import AudioGenerator
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -93,6 +96,9 @@ class VideoGenerator:
 
         # Initialize background manager for Pexels video backgrounds
         self.background_manager = BackgroundManager()
+
+        # Initialize audio generator for optimized voiceovers
+        self.audio_generator = AudioGenerator()
 
         logger.info("VideoGenerator initialized successfully")
         logger.info(f"Resolution: {self.width}x{self.height} @ {self.fps}fps")
@@ -306,7 +312,7 @@ class VideoGenerator:
 
     def _generate_voiceover(self, text: str, output_path: str) -> str:
         """
-        Generate voiceover audio from text using gTTS.
+        Generate optimized voiceover audio with 15% speed increase.
 
         Args:
             text: Text to convert to speech
@@ -316,15 +322,12 @@ class VideoGenerator:
             Path to generated audio file
         """
         try:
-            tts = gTTS(
+            # Use AudioGenerator for optimized voiceover with speed adjustment
+            return self.audio_generator.generate_voiceover(
                 text=text,
-                lang=self.audio_settings["voice"]["language"],
-                tld=self.audio_settings["voice"]["tld"],
-                slow=self.audio_settings["voice"]["slow"]
+                output_path=output_path,
+                speed_factor=1.15  # 15% faster for better pacing
             )
-            tts.save(output_path)
-            logger.info(f"Generated voiceover: {output_path}")
-            return output_path
         except Exception as e:
             logger.error(f"Failed to generate voiceover: {e}")
             raise
