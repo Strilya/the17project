@@ -2,18 +2,21 @@
 Main Workflow Orchestrator
 
 This is the entry point for the automated Instagram content generation workflow.
-It coordinates all three modules: content generation, Google Sheets logging, and Slack notifications.
+It coordinates all modules: topic selection, content generation, video generation,
+Google Sheets logging, and Slack notifications.
 
 Workflow:
-1. Generate content using Claude AI API
-2. Save content to Google Sheets
-3. Send Slack notification (optional - skipped if not configured)
-4. Handle errors gracefully
+1. Select topic from intelligent rotation system
+2. Generate content using Claude AI API (caption, hashtags, image description, video scenes)
+3. Generate 17-second Instagram Reel with voiceover
+4. Save content to Google Sheets with topic tracking and video path
+5. Mark topic as used in tracker
+6. Send Slack notification (optional - skipped if not configured)
 
 This script is called by GitHub Actions daily at 8:00 AM EST.
 
-Note: Slack notifications are optional. The workflow will complete successfully
-even if SLACK_BOT_TOKEN and SLACK_CHANNEL_ID are not configured.
+Note: Slack notifications and video generation are optional. The workflow will complete
+successfully even if they fail or are not configured.
 """
 
 import os
@@ -34,6 +37,8 @@ from save_to_sheets import SheetsManager
 from send_slack_notification import SlackNotifier, is_slack_configured
 # TopicManager handles intelligent topic rotation and tracking
 from topic_manager import TopicManager
+# VideoGenerator handles 17-second Instagram Reel generation
+from video_generator import VideoGenerator
 
 # Configure logging
 logging.basicConfig(
@@ -85,6 +90,11 @@ class ContentAutomation:
             self.sheets_manager = SheetsManager()
             logger.info("✓ Sheets manager initialized")
 
+            # Initialize video generator (required)
+            # This handles 17-second Instagram Reel generation
+            self.video_generator = VideoGenerator()
+            logger.info("✓ Video generator initialized")
+
             # Initialize Slack notifier (optional)
             # Check if Slack is configured before initializing
             self.slack_enabled = is_slack_configured()
@@ -112,16 +122,20 @@ class ContentAutomation:
             Dictionary with workflow results and status
 
         Workflow steps:
-        1. Generate content using Claude AI API
-        2. Save content to Google Sheets
-        3. Send Slack notification with preview (optional - skipped if not configured)
-        4. Return success status
+        1. Select topic from intelligent rotation system
+        2. Generate content using Claude AI API (caption, hashtags, image description, video scenes)
+        3. Generate 17-second Instagram Reel with voiceover
+        4. Save content to Google Sheets with topic tracking and video path
+        5. Mark topic as used in tracker
+        6. Send Slack notification with preview (optional - skipped if not configured)
         """
         # Initialize workflow result dictionary to track progress
         workflow_result = {
             "success": False,
             "content_generated": False,
             "saved_to_sheets": False,
+            "video_generated": False,
+            "video_path": None,
             "slack_notified": False,
             "slack_skipped": False,
             "error": None,
@@ -156,16 +170,42 @@ class ContentAutomation:
 
             logger.info("✅ Content generated successfully")
 
-            # Step 3: Save to Google Sheets with topic tracking
+            # Step 3: Generate 17-second Instagram Reel (before saving to sheets)
             logger.info("\n" + "-"*70)
-            logger.info("STEP 3: Saving to Google Sheets")
+            logger.info("STEP 3: Generating 17-second Instagram Reel")
             logger.info("-"*70)
 
-            # Save the content to Google Sheets with topic tracking
+            video_path = ""
+            # Check if video_scenes are present in content
+            if "video_scenes" in content and content["video_scenes"]:
+                try:
+                    # Generate the video reel
+                    video_path = self.video_generator.generate_reel(
+                        content=content["video_scenes"],
+                        category=specific_topic["type"]
+                    )
+                    workflow_result["video_generated"] = True
+                    workflow_result["video_path"] = video_path
+                    logger.info(f"✅ Video generated successfully: {video_path}")
+                except Exception as video_error:
+                    logger.error(f"❌ Video generation failed: {video_error}")
+                    logger.warning("Continuing workflow without video")
+                    workflow_result["video_generated"] = False
+            else:
+                logger.warning("⚠ No video_scenes in content, skipping video generation")
+                workflow_result["video_generated"] = False
+
+            # Step 4: Save to Google Sheets with topic tracking and video path
+            logger.info("\n" + "-"*70)
+            logger.info("STEP 4: Saving to Google Sheets")
+            logger.info("-"*70)
+
+            # Save the content to Google Sheets with topic tracking and video path
             self.sheets_manager.save_content(
                 content=content,
                 topic=specific_topic["value"],
-                category=specific_topic["type"]
+                category=specific_topic["type"],
+                video_path=video_path
             )
             # Mark sheets saving as successful
             workflow_result["saved_to_sheets"] = True
@@ -176,9 +216,9 @@ class ContentAutomation:
 
             logger.info("✅ Content saved to Google Sheets")
 
-            # Step 4: Mark topic as used in tracker
+            # Step 5: Mark topic as used in tracker
             logger.info("\n" + "-"*70)
-            logger.info("STEP 4: Updating topic tracker")
+            logger.info("STEP 5: Updating topic tracker")
             logger.info("-"*70)
 
             # Mark the topic as used so it won't be repeated
@@ -188,9 +228,9 @@ class ContentAutomation:
             )
             logger.info(f"✅ Topic '{specific_topic['value']}' marked as used")
 
-            # Step 5: Send Slack notification (optional)
+            # Step 6: Send Slack notification (optional)
             logger.info("\n" + "-"*70)
-            logger.info("STEP 5: Sending Slack notification")
+            logger.info("STEP 6: Sending Slack notification")
             logger.info("-"*70)
 
             # Check if Slack notifier is available
@@ -214,7 +254,7 @@ class ContentAutomation:
                 logger.info("⚠ Slack notification skipped (not configured)")
 
             # All required steps completed successfully
-            # Workflow is successful even if Slack was skipped
+            # Workflow is successful even if Slack or video was skipped
             workflow_result["success"] = True
 
             # Log final summary
@@ -230,6 +270,10 @@ class ContentAutomation:
                 logger.info("Slack: Skipped (not configured)")
             else:
                 logger.info("Slack: Notification sent")
+            if workflow_result["video_generated"]:
+                logger.info(f"Video: Generated successfully ({workflow_result['video_path']})")
+            else:
+                logger.info("Video: Skipped or failed")
             logger.info("="*70 + "\n")
 
             return workflow_result

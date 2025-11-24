@@ -51,6 +51,7 @@ config/service-account.json
 *.json
 !config/prompts.json
 !config/topic_tracker.json
+!config/video_config.json
 !package.json
 
 # Logs

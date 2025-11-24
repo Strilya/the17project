@@ -195,13 +195,14 @@ class SheetsManager:
             "Likes",             # I - NEW: For manual tracking
             "Comments",          # J - NEW: For manual tracking
             "Saves",             # K - NEW: For manual tracking
-            "Engagement_notes"   # L
+            "Engagement_notes",  # L
+            "Video_Path"         # M - NEW: Path to generated video reel
         ]
 
         worksheet.append_row(headers)
-        logger.info("Created header row in worksheet (12 columns)")
+        logger.info("Created header row in worksheet (13 columns)")
 
-    def save_content(self, content: Dict[str, Any], topic: str = "", category: str = "") -> None:
+    def save_content(self, content: Dict[str, Any], topic: str = "", category: str = "", video_path: str = "") -> None:
         """
         Save generated content to Google Sheets.
 
@@ -213,6 +214,7 @@ class SheetsManager:
         - Topic (the specific topic used for generation)
         - Category (topic category: angel_numbers, productivity, etc.)
         - Status, Posted_Date, Likes, Comments, Saves, Engagement_notes (empty for now)
+        - Video_Path (path to generated video reel)
 
         Args:
             content: Dictionary containing generated content
@@ -220,6 +222,7 @@ class SheetsManager:
                 Optional keys: generated_at, model, tokens_used, topic, category
             topic: The specific topic used (e.g., "717", "17-minute deep work")
             category: The topic category (e.g., "angel_numbers", "productivity")
+            video_path: Path to generated video reel (if any)
         """
         try:
             logger.info("Saving content to Google Sheets...")
@@ -253,10 +256,10 @@ class SheetsManager:
             topic_value = topic or content.get("topic", "")
             category_value = category or content.get("category", "")
 
-            # Prepare row data matching column structure (12 columns):
+            # Prepare row data matching column structure (13 columns):
             # A: Date, B: Caption, C: Hashtags, D: Image_description,
             # E: Topic, F: Category, G: Status, H: Posted_Date,
-            # I: Likes, J: Comments, K: Saves, L: Engagement_notes
+            # I: Likes, J: Comments, K: Saves, L: Engagement_notes, M: Video_Path
             row = [
                 date_formatted,        # A: Date
                 caption_formatted,     # B: Caption
@@ -269,11 +272,12 @@ class SheetsManager:
                 "",                    # I: Likes (empty, manual entry)
                 "",                    # J: Comments (empty, manual entry)
                 "",                    # K: Saves (empty, manual entry)
-                ""                     # L: Engagement_notes (empty)
+                "",                    # L: Engagement_notes (empty)
+                video_path             # M: Video_Path (NEW)
             ]
 
             # DEBUG: Log the exact row being written
-            logger.info(f"Row being written (12 columns):")
+            logger.info(f"Row being written (13 columns):")
             logger.info(f"  [0] Date: {row[0]}")
             logger.info(f"  [1] Caption: {row[1][:50]}..." if len(row[1]) > 50 else f"  [1] Caption: {row[1]}")
             logger.info(f"  [2] Hashtags: {row[2][:50]}..." if len(row[2]) > 50 else f"  [2] Hashtags: {row[2]}")
@@ -282,6 +286,7 @@ class SheetsManager:
             logger.info(f"  [5] Category: '{row[5]}'")
             logger.info(f"  [6] Status: '{row[6]}'")
             logger.info(f"  [7-11] Empty analytics columns")
+            logger.info(f"  [12] Video_Path: '{row[12]}'")
             logger.info(f"Row length: {len(row)} columns")
 
             # Append row to worksheet
