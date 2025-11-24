@@ -67,7 +67,8 @@
   },
   "fonts": {
     "primary": {
-      "family": "Arial-Bold",
+      "family": "DejaVuSans-Bold",
+      "path": "fonts/DejaVuSans-Bold.ttf",
       "size": {
         "hook": 90,
         "meaning": 70,
@@ -76,7 +77,8 @@
       }
     },
     "secondary": {
-      "family": "Arial",
+      "family": "DejaVuSans-Bold",
+      "path": "fonts/DejaVuSans-Bold.ttf",
       "size": {
         "hook": 60,
         "meaning": 50,
