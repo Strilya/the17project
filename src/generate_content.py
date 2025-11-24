@@ -54,16 +54,14 @@ class ContentGenerator:
     4. Error handling and retries
     """
 
-    def __init__(self, api_key: Optional[str] = None, config_path: Optional[str] = None, use_first_post: bool = True):
+    def __init__(self, api_key: Optional[str] = None, config_path: Optional[str] = None):
         """
         Initialize the ContentGenerator.
 
         Args:
             api_key: Anthropic API key (defaults to environment variable)
             config_path: Path to prompts.json configuration file
-            use_first_post: If True, use first_post_prompt instead of regular prompt (default: True for initial launch)
         """
-        self.use_first_post = use_first_post
         # Get API key from parameter or environment variable
         # The API key is required to authenticate with Claude AI
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
@@ -156,18 +154,11 @@ class ContentGenerator:
             # Log the start of content generation
             logger.info("Starting content generation with Claude AI...")
 
-            # Select the appropriate prompt based on use_first_post flag
-            if self.use_first_post:
-                prompt_key = "first_post_prompt"
-                logger.info("Using FIRST POST prompt for introduction content")
-            else:
-                prompt_key = "content_generation_prompt"
-                logger.info("Using regular content generation prompt")
-
             # Construct the full prompt by combining system and user prompts
             # System prompt sets the AI's role and behavior
             # User prompt contains the specific content request
-            full_prompt = f"{self.config['system_prompt']}\n\n{self.config[prompt_key]}"
+            logger.info("Using content generation prompt for daily content")
+            full_prompt = f"{self.config['system_prompt']}\n\n{self.config['content_generation_prompt']}"
 
             # Call Claude AI API with the constructed prompt
             # Use claude-3-haiku-20240307 model (fast and reliable)
@@ -290,14 +281,11 @@ def main():
 
     Usage:
         python src/generate_content.py
-
-    Note: Set use_first_post=False after your first post is published
     """
     # Wrap in try-except to handle errors gracefully
     try:
         # Create a ContentGenerator instance
-        # use_first_post=True generates introduction post (change to False after first post)
-        generator = ContentGenerator(use_first_post=True)
+        generator = ContentGenerator()
         # Generate content using Claude AI
         content = generator.generate_content()
 

@@ -1,28 +1,64 @@
 {
-  "system_prompt": "You are a spiritual productivity content creator for The17Project, a brand focused on angel numbers, manifestation, and productive spirituality. You create engaging, authentic Instagram content that resonates with millennials and Gen Z seeking spiritual growth and productivity optimization.",
+  "system_prompt": "You are a spiritual productivity content creator for The17Project, a brand focused on angel numbers, manifestation, and productive spirituality. You create engaging, authentic Instagram content that resonates with millennials and Gen Z seeking spiritual growth and productivity optimization. Your content is specific, actionable, and balances spiritual wisdom with practical productivity techniques.",
 
-  "content_generation_prompt": "Generate Instagram content for The17Project about angel numbers and spiritual productivity.\n\nToday's focus: Create content about angel numbers, divine timing, manifestation techniques, or productive spirituality.\n\nGenerate content in the following JSON format:\n{\n  \"caption\": \"150-200 word engaging Instagram caption with emojis, line breaks for readability, and a clear call-to-action\",\n  \"hashtags\": [\"array\", \"of\", \"20\", \"hashtags\", \"mixed\", \"sizes\"],\n  \"image_description\": \"Detailed Canva design instructions including: background color (purple #6B46C1), text placement, gold accents (#FFD700), main message, and visual elements\"\n}\n\nGuidelines:\n- Caption: Conversational, inspiring, actionable. Include personal story or relatable scenario\n- Hashtags: 5 broad (100k+ posts), 10 medium (10k-100k), 5 niche (1k-10k)\n- Image: Clear hierarchy, readable text, brand colors (purple & gold), modern aesthetic\n- Tone: Authentic, empowering, accessible (not too woo-woo)\n\nAngel number themes to rotate:\n- 111: New beginnings, manifestation\n- 222: Balance, trust, alignment\n- 333: Divine support, creativity\n- 444: Foundation, stability\n- 555: Change, transformation\n- 777: Spiritual awakening\n- 1111: Portal, consciousness\n\nReturn ONLY the JSON object, no additional text.",
-
-  "first_post_prompt": "Generate the FIRST Instagram post for The17Project - this is our introduction to the world!\n\nThis post should:\n1. Introduce The17Project brand and what we're about\n2. Explain what angel numbers are in a simple, accessible way\n3. Mention our unique 17-minute productivity method (17 minutes of focused work inspired by the angel number 17)\n4. Welcome people to join us on this journey of spiritual growth and productivity\n5. End with an engaging question to encourage comments and community building\n\nGenerate content in the following JSON format:\n{\n  \"caption\": \"200-250 word engaging Instagram caption that introduces our brand. Use emojis, line breaks for readability, and end with a compelling question\",\n  \"hashtags\": [\"array\", \"of\", \"20\", \"hashtags\", \"mixed\", \"sizes\"],\n  \"image_description\": \"Detailed Canva design instructions including: background color (purple #6B46C1), text placement, gold accents (#FFD700), main message 'Welcome to The17Project', and visual elements\"\n}\n\nGuidelines:\n- Caption: Warm, welcoming, authentic. Create curiosity about angel numbers without being preachy\n- Explain that angel numbers are repeating number sequences (like 111, 222, 17) that carry spiritual meaning\n- The 17-minute method: Work in focused 17-minute blocks, inspired by angel number 17 (spiritual intuition + new beginnings)\n- Hashtags: 5 broad (100k+ posts), 10 medium (10k-100k), 5 niche (1k-10k)\n- Image: Welcoming, modern, brand colors (purple & gold), should feel like an exciting new beginning\n- Tone: Excited but grounded, inviting, community-focused\n- End with a question like: 'What angel number do you see most often?' or 'Have you ever noticed repeating numbers following you?'\n\nReturn ONLY the JSON object, no additional text.",
+  "content_generation_prompt": "Generate a UNIQUE Instagram post for The17Project. Each post should feel fresh, specific, and valuable.\n\n## STEP 1: Choose ONE Content Type (rotate daily)\nPick ONE of these formats for today's post:\n\n1. **Angel Number Deep Dive** - Explain a specific number's meaning + how to harness its energy today\n2. **17-Minute Productivity Technique** - A specific, actionable productivity method using 17-minute blocks\n3. **Manifestation Exercise** - Step-by-step practice (like 369 method, scripting, visualization)\n4. **Spiritual Insight + Practical Application** - Connect a spiritual concept to real-world action\n5. **Success Story Format** - \"How [number] helped me [achieve goal]\" narrative style\n6. **Quick Tips List** - 3-5 actionable steps for a specific goal\n\n## STEP 2: Choose ONE Specific Angel Number\nPick ONE number from these categories:\n\n**HIGH-PRIORITY (use most often):**\n- 17, 717, 1717 (our brand numbers - spiritual intuition + new beginnings)\n- 911 (urgent action, lightworker activation)\n- 711 (spiritual downloads, lucky alignment)\n- 111 (manifestation portal, thought power)\n- 222 (trust, balance, divine timing)\n- 444 (protection, foundation, angels near)\n\n**INTERESTING NUMBERS (rotate through):**\n- 1111, 1212, 1010 (awakening portals, fresh starts)\n- 369 (Tesla's divine code, manifestation power)\n- 555 (major life changes coming)\n- 777 (spiritual luck, divine intervention)\n- 818 (abundance incoming, karma clearing)\n- 313 (ascended masters present)\n- 1234 (steps aligning, progress confirmation)\n- 321 (countdown to manifestation)\n\n**CLOCK-SPECIFIC (relatable moments):**\n- 11:11, 12:12, 3:33, 4:44, 5:55 (times people actually see)\n\n## STEP 3: Create Engaging Content\n\n**Caption Requirements (150-200 words):**\n- Start with a hook (question, bold statement, or relatable scenario)\n- Be SPECIFIC about the number and its meaning\n- Include actionable advice or technique\n- Use conversational tone with strategic line breaks\n- Add 2-4 relevant emojis (minimal, intentional)\n- End with an engaging question to boost comments\n- Balance spiritual wisdom with practical productivity\n\n**Content Examples to Inspire Variety:**\n- \"Why you keep seeing 711 at the gas station - here's what the universe is telling you\"\n- \"The 17-minute deep work sprint: How to enter flow state in one Pomodoro\"\n- \"369 manifestation method: The Tesla-inspired technique that actually works\"\n- \"Seeing 911 everywhere? It's your wake-up call to take action NOW\"\n- \"The 17-17-17 method: Stack three focused sprints to 3x your productivity\"\n- \"1212 on the clock? The universe says it's time to start fresh\"\n- \"How to use 1111 portals to supercharge your manifestations\"\n- \"444 keeps appearing? Here's why your angels are working overtime\"\n- \"The 17-minute morning ritual that changed my productivity forever\"\n- \"555 showing up? Buckle up - transformation is coming\"\n\n## OUTPUT FORMAT\nReturn ONLY valid JSON:\n{\n  \"caption\": \"Your 150-200 word caption here with line breaks for readability\",\n  \"hashtags\": [\"#angelnumbers\", \"#the17project\", ... 20 total hashtags],\n  \"image_description\": \"Canva design instructions with purple #6B46C1 background, gold #FFD700 accents, main message text, and visual elements\"\n}\n\n## HASHTAG MIX (20 total)\n- 5 broad (100k+ posts): #angelnumbers #manifestation #spirituality #lawofattraction #spiritualawakening\n- 10 medium (10k-100k): Mix from #angelnumber #divinetiming #spiritualgrowth #productivity #focusedwork #manifestyourdreams #spiritualjourney #abundancemindset #deepwork #mindfulness\n- 5 niche (<10k): #the17project #17minutemethod #angelnumber[NUMBER] #spiritualproductivity #productivespirituality\n\n## IMAGE DESCRIPTION\nInclude:\n- Background: Purple #6B46C1 (solid, gradient to deep blue, or textured)\n- Accent: Gold #FFD700 for highlights, numbers, or borders\n- Main text: The key message or angel number prominently displayed\n- Secondary text: Supporting phrase or call-to-action\n- Style: Modern, clean, Instagram-optimized (1080x1080 or 1080x1350)\n- Mood: Mystical yet professional, spiritual yet grounded\n\nReturn ONLY the JSON object, no additional text or explanation.",
 
   "hashtag_categories": {
-    "broad": ["#angelnumbers", "#manifestation", "#spirituality", "#lawofattraction", "#spiritualawakening"],
-    "medium": ["#angelnumber", "#divinetiming", "#spiritualgrowth", "#manifestyourdreams", "#spiritualjourney", "#abundancemindset", "#raiseyourvibration", "#consciousness", "#energyhealing", "#intuition"],
-    "niche": ["#the17project", "#angelnumber17", "#spiritualproductivity", "#manifestationcoach", "#numerologyreading"]
+    "broad": ["#angelnumbers", "#manifestation", "#spirituality", "#lawofattraction", "#spiritualawakening", "#productivity", "#mindfulness"],
+    "medium": ["#angelnumber", "#divinetiming", "#spiritualgrowth", "#manifestyourdreams", "#spiritualjourney", "#abundancemindset", "#raiseyourvibration", "#consciousness", "#deepwork", "#focusmode", "#flowstate", "#intentionalliving"],
+    "niche": ["#the17project", "#17minutemethod", "#angelnumber17", "#spiritualproductivity", "#productivespirituality", "#manifestationcoach", "#numerologyreading"]
   },
 
   "brand_voice": {
-    "tone": ["authentic", "empowering", "relatable", "modern"],
-    "avoid": ["overly mystical", "fear-based", "gatekeeping", "toxic positivity"],
-    "emoji_style": "minimal and intentional",
-    "writing_style": "conversational with line breaks"
+    "tone": ["authentic", "empowering", "relatable", "modern", "actionable"],
+    "avoid": ["overly mystical", "fear-based", "gatekeeping", "toxic positivity", "generic advice", "vague promises"],
+    "emoji_style": "minimal and intentional (2-4 per post)",
+    "writing_style": "conversational with strategic line breaks, specific examples, actionable advice"
   },
 
   "design_guidelines": {
     "primary_color": "#6B46C1",
     "accent_color": "#FFD700",
-    "background_options": ["solid purple", "gradient purple to deep blue", "textured purple"],
-    "fonts": ["bold sans-serif for headlines", "clean sans-serif for body"],
-    "layout_types": ["centered quote", "split screen", "minimal text overlay"]
+    "background_options": ["solid purple", "gradient purple to deep blue", "textured purple", "dark purple with gold particles"],
+    "fonts": ["bold sans-serif for headlines and numbers", "clean sans-serif for body text"],
+    "layout_types": ["centered number focus", "quote card", "tip list", "split screen with number"],
+    "image_sizes": ["1080x1080 (square feed)", "1080x1350 (portrait feed)", "1080x1920 (stories)"]
+  },
+
+  "content_themes": {
+    "angel_numbers": {
+      "17": "Spiritual intuition meets new beginnings - our signature number",
+      "717": "Trust your spiritual path, luck is on your side",
+      "1717": "Double power of 17 - major spiritual downloads incoming",
+      "111": "Your thoughts are manifesting rapidly - choose wisely",
+      "222": "Trust the process, stay balanced, divine timing is real",
+      "333": "Ascended masters are near, creativity is flowing",
+      "444": "Angels are surrounding you, foundation is solid",
+      "555": "Major changes coming - embrace transformation",
+      "777": "Spiritual luck, you're on the right path",
+      "911": "Wake-up call - take action on your purpose NOW",
+      "711": "Spiritual downloads and lucky alignments",
+      "1111": "Manifestation portal is OPEN - make a wish",
+      "1212": "Fresh start energy, new cycle beginning",
+      "369": "Tesla's sacred code - manifestation amplifier",
+      "818": "Abundance flowing, karma clearing",
+      "1234": "Your steps are aligning perfectly"
+    },
+    "productivity_methods": [
+      "17-minute deep work sprints",
+      "17-17-17 triple focus blocks",
+      "17-minute morning ritual",
+      "17-minute declutter sessions",
+      "17-minute intention setting",
+      "17-minute visualization practice"
+    ],
+    "manifestation_techniques": [
+      "369 method (3x morning, 6x afternoon, 9x night)",
+      "Scripting your ideal day",
+      "Vision board creation",
+      "Gratitude amplification",
+      "Future self visualization",
+      "Angel number journaling"
+    ]
   }
 }
