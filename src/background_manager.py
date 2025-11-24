@@ -17,6 +17,7 @@ import requests
 import logging
 import json
 import random
+import time
 from pathlib import Path
 from typing import Optional, List, Dict
 from datetime import datetime
@@ -126,7 +127,7 @@ class BackgroundManager:
 
     def _search_pexels(self, query: str) -> Optional[str]:
         """
-        Search Pexels API for video.
+        Search Pexels API for video with retry logic.
 
         Args:
             query: Search query string
@@ -134,58 +135,77 @@ class BackgroundManager:
         Returns:
             Direct URL to video file, or None if not found
         """
-        try:
-            url = "https://api.pexels.com/videos/search"
-            headers = {"Authorization": self.api_key}
+        url = "https://api.pexels.com/videos/search"
+        headers = {"Authorization": self.api_key}
 
-            video_settings = self.config.get("video_settings", {})
-            params = {
-                "query": query,
-                "orientation": video_settings.get("orientation", "portrait"),
-                "size": video_settings.get("size", "large"),
-                "per_page": video_settings.get("per_page", 10)
-            }
+        video_settings = self.config.get("video_settings", {})
+        params = {
+            "query": query,
+            "orientation": video_settings.get("orientation", "portrait"),
+            "size": video_settings.get("size", "large"),
+            "per_page": video_settings.get("per_page", 10)
+        }
 
-            response = requests.get(url, headers=headers, params=params, timeout=10)
-            response.raise_for_status()
+        # Retry logic: 3 attempts with exponential backoff
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Increased timeout from 10s to 30s to handle slow API responses
+                response = requests.get(url, headers=headers, params=params, timeout=30)
+                response.raise_for_status()
 
-            data = response.json()
-            videos = data.get("videos", [])
+                data = response.json()
+                videos = data.get("videos", [])
 
-            if not videos:
-                logger.warning(f"No videos found for query: {query}")
-                return None
+                if not videos:
+                    logger.warning(f"No videos found for query: {query}")
+                    return None
 
-            # Get first video's HD file
-            video = videos[0]
-            video_files = video.get("video_files", [])
+                # Get first video's HD file
+                video = videos[0]
+                video_files = video.get("video_files", [])
 
-            # Find HD portrait video (width < height)
-            for vf in video_files:
-                if vf.get("quality") == "hd":
+                # Find HD portrait video (width < height)
+                for vf in video_files:
+                    if vf.get("quality") == "hd":
+                        width = vf.get("width", 0)
+                        height = vf.get("height", 0)
+                        if width > 0 and height > 0 and width < height:
+                            logger.info(f"Found HD portrait video: {width}x{height}")
+                            return vf["link"]
+
+                # Fallback to any portrait video
+                for vf in video_files:
                     width = vf.get("width", 0)
                     height = vf.get("height", 0)
                     if width > 0 and height > 0 and width < height:
-                        logger.info(f"Found HD portrait video: {width}x{height}")
+                        logger.info(f"Found portrait video: {width}x{height}")
                         return vf["link"]
 
-            # Fallback to any portrait video
-            for vf in video_files:
-                width = vf.get("width", 0)
-                height = vf.get("height", 0)
-                if width > 0 and height > 0 and width < height:
-                    logger.info(f"Found portrait video: {width}x{height}")
-                    return vf["link"]
+                logger.warning("No portrait videos found")
+                return None
 
-            logger.warning("No portrait videos found")
-            return None
+            except requests.exceptions.Timeout as e:
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt)  # Exponential backoff: 1s, 2s, 4s
+                    logger.warning(f"Pexels API timeout (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Pexels API timeout after {max_retries} attempts: {e}")
+                    return None
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt)
+                    logger.warning(f"Pexels API request error (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Pexels API request error after {max_retries} attempts: {e}")
+                    return None
+            except Exception as e:
+                logger.error(f"Pexels API error: {e}")
+                return None
 
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Pexels API request error: {e}")
-            return None
-        except Exception as e:
-            logger.error(f"Pexels API error: {e}")
-            return None
+        return None
 
     def _download_video(self, url: str, category: str) -> str:
         """

@@ -421,15 +421,19 @@ class VideoGenerator:
 
         palette = self.color_palettes[category]
 
-        # Load fonts
+        # Load fonts - try bundled font first, then fallback to default
         try:
+            # Try bundled DejaVu Sans Bold font (cross-platform)
+            font_path = Path(__file__).parent.parent / "fonts" / "DejaVuSans-Bold.ttf"
             primary_font = ImageFont.truetype(
-                "/System/Library/Fonts/Helvetica.ttc",
+                str(font_path),
                 self.fonts["primary"]["size"][scene_type]
             )
-        except:
+            logger.debug(f"Loaded bundled font: {font_path}")
+        except Exception as e:
+            # Fallback to default font if bundled font not found
             primary_font = ImageFont.load_default()
-            logger.warning("Using default fonts (custom fonts not found)")
+            logger.warning(f"Could not load bundled font, using default: {e}")
 
         # Text colors
         primary_color = self._hex_to_rgb(palette["primary_text"])
