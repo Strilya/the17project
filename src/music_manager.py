@@ -1,21 +1,19 @@
 """
-Music Manager Module
+Music Manager Module - SIMPLIFIED
 
-This module handles background music for Instagram Reels.
-It manages spiritual/ambient music tracks and mixes them with voiceovers.
-
-Main functionality:
-- Manage bundled royalty-free spiritual music tracks
-- Mix background music with voiceovers at appropriate volume levels
-- Loop and trim music to match video duration
-- Support for 432Hz, ambient, and meditation music styles
+This module handles background music for Instagram Reels with a simple approach:
+- User manually adds MP3 files to music/ folder
+- System randomly selects one and mixes with voiceover
+- Music is ALWAYS cut to exactly 17 seconds (never extends video)
+- If no music files, gracefully fallback to voiceover only
 """
 
 import os
 import logging
 import random
+import shutil
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 from pydub import AudioSegment
 
 # Configure logging
@@ -28,44 +26,28 @@ logger = logging.getLogger(__name__)
 
 class MusicManager:
     """
-    Manages background music for Instagram Reels.
+    Simple music manager for Instagram Reels.
 
     Features:
-    - Bundled royalty-free spiritual music
-    - Audio mixing with volume control
-    - Music looping and trimming
-    - Multiple music styles (432Hz, ambient, meditation)
+    - Manual music file setup (user adds MP3s to music/ folder)
+    - Random selection from available tracks
+    - FIXED 17-second duration (music cut/looped to fit)
+    - Graceful fallback if no music available
     """
 
-    def __init__(self, music_dir: str = "music", cache_dir: str = "output/music_cache"):
+    def __init__(self, music_dir: str = "music"):
         """
         Initialize the MusicManager.
 
         Args:
-            music_dir: Directory containing bundled music files
-            cache_dir: Directory for cached/processed music files
+            music_dir: Directory containing music MP3 files
         """
         self.music_dir = Path(music_dir)
-        self.cache_dir = Path(cache_dir)
+        logger.info(f"MusicManager initialized with music directory: {self.music_dir}")
 
-        # Create directories if they don't exist
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-
-        logger.info(f"MusicManager initialized")
-        logger.info(f"Music directory: {self.music_dir}")
-        logger.info(f"Cache directory: {self.cache_dir}")
-
-    def get_background_music(
-        self,
-        duration: float = 17.0,
-        style: Optional[str] = None
-    ) -> Optional[str]:
+    def get_random_music_path(self) -> Optional[str]:
         """
-        Get background music file path, selecting randomly from available tracks.
-
-        Args:
-            duration: Target duration in seconds
-            style: Music style preference (meditation, 432hz, ambient_space, spiritual_healing)
+        Get a random music file from music/ directory.
 
         Returns:
             Path to music file, or None if no music available
@@ -74,165 +56,129 @@ class MusicManager:
             # Check if music directory exists
             if not self.music_dir.exists():
                 logger.warning(f"Music directory not found: {self.music_dir}")
-                logger.info("Creating music directory - add .mp3 files to enable background music")
-                self.music_dir.mkdir(parents=True, exist_ok=True)
                 return None
 
-            # Find all MP3 files in music directory
+            # Find all MP3 files
             music_files = list(self.music_dir.glob("*.mp3"))
 
             if not music_files:
-                logger.warning("No music files found in music directory")
+                logger.warning("No MP3 files found in music directory")
                 return None
 
-            # Filter by style if provided (look for style in filename)
-            if style:
-                style_files = [f for f in music_files if style.lower() in f.name.lower()]
-                if style_files:
-                    music_files = style_files
-                else:
-                    logger.info(f"No music files found for style '{style}', using any available")
-
-            # Randomly select a music file
+            # Randomly select one
             selected_file = random.choice(music_files)
             logger.info(f"Selected background music: {selected_file.name}")
 
             return str(selected_file)
 
         except Exception as e:
-            logger.error(f"Failed to get background music: {e}")
+            logger.error(f"Failed to get music file: {e}")
             return None
 
-    def mix_audio(
+    def mix_with_music(
         self,
         voiceover_path: str,
-        music_path: Optional[str],
         output_path: str,
+        target_duration: float = 17.0,
         music_volume: float = 0.25
     ) -> str:
         """
-        Mix voiceover with background music at specified volume.
+        Mix voiceover with background music. CRITICAL: Output is always exactly target_duration.
 
         Args:
-            voiceover_path: Path to voiceover audio file
-            music_path: Path to background music file (None to skip mixing)
-            output_path: Path to save mixed audio
+            voiceover_path: Path to voiceover audio (concatenated scenes)
+            output_path: Path to save final mixed audio
+            target_duration: Fixed duration in seconds (default 17.0) - NEVER EXCEEDED
             music_volume: Background music volume (0.0 to 1.0, default 0.25 = 25%)
 
         Returns:
-            Path to mixed audio file
+            Path to final mixed audio file (always exactly target_duration seconds)
         """
         try:
-            # If no music, just copy voiceover
-            if not music_path or not os.path.exists(music_path):
-                logger.info("No background music, using voiceover only")
-                voice = AudioSegment.from_file(voiceover_path)
+            # Get random music file
+            music_path = self.get_random_music_path()
+
+            # Load voiceover
+            voice = AudioSegment.from_file(voiceover_path)
+
+            # Convert target duration to milliseconds
+            target_ms = int(target_duration * 1000)
+
+            # CUT OR PAD voiceover to exactly target duration
+            if len(voice) > target_ms:
+                logger.warning(f"Voiceover ({len(voice)/1000:.1f}s) exceeds target ({target_duration}s), cutting to fit")
+                voice = voice[:target_ms]
+            elif len(voice) < target_ms:
+                # Pad with silence if shorter
+                silence_needed = target_ms - len(voice)
+                silence = AudioSegment.silent(duration=silence_needed)
+                voice = voice + silence
+                logger.info(f"Padded voiceover with {silence_needed/1000:.1f}s silence to reach {target_duration}s")
+
+            # If no music, just export voiceover at exact duration
+            if not music_path:
+                logger.info("No background music - using voiceover only")
                 voice.export(output_path, format='mp3', bitrate='128k')
+                logger.info(f"✅ Audio created: {target_duration}s (voiceover only)")
                 return output_path
 
-            # Load both audio files
-            logger.info(f"Mixing voiceover with background music...")
-            voice = AudioSegment.from_file(voiceover_path)
+            # Load music
             music = AudioSegment.from_file(music_path)
 
-            # Calculate volume reduction in dB
-            # 0.25 volume = -12dB, 0.30 volume = -10.5dB
-            db_reduction = -1 * (20 * (1 - music_volume) * 2)  # Approximation
-            music = music + db_reduction
+            # Reduce music volume to 25% (-12dB approximation)
+            music = music - 12
+            logger.info(f"Reduced music volume to {music_volume * 100:.0f}% (-12dB)")
 
-            logger.info(f"Music volume: {music_volume * 100:.0f}% ({db_reduction:.1f}dB)")
-
-            # Loop music if shorter than voice
-            voice_duration = len(voice)
-            if len(music) < voice_duration:
-                loops_needed = (voice_duration // len(music)) + 1
-                logger.info(f"Looping music {loops_needed} times to match voiceover duration")
+            # Loop music if shorter than target
+            if len(music) < target_ms:
+                loops_needed = (target_ms // len(music)) + 1
+                logger.info(f"Looping music {loops_needed} times to reach {target_duration}s")
                 music = music * loops_needed
 
-            # Trim music to match voice duration exactly
-            music = music[:voice_duration]
+            # CUT music to exactly target duration
+            music = music[:target_ms]
+            logger.info(f"Cut music to exactly {target_duration}s")
 
-            # Overlay voice on top of music (voice at full volume, music at background)
+            # Overlay voiceover on top of music
             mixed = music.overlay(voice)
 
-            # Export with high quality
-            mixed.export(
-                output_path,
-                format='mp3',
-                bitrate='128k',
-                parameters=["-q:a", "2"]  # High quality
-            )
+            # Double-check duration is exact
+            if len(mixed) != target_ms:
+                logger.warning(f"Mixed audio duration mismatch, forcing to {target_duration}s")
+                mixed = mixed[:target_ms]
 
-            logger.info(f"Mixed audio created: {output_path}")
-            logger.info(f"Duration: {len(mixed) / 1000.0:.2f} seconds")
+            # Export
+            mixed.export(output_path, format='mp3', bitrate='128k')
 
+            logger.info(f"✅ Mixed audio created: {len(mixed)/1000:.2f}s (voiceover + background music)")
             return output_path
 
         except Exception as e:
-            logger.error(f"Failed to mix audio: {e}")
+            logger.error(f"Music mixing failed: {e}")
             logger.warning("Falling back to voiceover only")
-            # Fallback: just use voiceover
-            voice = AudioSegment.from_file(voiceover_path)
-            voice.export(output_path, format='mp3', bitrate='128k')
-            return output_path
 
-    def concatenate_and_mix(
-        self,
-        audio_segments: List[str],
-        music_path: Optional[str],
-        output_path: str,
-        music_volume: float = 0.25
-    ) -> str:
-        """
-        Concatenate multiple audio segments, then mix with background music.
+            # Fallback: just export voiceover at exact duration
+            try:
+                voice = AudioSegment.from_file(voiceover_path)
+                target_ms = int(target_duration * 1000)
 
-        Args:
-            audio_segments: List of paths to audio files to concatenate
-            music_path: Path to background music file
-            output_path: Path to save final mixed audio
-            music_volume: Background music volume (0.0 to 1.0)
+                # Ensure exact duration
+                if len(voice) > target_ms:
+                    voice = voice[:target_ms]
+                elif len(voice) < target_ms:
+                    silence = AudioSegment.silent(duration=target_ms - len(voice))
+                    voice = voice + silence
 
-        Returns:
-            Path to final mixed audio file
-        """
-        try:
-            # Concatenate all voiceover segments
-            logger.info(f"Concatenating {len(audio_segments)} audio segments...")
-            combined_voice = AudioSegment.empty()
-
-            for i, segment_path in enumerate(audio_segments):
-                segment = AudioSegment.from_file(segment_path)
-                combined_voice += segment
-                logger.debug(f"Added segment {i+1}: {segment_path} ({len(segment)/1000.0:.2f}s)")
-
-            # Save concatenated voiceover temporarily
-            temp_voice_path = str(Path(output_path).parent / "temp_concatenated_voice.mp3")
-            combined_voice.export(temp_voice_path, format='mp3')
-
-            logger.info(f"Total voiceover duration: {len(combined_voice) / 1000.0:.2f} seconds")
-
-            # Mix with background music
-            result = self.mix_audio(
-                voiceover_path=temp_voice_path,
-                music_path=music_path,
-                output_path=output_path,
-                music_volume=music_volume
-            )
-
-            # Clean up temp file
-            if os.path.exists(temp_voice_path):
-                os.remove(temp_voice_path)
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Failed to concatenate and mix audio: {e}")
-            raise
+                voice.export(output_path, format='mp3', bitrate='128k')
+                return output_path
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {fallback_error}")
+                raise
 
 
 def main():
     """
-    Main function for testing MusicManager locally.
+    Test the MusicManager.
 
     Usage:
         python src/music_manager.py
@@ -242,43 +188,45 @@ def main():
         print("TESTING MUSIC MANAGER")
         print("="*70)
 
-        # Initialize manager
+        # Initialize
         manager = MusicManager()
 
-        # Test 1: Get background music
-        print("\nTest 1: Getting background music...")
-        music_path = manager.get_background_music(duration=17.0, style="meditation")
+        # Check for music files
+        music_path = manager.get_random_music_path()
         if music_path:
-            print(f"✅ Found music: {music_path}")
+            print(f"\n✅ Found music: {music_path}")
         else:
-            print("⚠️  No music files found - add .mp3 files to music/ directory")
+            print("\n⚠️  No music files found")
+            print("   Add MP3 files to music/ directory to enable background music")
 
-        # Test 2: Create test voiceover
-        print("\nTest 2: Creating test voiceover...")
+        # Create test voiceover
+        print("\nCreating test voiceover...")
         from gtts import gTTS
-        test_text = "This is a test voiceover for background music mixing."
-        test_voice_path = "output/audio/test_voice.mp3"
         os.makedirs("output/audio", exist_ok=True)
-        tts = gTTS(text=test_text, lang='en', slow=False)
+        test_voice_path = "output/audio/test_voice.mp3"
+        tts = gTTS(text="This is a test voiceover for the music mixer.", lang='en', tld='co.uk', slow=False)
         tts.save(test_voice_path)
-        print(f"✅ Created test voiceover: {test_voice_path}")
+        print(f"✅ Created test voiceover")
 
-        # Test 3: Mix audio (if music available)
-        if music_path:
-            print("\nTest 3: Mixing voiceover with music...")
-            output_path = "output/audio/test_mixed.mp3"
-            result = manager.mix_audio(
-                voiceover_path=test_voice_path,
-                music_path=music_path,
-                output_path=output_path,
-                music_volume=0.25
-            )
-            print(f"✅ Mixed audio created: {result}")
+        # Test mixing
+        print("\nMixing audio (fixed 17-second duration)...")
+        output_path = "output/audio/test_mixed.mp3"
+        result = manager.mix_with_music(
+            voiceover_path=test_voice_path,
+            output_path=output_path,
+            target_duration=17.0,
+            music_volume=0.25
+        )
 
-            # Check file size
-            if Path(result).exists():
-                size_kb = Path(result).stat().st_size / 1024
-                print(f"   File size: {size_kb:.2f} KB")
+        # Verify duration
+        final_audio = AudioSegment.from_file(result)
+        duration = len(final_audio) / 1000.0
+        print(f"✅ Final audio duration: {duration:.2f} seconds")
+
+        if abs(duration - 17.0) < 0.1:
+            print("✅ Duration is exactly 17 seconds!")
+        else:
+            print(f"⚠️  Duration mismatch: expected 17.0s, got {duration:.2f}s")
 
         print("\n" + "="*70)
         print("MUSIC MANAGER TEST COMPLETE")
