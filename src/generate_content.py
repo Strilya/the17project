@@ -237,8 +237,30 @@ class ContentGenerator:
                 content_text = content_text[start:end].strip()
 
             # Parse the response text as JSON
-            # Claude should return structured JSON based on our prompt
-            content = json.loads(content_text)
+            # Try parsing first, if it fails due to control characters, clean and retry
+            try:
+                content = json.loads(content_text)
+            except json.JSONDecodeError as e:
+                # If parsing fails with control character error, try cleaning the JSON
+                if "control character" in str(e).lower():
+                    logger.warning("JSON has control characters, attempting to clean...")
+                    # Replace literal control characters with escaped versions
+                    # This is a simple approach - replaces literal newlines/tabs/returns
+                    import re
+                    # Find all string values and escape control characters within them
+                    def escape_control_chars(match):
+                        text = match.group(0)
+                        text = text.replace('\n', '\\n')
+                        text = text.replace('\r', '\\r')
+                        text = text.replace('\t', '\\t')
+                        return text
+                    # Apply to content between quotes (string values)
+                    content_text_cleaned = re.sub(r'"[^"]*"', escape_control_chars, content_text)
+                    content = json.loads(content_text_cleaned)
+                    logger.info("Successfully cleaned and parsed JSON")
+                else:
+                    # Re-raise if not a control character issue
+                    raise
 
             # DEBUG: Log the raw structure of what Claude returned
             logger.info(f"Raw content structure from Claude: {json.dumps(content, indent=2)}")
