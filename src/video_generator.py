@@ -466,7 +466,8 @@ class VideoGenerator:
                 if background.duration < duration:
                     # Calculate how many loops needed
                     n_loops = int(duration / background.duration) + 1
-                    background = background.looped(n_loops)
+                    # Use .loop() method (moviepy 1.x/2.x compatible)
+                    background = background.loop(n=n_loops)
 
                 # Trim to exact duration
                 background = background.subclipped(0, duration)
