@@ -73,10 +73,10 @@ node_modules/
 labshock/
 output/
 
-# Music files (can be large, may have licensing restrictions)
-music/*.mp3
-music/*.wav
-music/*.m4a
-music/*.ogg
+# Music files - ALLOW IN GIT for background music
+# music/*.mp3
+# music/*.wav
+# music/*.m4a
+# music/*.ogg
 # But keep the README
 !music/README.md
