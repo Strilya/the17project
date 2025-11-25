@@ -334,6 +334,80 @@ class VideoGenerator:
             logger.error(f"Failed to generate voiceover: {e}")
             raise
 
+    def _add_background_music(self, voiceover_path: Path, output_path: Path, target_duration: float) -> Path:
+        """
+        Mix voiceover with random background music from music/ folder.
+
+        Args:
+            voiceover_path: Path to voiceover audio
+            output_path: Path to save mixed audio
+            target_duration: Target duration in seconds (17.0)
+
+        Returns:
+            Path to final mixed audio (or voiceover-only if no music available)
+        """
+        import shutil
+        from pydub import AudioSegment
+
+        music_dir = Path("music")
+
+        # Check if music folder exists
+        if not music_dir.exists():
+            logger.warning("No music/ folder found - using voiceover only")
+            shutil.copy(voiceover_path, output_path)
+            return output_path
+
+        # Get all MP3 files
+        music_files = list(music_dir.glob("*.mp3"))
+
+        if not music_files:
+            logger.warning("No MP3 files in music/ folder - using voiceover only")
+            shutil.copy(voiceover_path, output_path)
+            return output_path
+
+        # Pick random music file
+        import random
+        music_file = random.choice(music_files)
+        logger.info(f"Using background music: {music_file.name}")
+
+        try:
+            # Load audio files
+            voiceover = AudioSegment.from_file(str(voiceover_path))
+            music = AudioSegment.from_file(str(music_file))
+
+            # Reduce music volume to 20% (background level)
+            music = music - 14  # -14dB ≈ 20% volume
+            logger.info("Reduced music volume to 20% (background level)")
+
+            # Ensure music matches voiceover duration
+            target_ms = int(target_duration * 1000)
+
+            if len(music) > target_ms:
+                # Trim music to match
+                music = music[:target_ms]
+                logger.info(f"Trimmed music to {target_duration}s")
+            elif len(music) < target_ms:
+                # Loop music if too short
+                loops_needed = (target_ms // len(music)) + 1
+                music = music * loops_needed
+                music = music[:target_ms]
+                logger.info(f"Looped music to reach {target_duration}s")
+
+            # Mix: music as base layer, voiceover overlaid on top
+            mixed = music.overlay(voiceover)
+
+            # Export mixed audio
+            mixed.export(str(output_path), format='mp3', bitrate='128k')
+            logger.info(f"✅ Mixed audio with background music: {target_duration}s")
+
+            return output_path
+
+        except Exception as e:
+            logger.error(f"Failed to mix background music: {e}")
+            logger.warning("Falling back to voiceover only")
+            shutil.copy(voiceover_path, output_path)
+            return output_path
+
     def _generate_all_audio(
         self,
         content: Dict[str, Any],
@@ -668,29 +742,54 @@ class VideoGenerator:
             scaling_factor = 1.0
 
             if len(combined_voice) > target_ms:
-                # Calculate how much we're cutting
-                scaling_factor = FIXED_DURATION / original_duration
-                logger.warning(f"Voiceover ({original_duration:.1f}s) exceeds 17s - cutting to 17s and scaling text overlays by {scaling_factor:.3f}x")
+                logger.warning(f"Voiceover ({original_duration:.1f}s) exceeds 17s - trimming segments to fit exactly")
 
-                # Cut audio at 17 seconds (simple approach - keeps voiceover clear)
+                # Cut audio at 17 seconds
                 combined_voice = combined_voice[:target_ms]
 
-                # Scale text overlay durations to fit within 17 seconds
-                logger.info(f"Scaling text overlay durations by {scaling_factor:.3f}x to fit 17s")
-                for scene_type in audio_segments:
-                    original_dur = audio_segments[scene_type]['duration']
-                    scaled_dur = original_dur * scaling_factor
-                    audio_segments[scene_type]['duration'] = scaled_dur
-                    logger.debug(f"  {scene_type}: {original_dur:.2f}s → {scaled_dur:.2f}s")
+                # Calculate which segments actually fit within 17 seconds
+                # Use ACTUAL durations, not proportional scaling
+                cumulative_time = 0.0
+                for scene_type in ["hook", "meaning", "action", "cta"]:
+                    segment_duration = audio_segments[scene_type]['duration']
+
+                    if cumulative_time + segment_duration <= FIXED_DURATION:
+                        # Segment fits completely
+                        logger.info(f"  {scene_type}: {segment_duration:.2f}s (fully included)")
+                        cumulative_time += segment_duration
+                    elif cumulative_time < FIXED_DURATION:
+                        # Segment is partially included - trim it
+                        remaining_time = FIXED_DURATION - cumulative_time
+                        audio_segments[scene_type]['duration'] = remaining_time
+                        logger.warning(f"  {scene_type}: trimmed from {segment_duration:.2f}s to {remaining_time:.2f}s")
+                        cumulative_time = FIXED_DURATION
+                    else:
+                        # Segment is completely cut off
+                        audio_segments[scene_type]['duration'] = 0.0
+                        logger.warning(f"  {scene_type}: completely cut (no time remaining)")
 
             elif len(combined_voice) < target_ms:
                 silence = AudioSegment.silent(duration=target_ms - len(combined_voice))
                 combined_voice = combined_voice + silence
                 logger.info(f"Padded voiceover to {FIXED_DURATION}s")
 
-            # Export final voiceover
-            combined_voice.export(str(final_audio_path), format='mp3')
-            logger.info(f"✅ Final voiceover: {FIXED_DURATION}s (NO music)")
+            # Export voiceover (temporary - will mix with music)
+            temp_voiceover_path = Path(self.audio_settings["output_folder"]) / f"temp_voiceover_{timestamp}.mp3"
+            combined_voice.export(str(temp_voiceover_path), format='mp3')
+            logger.info(f"✅ Voiceover generated: {FIXED_DURATION}s")
+
+            # ========================================================================
+            # STEP 3B: Add background music from music/ folder
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 3B: Adding background music")
+            logger.info("="*70)
+
+            final_audio_path = self._add_background_music(temp_voiceover_path, final_audio_path, FIXED_DURATION)
+
+            # Clean up temp voiceover
+            if temp_voiceover_path.exists():
+                temp_voiceover_path.unlink()
 
             # Set total_audio_duration to FIXED_DURATION for video creation
             total_audio_duration = FIXED_DURATION
@@ -717,8 +816,13 @@ class VideoGenerator:
             for scene_type in ["hook", "meaning", "action", "cta"]:
                 segment_info = audio_segments[scene_type]
                 scene_text = segment_info['text']
-                # Use SCALED duration (fits within 17 seconds)
+                # Use ACTUAL duration from audio (not config)
                 duration = segment_info['duration']
+
+                # Skip segments that were completely cut off
+                if duration <= 0:
+                    logger.info(f"  {scene_type}: SKIPPED (cut off)")
+                    continue
 
                 logger.info(f"  {scene_type}: {duration:.2f}s @ {current_time:.2f}s")
 
