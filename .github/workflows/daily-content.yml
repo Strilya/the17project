@@ -55,28 +55,31 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      # Step 4.5: Download background music (FreePD - Public Domain)
-      - name: Download background music
+      # Step 4.5: Check for background music (manual setup required)
+      - name: Check for background music
         run: |
-          echo "Downloading public domain background music from FreePD..."
+          echo "Checking for background music files..."
           mkdir -p music
 
-          # Download 3 ambient meditation tracks from FreePD (100% public domain)
-          # These are stable direct links that will not expire
-
-          # Track 1: Ambient meditation
-          curl -L "https://freepd.com/music/Ambient%20Piano.mp3" -o "music/432hz_ambient_meditation.mp3" || echo "Track 1 failed"
-
-          # Track 2: Peaceful ambient
-          curl -L "https://freepd.com/music/Meditation.mp3" -o "music/spiritual_healing_frequency.mp3" || echo "Track 2 failed"
-
-          # Track 3: Relaxing atmosphere
-          curl -L "https://freepd.com/music/Relaxing%20Ballad.mp3" -o "music/meditation_peaceful_flow.mp3" || echo "Track 3 failed"
-
-          # Verify downloads
-          echo "Checking downloaded music files:"
-          ls -lh music/*.mp3 || echo "Warning: No music files downloaded"
-          echo "Music download complete"
+          # Check if music files exist (should be set up via GitHub Secrets or git-lfs)
+          if ls music/*.mp3 1> /dev/null 2>&1; then
+            echo "✅ Found background music files:"
+            ls -lh music/*.mp3
+            echo "Music will be mixed with voiceovers at 25% volume"
+          else
+            echo "⚠️ No background music files found"
+            echo "Videos will be generated with voiceover only (no background music)"
+            echo ""
+            echo "To add background music:"
+            echo "  1. Download 3-5 ambient meditation MP3 files from Pixabay or Free Music Archive"
+            echo "  2. Add them to the music/ directory"
+            echo "  3. Commit and push (or use git-lfs for large files)"
+            echo ""
+            echo "Recommended sources:"
+            echo "  - https://pixabay.com/music/search/meditation/"
+            echo "  - https://freemusicarchive.org/search?quicksearch=meditation"
+            echo ""
+          fi
 
       # Step 5: Verify environment setup
       - name: Verify environment
