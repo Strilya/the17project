@@ -239,15 +239,56 @@ class VideoGenerator:
         total_duration = sum(seg['duration'] for seg in audio_segments.values())
         logger.info(f"\n✅ Total audio duration: {total_duration:.2f}s")
 
+        # CAP DURATION: If audio exceeds 20s, trim segments to fit
+        MAX_DURATION = 20.0
+        if total_duration > MAX_DURATION:
+            logger.warning(f"⚠️  Audio duration ({total_duration:.2f}s) exceeds maximum ({MAX_DURATION}s), trimming...")
+
+            # Trim segments to fit within MAX_DURATION
+            cumulative = 0.0
+            for scene in ["hook", "meaning", "action", "cta"]:
+                seg_duration = audio_segments[scene]['duration']
+
+                if cumulative + seg_duration <= MAX_DURATION:
+                    # Segment fits completely
+                    cumulative += seg_duration
+                elif cumulative < MAX_DURATION:
+                    # Partial segment - trim it
+                    remaining = MAX_DURATION - cumulative
+                    audio_segments[scene]['duration'] = remaining
+                    logger.info(f"  Trimmed {scene} from {seg_duration:.2f}s to {remaining:.2f}s")
+                    cumulative = MAX_DURATION
+                else:
+                    # Segment completely cut off
+                    audio_segments[scene]['duration'] = 0.0
+                    logger.info(f"  Removed {scene} (exceeds max duration)")
+
+            total_duration = MAX_DURATION
+            logger.info(f"✅ Adjusted duration: {total_duration:.2f}s")
+
         # ===================================================================
         # STEP 2: Concatenate audio and add background music
         # ===================================================================
         logger.info("\nSTEP 2: Mixing audio...")
-        
-        # Concatenate voiceover segments
+
+        # Concatenate voiceover segments (respecting trimmed durations)
         combined = AudioSegment.empty()
         for scene in ["hook", "meaning", "action", "cta"]:
-            segment = AudioSegment.from_file(audio_segments[scene]['path'])
+            seg_info = audio_segments[scene]
+
+            # Skip if duration is 0 (completely cut off)
+            if seg_info['duration'] <= 0:
+                logger.info(f"  Skipping {scene} (duration = 0)")
+                continue
+
+            segment = AudioSegment.from_file(seg_info['path'])
+
+            # Trim to specified duration (in case it was capped)
+            duration_ms = int(seg_info['duration'] * 1000)
+            if len(segment) > duration_ms:
+                segment = segment[:duration_ms]
+                logger.info(f"  Trimmed {scene} audio to {seg_info['duration']:.2f}s")
+
             combined += segment
         
         temp_voice = Path("output/audio") / f"temp_voice_{timestamp}.mp3"
@@ -269,13 +310,18 @@ class VideoGenerator:
         # STEP 4: Create text overlays (synced to audio)
         # ===================================================================
         logger.info("\nSTEP 4: Creating text overlays...")
-        
+
         text_clips = []
         current_time = 0.0
 
         for scene in ["hook", "meaning", "action", "cta"]:
             seg = audio_segments[scene]
-            
+
+            # Skip segments with 0 duration (cut off)
+            if seg['duration'] <= 0:
+                logger.info(f"  Skipping {scene} (duration = 0)")
+                continue
+
             logger.info(f"  {scene}: {seg['duration']:.2f}s @ {current_time:.2f}s")
             
             # Create text overlay
