@@ -638,27 +638,17 @@ class VideoGenerator:
             logger.info("STEP 2: Validating total audio duration")
             logger.info("="*70)
 
-            dynamic_timing_config = self.audio_settings.get("dynamic_timing", {})
-            target_duration = dynamic_timing_config.get("target_duration", 17.0)
-            max_duration = dynamic_timing_config.get("max_duration", 17.5)
+            # CRITICAL: Video is ALWAYS 17 seconds - never flexible!
+            FIXED_DURATION = 17.0
 
-            is_valid, total_audio_duration = self._validate_total_duration(
-                audio_segments,
-                target_duration=target_duration,
-                max_duration=max_duration
-            )
-
-            if not is_valid:
-                logger.warning(f"Audio duration ({total_audio_duration:.2f}s) exceeds maximum ({max_duration:.2f}s)")
-                excess_pct = ((total_audio_duration - max_duration) / max_duration) * 100
-                logger.warning(f"Video will be {excess_pct:.0f}% longer than target duration")
-                logger.info("Continuing with extended duration - consider shortening content text")
+            logger.info(f"Total voiceover duration: {sum(seg['duration'] for seg in audio_segments.values()):.2f}s")
+            logger.info(f"Target video duration: {FIXED_DURATION}s (FIXED - never changes)")
 
             # ========================================================================
-            # STEP 3: Get background music and mix with voiceover
+            # STEP 3: Concatenate voiceover and mix with music (ALWAYS 17 seconds)
             # ========================================================================
             logger.info("\n" + "="*70)
-            logger.info("STEP 3: Adding background music")
+            logger.info("STEP 3: Mixing audio (fixed 17-second duration)")
             logger.info("="*70)
 
             music_config = self.audio_settings.get("background_music", {})
@@ -668,39 +658,54 @@ class VideoGenerator:
             # Collect all audio segment paths
             audio_file_paths = [seg['path'] for seg in audio_segments.values()]
 
-            # Path for final mixed audio (voiceover + background music)
+            # Path for concatenated voiceover (temp)
+            temp_voice_path = Path(self.audio_settings["output_folder"]) / f"temp_concatenated_{timestamp}.mp3"
+
+            # Path for final mixed audio
             final_audio_path = Path(self.audio_settings["output_folder"]) / f"final_mixed_{timestamp}.mp3"
 
-            if music_enabled:
-                # Get background music
-                music_styles = music_config.get("styles", ["meditation"])
-                music_style = random.choice(music_styles)
-                music_path = self.music_manager.get_background_music(
-                    duration=total_audio_duration,
-                    style=music_style
-                )
+            # Step 3a: Concatenate all voiceover segments
+            logger.info("Concatenating voiceover segments...")
+            from pydub import AudioSegment
+            combined_voice = AudioSegment.empty()
+            for i, audio_path in enumerate(audio_file_paths):
+                segment = AudioSegment.from_file(audio_path)
+                combined_voice += segment
+                logger.debug(f"  Segment {i+1}: {len(segment)/1000:.2f}s")
 
-                # Mix voiceover with background music
-                self.music_manager.concatenate_and_mix(
-                    audio_segments=audio_file_paths,
-                    music_path=music_path,
+            # Save concatenated voiceover
+            combined_voice.export(str(temp_voice_path), format='mp3')
+            logger.info(f"Concatenated voiceover: {len(combined_voice)/1000:.2f}s")
+
+            # Step 3b: Mix with music (or just use voiceover)
+            if music_enabled:
+                logger.info("Mixing with background music...")
+                self.music_manager.mix_with_music(
+                    voiceover_path=str(temp_voice_path),
                     output_path=str(final_audio_path),
+                    target_duration=FIXED_DURATION,  # ALWAYS 17 seconds
                     music_volume=music_volume
                 )
-
-                # Log the actual result (music might not be available)
-                if music_path:
-                    logger.info(f"✅ Mixed audio with background music at {music_volume*100:.0f}% volume")
-                else:
-                    logger.info("✅ Audio created (voiceover only - no music files found)")
             else:
-                # No background music - just concatenate voiceovers
                 logger.info("Background music disabled - using voiceover only")
-                from pydub import AudioSegment
-                combined = AudioSegment.empty()
-                for audio_path in audio_file_paths:
-                    combined += AudioSegment.from_file(audio_path)
-                combined.export(str(final_audio_path), format='mp3')
+                # Still need to ensure exact 17-second duration
+                target_ms = int(FIXED_DURATION * 1000)
+                if len(combined_voice) > target_ms:
+                    logger.warning(f"Cutting voiceover from {len(combined_voice)/1000:.1f}s to {FIXED_DURATION}s")
+                    combined_voice = combined_voice[:target_ms]
+                elif len(combined_voice) < target_ms:
+                    silence = AudioSegment.silent(duration=target_ms - len(combined_voice))
+                    combined_voice = combined_voice + silence
+                    logger.info(f"Padded voiceover to {FIXED_DURATION}s")
+
+                combined_voice.export(str(final_audio_path), format='mp3')
+
+            # Clean up temp voiceover file
+            if temp_voice_path.exists():
+                temp_voice_path.unlink()
+
+            # Set total_audio_duration to FIXED_DURATION for video creation
+            total_audio_duration = FIXED_DURATION
 
             # ========================================================================
             # STEP 4: Create background video clip
@@ -812,10 +817,9 @@ class VideoGenerator:
             logger.info("✅ VIDEO GENERATION COMPLETE")
             logger.info("="*70)
             logger.info(f"Output: {output_path}")
-            logger.info(f"Duration: {total_audio_duration:.2f} seconds")
+            logger.info(f"Duration: 17.00 seconds (FIXED)")
             logger.info(f"Resolution: {self.width}x{self.height}")
             logger.info(f"Background music: {'enabled' if music_enabled else 'disabled'}")
-            logger.info(f"Dynamic timing: enabled")
             logger.info("="*70 + "\n")
 
             return str(output_path)
