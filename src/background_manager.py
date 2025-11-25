@@ -161,28 +161,32 @@ class BackgroundManager:
                     logger.warning(f"No videos found for query: {query}")
                     return None
 
-                # Get first video's HD file
-                video = videos[0]
-                video_files = video.get("video_files", [])
+                # Find first VALIDATED HD video (no people/activities)
+                for video in videos:
+                    if not self._validate_video(video):
+                        logger.debug(f"Skipping video: failed validation")
+                        continue
 
-                # Find HD portrait video (width < height)
-                for vf in video_files:
-                    if vf.get("quality") == "hd":
+                    video_files = video.get("video_files", [])
+
+                    # Find HD portrait video (width < height)
+                    for vf in video_files:
+                        if vf.get("quality") == "hd":
+                            width = vf.get("width", 0)
+                            height = vf.get("height", 0)
+                            if width > 0 and height > 0 and width < height:
+                                logger.info(f"✅ Found validated HD portrait video: {width}x{height}")
+                                return vf["link"]
+
+                    # Fallback to any portrait video for this validated result
+                    for vf in video_files:
                         width = vf.get("width", 0)
                         height = vf.get("height", 0)
                         if width > 0 and height > 0 and width < height:
-                            logger.info(f"Found HD portrait video: {width}x{height}")
+                            logger.info(f"Found validated portrait video: {width}x{height}")
                             return vf["link"]
 
-                # Fallback to any portrait video
-                for vf in video_files:
-                    width = vf.get("width", 0)
-                    height = vf.get("height", 0)
-                    if width > 0 and height > 0 and width < height:
-                        logger.info(f"Found portrait video: {width}x{height}")
-                        return vf["link"]
-
-                logger.warning("No portrait videos found")
+                logger.warning("No validated portrait videos found")
                 return None
 
             except requests.exceptions.Timeout as e:
@@ -206,6 +210,51 @@ class BackgroundManager:
                 return None
 
         return None
+
+    def _validate_video(self, video_data: Dict) -> bool:
+        """
+        Validate video is appropriate for spiritual content (no people/activities).
+
+        Args:
+            video_data: Video metadata from Pexels API
+
+        Returns:
+            True if video is valid, False otherwise
+        """
+        # Check resolution - must be HD minimum
+        width = video_data.get('width', 0)
+        height = video_data.get('height', 0)
+
+        if width < 1080 or height < 1920:
+            logger.debug(f"Rejected: resolution too low ({width}x{height})")
+            return False
+
+        # Check duration - prefer longer clips (minimum 10s)
+        duration = video_data.get('duration', 0)
+        if duration < 10:
+            logger.debug(f"Rejected: duration too short ({duration}s)")
+            return False
+
+        # Check tags for red flag keywords (people/activities)
+        tags_str = ' '.join([tag.lower() for tag in video_data.get('tags', [])])
+        url_str = video_data.get('url', '').lower()
+        combined = f"{tags_str} {url_str}"
+
+        # Reject if contains people-related keywords
+        bad_keywords = [
+            'person', 'man', 'woman', 'people', 'guy', 'girl', 'face', 'body',
+            'human', 'hand', 'hands', 'portrait', 'selfie', 'model', 'male', 'female',
+            'boy', 'child', 'adult', 'crowd', 'group', 'team', 'yoga', 'exercise',
+            'workout', 'dance', 'running', 'walking', 'sitting', 'standing'
+        ]
+
+        for keyword in bad_keywords:
+            if keyword in combined:
+                logger.debug(f"Rejected: contains keyword '{keyword}'")
+                return False
+
+        logger.debug("Video passed validation")
+        return True
 
     def _download_video(self, url: str, category: str) -> str:
         """
