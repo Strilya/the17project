@@ -455,22 +455,23 @@ class VideoGenerator:
 
                 # Resize to fit our dimensions (1080x1920)
                 if background.h != self.height:
-                    background = background.resized(height=self.height)
+                    background = background.resize(height=self.height)
 
                 if background.w > self.width:
                     # Crop to center if too wide
                     x_center = background.w / 2
-                    background = background.cropped(x1=x_center - self.width/2, x2=x_center + self.width/2)
+                    background = background.crop(x1=x_center - self.width/2, x2=x_center + self.width/2)
 
                 # Loop if shorter than duration
                 if background.duration < duration:
                     # Calculate how many loops needed
                     n_loops = int(duration / background.duration) + 1
-                    # Use .loop() method (moviepy 1.x/2.x compatible)
-                    background = background.loop(n=n_loops)
+                    # Create looped video by concatenating copies
+                    looped_clips = [background] * n_loops
+                    background = concatenate_videoclips(looped_clips)
 
                 # Trim to exact duration
-                background = background.subclipped(0, duration)
+                background = background.subclip(0, duration)
 
                 # Add semi-transparent color overlay to maintain brand colors
                 overlay_color = self._hex_to_rgb(palette["gradient_start"])
