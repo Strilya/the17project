@@ -1,19 +1,18 @@
 """
-Video Generator - FIXED FOR EXACT 17 SECONDS
+Video Generator - 17 SECONDS + SMART COLOR CONTRAST
 
-Key features:
-- ALWAYS 17 seconds (target duration)
-- Clean 4K backgrounds (NO overlays)
-- Text perfectly synced with voice
-- Speech at max 1.3x speed
-- Content fits naturally in 17 seconds
+Features:
+- Exact 17-second videos
+- Clean 4K backgrounds
+- Smart text colors that CONTRAST with background
+- Purple/Gold/White palette
 """
 
 import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -36,10 +35,20 @@ logger = logging.getLogger(__name__)
 
 
 class VideoGenerator:
-    """Generate perfect 17-second Instagram Reels."""
+    """Generate perfect 17-second Reels with smart color contrast."""
 
-    TARGET_DURATION = 17.0  # FIXED target
-    MAX_SPEED = 1.3  # Maximum speech speedup
+    TARGET_DURATION = 17.0
+    MAX_SPEED = 1.3
+
+    # COLOR PALETTE - Purple/Gold/White
+    TEXT_COLORS = {
+        "bright_purple": "#9D4EDD",      # Bright purple - for dark backgrounds
+        "deep_purple": "#5A189A",        # Deep purple - for light backgrounds  
+        "gold": "#FFD700",                # Gold - for purple/blue backgrounds
+        "white": "#FFFFFF",               # White - for very dark backgrounds
+        "magenta": "#D946EF",             # Magenta - for green backgrounds
+        "light_purple": "#E0AAFF"         # Light purple - for medium backgrounds
+    }
 
     def __init__(self, config_path: Optional[str] = None):
         """Initialize VideoGenerator."""
@@ -62,29 +71,128 @@ class VideoGenerator:
         self.background_manager = BackgroundManager()
         self.audio_generator = AudioGenerator()
 
-        logger.info("VideoGenerator initialized (17s target)")
+        logger.info("VideoGenerator initialized (17s + smart colors)")
 
-    def _hex_to_rgb(self, hex_color: str):
+    def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
         """Convert hex to RGB."""
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
-    def _create_text_overlay(self, text: str, category: str, scene_type: str) -> Image.Image:
-        """Create transparent text overlay."""
+    def _analyze_background_color(self, video_path: str) -> str:
+        """
+        Analyze video background to pick best contrasting text color.
+        
+        Returns color key from TEXT_COLORS dict.
+        """
+        try:
+            # Sample middle frame
+            video = VideoFileClip(video_path)
+            middle_frame = video.get_frame(video.duration / 2)
+            video.close()
+            
+            # Convert to PIL Image
+            img = Image.fromarray(middle_frame)
+            
+            # Get dominant colors (sample center region)
+            center_x = img.width // 2
+            center_y = img.height // 2
+            sample_size = 200
+            
+            crop = img.crop((
+                center_x - sample_size,
+                center_y - sample_size,
+                center_x + sample_size,
+                center_y + sample_size
+            ))
+            
+            # Calculate average RGB
+            np_img = np.array(crop)
+            avg_r = np.mean(np_img[:, :, 0])
+            avg_g = np.mean(np_img[:, :, 1])
+            avg_b = np.mean(np_img[:, :, 2])
+            
+            # Calculate brightness
+            brightness = (avg_r + avg_g + avg_b) / 3
+            
+            # Determine dominant hue
+            max_channel = max(avg_r, avg_g, avg_b)
+            
+            logger.info(f"Background analysis: R={avg_r:.0f} G={avg_g:.0f} B={avg_b:.0f} Brightness={brightness:.0f}")
+            
+            # SMART COLOR SELECTION
+            
+            # Very dark background → White or bright purple
+            if brightness < 60:
+                logger.info("Dark background → Using WHITE text")
+                return "white"
+            
+            # Dark background → Bright purple or gold
+            elif brightness < 100:
+                if avg_b > avg_r and avg_b > avg_g:  # Blue-ish
+                    logger.info("Dark blue background → Using GOLD text")
+                    return "gold"
+                else:
+                    logger.info("Dark background → Using BRIGHT PURPLE text")
+                    return "bright_purple"
+            
+            # Medium brightness
+            elif brightness < 150:
+                # Yellow/Orange (sunset, fire)
+                if avg_r > 150 and avg_g > 100 and avg_b < 100:
+                    logger.info("Yellow/Orange background → Using DEEP PURPLE text")
+                    return "deep_purple"
+                
+                # Green/Teal (nature, ocean)
+                elif avg_g > avg_r and avg_g > avg_b:
+                    logger.info("Green background → Using MAGENTA text")
+                    return "magenta"
+                
+                # Purple/Blue (space, nebula)
+                elif avg_b > avg_r:
+                    logger.info("Blue/Purple background → Using GOLD text")
+                    return "gold"
+                
+                else:
+                    logger.info("Medium background → Using BRIGHT PURPLE text")
+                    return "bright_purple"
+            
+            # Light background
+            else:
+                logger.info("Light background → Using DEEP PURPLE text")
+                return "deep_purple"
+                
+        except Exception as e:
+            logger.error(f"Color analysis failed: {e}")
+            # Default fallback
+            return "bright_purple"
+
+    def _create_text_overlay(
+        self, 
+        text: str, 
+        text_color_key: str,
+        scene_type: str
+    ) -> Image.Image:
+        """Create text overlay with smart contrasting color."""
         img = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
 
-        palette = self.color_palettes[category]
+        # Get color from palette
+        text_color_hex = self.TEXT_COLORS[text_color_key]
+        text_color = self._hex_to_rgb(text_color_hex) + (255,)
 
         # Load font
         try:
             font_path = Path(__file__).parent.parent / "fonts" / "DejaVuSans-Bold.ttf"
-            font_size = self.fonts["primary"]["size"][scene_type]
+            font_sizes = {
+                "hook": 110,
+                "meaning": 85,
+                "action": 85,
+                "cta": 95
+            }
+            font_size = font_sizes.get(scene_type, 85)
             font = ImageFont.truetype(str(font_path), font_size)
         except:
             font = ImageFont.load_default()
-
-        text_color = self._hex_to_rgb(palette["primary_text"]) + (255,)
 
         # Word wrap
         words = text.split()
@@ -104,7 +212,7 @@ class VideoGenerator:
         if current_line:
             lines.append(' '.join(current_line))
 
-        # Draw centered
+        # Draw centered with strong shadow
         line_height = font_size + 20
         total_height = len(lines) * line_height
         y_start = (self.height - total_height) // 2
@@ -115,15 +223,17 @@ class VideoGenerator:
             x = (self.width - text_width) // 2
             y = y_start + (i * line_height)
 
-            # Shadow
-            draw.text((x + 3, y + 3), line, font=font, fill=(0, 0, 0, 180))
-            # Text
+            # Strong shadow for readability
+            for offset in [(0, 4), (4, 0), (0, -4), (-4, 0), (4, 4), (-4, -4), (4, -4), (-4, 4)]:
+                draw.text((x + offset[0], y + offset[1]), line, font=font, fill=(0, 0, 0, 220))
+            
+            # Main text
             draw.text((x, y), line, font=font, fill=text_color)
 
         return img
 
     def _create_gradient_background(self, category: str) -> Image.Image:
-        """Create gradient (fallback only)."""
+        """Gradient fallback."""
         palette = self.color_palettes[category]
         img = Image.new('RGB', (self.width, self.height))
         draw = ImageDraw.Draw(img)
@@ -140,8 +250,12 @@ class VideoGenerator:
 
         return img
 
-    def _create_background_clip(self, category: str, duration: float):
-        """Create CLEAN 4K background (NO overlays)."""
+    def _create_background_clip(self, category: str, duration: float) -> Tuple[object, str]:
+        """
+        Create clean 4K background.
+        
+        Returns: (video_clip, video_path_or_none)
+        """
         bg_video_path = self.background_manager.get_background_video(category)
 
         if bg_video_path and os.path.exists(bg_video_path):
@@ -150,11 +264,9 @@ class VideoGenerator:
             try:
                 video = VideoFileClip(bg_video_path)
 
-                # Resize
                 if video.h != self.height:
                     video = video.resized(height=self.height)
 
-                # Crop width
                 if video.w > self.width:
                     x_center = video.w / 2
                     video = video.cropped(
@@ -162,24 +274,21 @@ class VideoGenerator:
                         x2=x_center + self.width/2
                     )
 
-                # Loop if needed
                 if video.duration < duration:
                     n = int(duration / video.duration) + 1
                     video = concatenate_videoclips([video] * n)
 
-                # Trim to exact duration
                 video = video.subclipped(0, duration)
 
-                logger.info("✅ Clean 4K background (NO overlays)")
-                return video
+                logger.info("✅ Clean 4K background")
+                return (video, bg_video_path)
 
             except Exception as e:
                 logger.error(f"Video failed: {e}")
 
-        # Fallback
         logger.info("Using gradient fallback")
         gradient = self._create_gradient_background(category)
-        return ImageClip(np.array(gradient), duration=duration)
+        return (ImageClip(np.array(gradient), duration=duration), None)
 
     def generate_reel(
         self,
@@ -187,15 +296,7 @@ class VideoGenerator:
         category: str = "angel_numbers",
         output_filename: Optional[str] = None
     ) -> str:
-        """
-        Generate EXACTLY 17-second Instagram Reel.
-        
-        Flow:
-        1. Generate audio segments
-        2. Check if total > 17s, speed up if needed (max 1.3x)
-        3. Pad with silence if < 17s
-        4. Create video that matches EXACTLY 17s
-        """
+        """Generate EXACTLY 17-second Reel with smart colors."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if output_filename is None:
@@ -204,14 +305,14 @@ class VideoGenerator:
         output_path = Path("output/reels") / output_filename
 
         logger.info("\n" + "="*70)
-        logger.info("GENERATING 17-SECOND INSTAGRAM REEL")
+        logger.info("GENERATING 17-SECOND REEL (SMART COLORS)")
         logger.info("="*70)
 
-        # Generate audio segments
+        # Generate audio
         logger.info("STEP 1: Generating audio...")
         
         audio_segments = {}
-        base_speed = 1.15  # Start with 1.15x
+        base_speed = 1.15
         
         for scene in ["hook", "meaning", "action", "cta"]:
             text = content.get(scene, "")
@@ -233,30 +334,25 @@ class VideoGenerator:
                 'audio': audio
             }
             
-            logger.info(f"  {scene}: {duration:.2f}s")
+            logger.info(f"  {scene}: {duration:.2f}s - '{text}'")
 
-        # Check total duration
         total_duration = sum(seg['duration'] for seg in audio_segments.values())
         logger.info(f"\nInitial total: {total_duration:.2f}s")
 
-        # Adjust if needed
+        # Speed up if needed
         if total_duration > self.TARGET_DURATION:
-            # Need to speed up
             speedup_factor = total_duration / self.TARGET_DURATION
             
             if speedup_factor > self.MAX_SPEED / base_speed:
-                logger.warning(f"Content too long! Would need {speedup_factor:.2f}x speed")
-                logger.info(f"Limiting to max {self.MAX_SPEED}x speed")
+                logger.warning(f"Content too long! Limiting to {self.MAX_SPEED}x")
                 speedup_factor = self.MAX_SPEED / base_speed
             
-            logger.info(f"Speeding up audio by {speedup_factor:.2f}x")
+            logger.info(f"Speeding up by {speedup_factor:.2f}x")
             
-            # Speed up all segments
             for scene, seg in audio_segments.items():
                 sped_up = seg['audio'].speedup(playback_speed=speedup_factor)
                 seg['audio'] = sped_up
                 seg['duration'] = len(sped_up) / 1000.0
-                logger.info(f"  {scene}: {seg['duration']:.2f}s (sped up)")
             
             total_duration = sum(seg['duration'] for seg in audio_segments.values())
 
@@ -267,32 +363,33 @@ class VideoGenerator:
         for scene in ["hook", "meaning", "action", "cta"]:
             combined += audio_segments[scene]['audio']
 
-        # Pad to EXACTLY 17 seconds if short
+        # Pad to exactly 17s
         target_ms = int(self.TARGET_DURATION * 1000)
         if len(combined) < target_ms:
-            silence_needed = target_ms - len(combined)
-            combined = combined + AudioSegment.silent(duration=silence_needed)
-            logger.info(f"Added {silence_needed/1000:.2f}s silence to reach 17s")
+            silence = target_ms - len(combined)
+            combined = combined + AudioSegment.silent(duration=silence)
+            logger.info(f"Added {silence/1000:.2f}s silence")
         elif len(combined) > target_ms:
-            # Trim if slightly over
             combined = combined[:target_ms]
-            logger.info(f"Trimmed to exactly 17s")
 
-        # Export voiceover
         temp_voice = Path("output/audio") / f"temp_voice_{timestamp}.mp3"
         combined.export(str(temp_voice), format='mp3')
-        
-        final_duration = len(combined) / 1000.0
-        logger.info(f"✅ Final audio duration: {final_duration:.2f}s")
 
-        # Add music
         final_audio = Path("output/audio") / f"final_{timestamp}.mp3"
-        self._add_music(temp_voice, final_audio, final_duration)
+        self._add_music(temp_voice, final_audio, self.TARGET_DURATION)
         temp_voice.unlink()
 
         # Create background
         logger.info("\nSTEP 3: Creating 4K background...")
-        background = self._create_background_clip(category, self.TARGET_DURATION)
+        background, bg_path = self._create_background_clip(category, self.TARGET_DURATION)
+
+        # Analyze background and pick text color
+        if bg_path:
+            text_color_key = self._analyze_background_color(bg_path)
+        else:
+            text_color_key = "bright_purple"  # Fallback for gradient
+
+        logger.info(f"✅ Text color: {text_color_key.upper()}")
 
         # Create text overlays
         logger.info("\nSTEP 4: Creating text overlays...")
@@ -303,11 +400,9 @@ class VideoGenerator:
         for scene in ["hook", "meaning", "action", "cta"]:
             seg = audio_segments[scene]
             
-            logger.info(f"  {scene}: {seg['duration']:.2f}s @ {current_time:.2f}s")
-            
             text_img = self._create_text_overlay(
                 text=seg['text'],
-                category=category,
+                text_color_key=text_color_key,
                 scene_type=scene
             )
             
@@ -338,7 +433,7 @@ class VideoGenerator:
             temp_audiofile='temp-audio.m4a',
             remove_temp=True,
             preset='medium',
-            bitrate='8000k'  # Higher bitrate for better quality
+            bitrate='8000k'
         )
 
         # Cleanup
@@ -359,8 +454,8 @@ class VideoGenerator:
         logger.info("✅ VIDEO COMPLETE")
         logger.info("="*70)
         logger.info(f"Output: {output_path}")
-        logger.info(f"Duration: EXACTLY {self.TARGET_DURATION}s")
-        logger.info(f"Quality: 4K backgrounds, clean HD export")
+        logger.info(f"Duration: {self.TARGET_DURATION}s")
+        logger.info(f"Text color: {text_color_key.upper()} ({self.TEXT_COLORS[text_color_key]})")
         logger.info("="*70 + "\n")
 
         return str(output_path)
@@ -373,7 +468,7 @@ class VideoGenerator:
         music_dir = Path("music")
         
         if not music_dir.exists() or not list(music_dir.glob("*.mp3")):
-            logger.warning("No music - voiceover only")
+            logger.warning("No music")
             shutil.copy(voiceover_path, output_path)
             return
 
@@ -385,10 +480,8 @@ class VideoGenerator:
             voice = AudioSegment.from_file(str(voiceover_path))
             music = AudioSegment.from_file(str(music_file))
 
-            # Reduce volume
-            music = music - 14  # 20% volume
+            music = music - 14
             
-            # Match duration
             voice_ms = len(voice)
             
             if len(music) > voice_ms:
@@ -398,11 +491,10 @@ class VideoGenerator:
                 music = music * loops
                 music = music[:voice_ms]
 
-            # Mix
             mixed = music.overlay(voice)
             mixed.export(str(output_path), format='mp3', bitrate='192k')
             
-            logger.info("✅ Mixed with music at 20%")
+            logger.info("✅ Mixed with music")
 
         except Exception as e:
             logger.error(f"Music failed: {e}")
@@ -410,14 +502,14 @@ class VideoGenerator:
 
 
 def main():
-    """Test generator."""
+    """Test."""
     generator = VideoGenerator()
 
     test_content = {
-        "hook": "Seeing angel number 17 everywhere?",
-        "meaning": "This powerful number signals new beginnings and spiritual awakening",
-        "action": "Trust your intuition. The universe is guiding you toward your highest path",
-        "cta": "Follow @the17project for daily spiritual guidance"
+        "hook": "Seeing 717 everywhere?",
+        "meaning": "Angel number 717 signals new spiritual beginnings approaching fast",
+        "action": "Trust your intuition. The universe guides you forward",
+        "cta": "Follow @the17project for guidance"
     }
 
     video = generator.generate_reel(
