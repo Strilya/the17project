@@ -245,7 +245,12 @@ class BackgroundManager:
             'person', 'man', 'woman', 'people', 'guy', 'girl', 'face', 'body',
             'human', 'hand', 'hands', 'portrait', 'selfie', 'model', 'male', 'female',
             'boy', 'child', 'adult', 'crowd', 'group', 'team', 'yoga', 'exercise',
-            'workout', 'dance', 'running', 'walking', 'sitting', 'standing'
+            'workout', 'dance', 'running', 'walking', 'sitting', 'standing',
+            'athlete', 'player', 'sport', 'fitness', 'gym', 'training', 'jogging',
+            'hiking', 'climbing', 'cycling', 'swimming', 'surfing', 'skiing',
+            'street', 'city', 'urban', 'tourist', 'travel', 'vacation', 'crowd',
+            'festival', 'concert', 'party', 'celebration', 'wedding', 'event',
+            'restaurant', 'cafe', 'bar', 'club', 'shopping', 'market', 'store'
         ]
 
         for keyword in bad_keywords:
