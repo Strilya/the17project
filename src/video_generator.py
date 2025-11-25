@@ -43,6 +43,9 @@ from background_manager import BackgroundManager
 # AudioGenerator for optimized voiceovers
 from audio_generator import AudioGenerator
 
+# MusicManager for background music
+from music_manager import MusicManager
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -99,6 +102,10 @@ class VideoGenerator:
 
         # Initialize audio generator for optimized voiceovers
         self.audio_generator = AudioGenerator()
+
+        # Initialize music manager for background music
+        music_dir = self.audio_settings.get("background_music", {}).get("music_dir", "music")
+        self.music_manager = MusicManager(music_dir=music_dir)
 
         logger.info("VideoGenerator initialized successfully")
         logger.info(f"Resolution: {self.width}x{self.height} @ {self.fps}fps")
@@ -332,6 +339,96 @@ class VideoGenerator:
             logger.error(f"Failed to generate voiceover: {e}")
             raise
 
+    def _generate_all_audio(
+        self,
+        content: Dict[str, Any],
+        timestamp: str
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Generate all audio segments first and measure their actual durations.
+
+        This enables dynamic timing where text overlays match actual audio length
+        instead of using fixed timings.
+
+        Args:
+            content: Content dictionary with scene text (hook, meaning, action, cta)
+            timestamp: Timestamp string for unique filenames
+
+        Returns:
+            Dictionary mapping scene types to their audio info:
+            {
+                'hook': {'path': '...', 'duration': 2.3, 'text': '...'},
+                'meaning': {'path': '...', 'duration': 5.1, 'text': '...'},
+                ...
+            }
+        """
+        audio_segments = {}
+        total_duration = 0.0
+
+        logger.info("Generating all audio segments with dynamic timing...")
+
+        for scene_type in ["hook", "meaning", "action", "cta"]:
+            # Get text for this scene
+            scene_text = content.get(scene_type, "")
+            if not scene_text:
+                logger.warning(f"No text for {scene_type} scene, using placeholder")
+                scene_text = f"{scene_type.upper()}"
+
+            # Generate audio file
+            audio_path = Path(self.audio_settings["output_folder"]) / f"{scene_type}_{timestamp}.mp3"
+            audio_path.parent.mkdir(parents=True, exist_ok=True)
+
+            self._generate_voiceover(scene_text, str(audio_path))
+
+            # Measure actual duration using pydub
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(str(audio_path))
+            duration = len(audio) / 1000.0  # Convert ms to seconds
+
+            audio_segments[scene_type] = {
+                'path': str(audio_path),
+                'duration': duration,
+                'text': scene_text
+            }
+
+            total_duration += duration
+            logger.info(f"  {scene_type}: {duration:.2f}s - {scene_text[:50]}...")
+
+        logger.info(f"Total audio duration: {total_duration:.2f} seconds")
+
+        return audio_segments
+
+    def _validate_total_duration(
+        self,
+        audio_segments: Dict[str, Dict[str, Any]],
+        target_duration: float = 17.0,
+        max_duration: float = 17.5
+    ) -> tuple[bool, float]:
+        """
+        Validate if total audio duration fits within target range.
+
+        Args:
+            audio_segments: Dictionary of audio segment info from _generate_all_audio
+            target_duration: Target duration in seconds (default 17.0)
+            max_duration: Maximum acceptable duration (default 17.5)
+
+        Returns:
+            Tuple of (is_valid, total_duration)
+            - is_valid: True if duration is acceptable, False if too long
+            - total_duration: Actual total duration in seconds
+        """
+        total_duration = sum(seg['duration'] for seg in audio_segments.values())
+
+        if total_duration > max_duration:
+            logger.warning(f"Total audio duration ({total_duration:.2f}s) exceeds max ({max_duration:.2f}s)")
+            return False, total_duration
+        elif total_duration < target_duration * 0.8:  # Less than 80% of target
+            logger.warning(f"Total audio duration ({total_duration:.2f}s) is much shorter than target ({target_duration:.2f}s)")
+            logger.info("This is acceptable - video will be shorter than target")
+
+        logger.info(f"Audio duration validation: {total_duration:.2f}s (target: {target_duration:.2f}s) ✓")
+        return True, total_duration
+
     def _create_background_clip(self, category: str, duration: float):
         """
         Create background video clip or gradient fallback.
@@ -490,14 +587,18 @@ class VideoGenerator:
         output_filename: Optional[str] = None
     ) -> str:
         """
-        Generate a complete 17-second Instagram Reel.
+        Generate a complete Instagram Reel with dynamic timing and background music.
+
+        NEW FEATURES:
+        - Dynamic timing: Text overlays match actual audio duration (not fixed)
+        - Background music: Spiritual ambient music mixed with voiceover
 
         Args:
             content: Dictionary containing video content with keys:
-                - hook: Hook text (3 seconds)
-                - meaning: Meaning text (5 seconds)
-                - action: Action text (5 seconds)
-                - cta: Call-to-action text (4 seconds)
+                - hook: Hook text
+                - meaning: Meaning text
+                - action: Action text
+                - cta: Call-to-action text
             category: Content category (angel_numbers, productivity, etc.)
             output_filename: Optional custom filename
 
@@ -505,34 +606,117 @@ class VideoGenerator:
             Path to generated video file
         """
         try:
-            logger.info("Starting 17-second Reel generation...")
+            logger.info("Starting Instagram Reel generation with dynamic timing...")
             logger.info(f"Category: {category}")
+
+            # Generate timestamp for unique filenames
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             # Generate output filename if not provided
             if output_filename is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 output_filename = f"reel_{category}_{timestamp}.mp4"
 
             output_path = Path(self.video_settings["output_folder"]) / output_filename
 
-            # Step 1: Create background clip (video or gradient) for full 17 seconds
-            logger.info("Creating background...")
-            total_duration = sum(self.scene_timings.values())
-            background_clip = self._create_background_clip(category, total_duration)
+            # ========================================================================
+            # STEP 1: Generate all audio segments first and measure actual durations
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 1: Generating audio with dynamic timing")
+            logger.info("="*70)
 
-            # Step 2: Create text overlays for each scene
+            audio_segments = self._generate_all_audio(content, timestamp)
+
+            # ========================================================================
+            # STEP 2: Validate total audio duration
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 2: Validating total audio duration")
+            logger.info("="*70)
+
+            dynamic_timing_config = self.audio_settings.get("dynamic_timing", {})
+            target_duration = dynamic_timing_config.get("target_duration", 17.0)
+            max_duration = dynamic_timing_config.get("max_duration", 17.5)
+
+            is_valid, total_audio_duration = self._validate_total_duration(
+                audio_segments,
+                target_duration=target_duration,
+                max_duration=max_duration
+            )
+
+            if not is_valid:
+                logger.warning(f"Audio duration ({total_audio_duration:.2f}s) exceeds maximum ({max_duration:.2f}s)")
+                logger.info("Continuing anyway - video will be slightly longer")
+
+            # ========================================================================
+            # STEP 3: Get background music and mix with voiceover
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 3: Adding background music")
+            logger.info("="*70)
+
+            music_config = self.audio_settings.get("background_music", {})
+            music_enabled = music_config.get("enabled", False)
+            music_volume = music_config.get("volume", 0.25)
+
+            # Collect all audio segment paths
+            audio_file_paths = [seg['path'] for seg in audio_segments.values()]
+
+            # Path for final mixed audio (voiceover + background music)
+            final_audio_path = Path(self.audio_settings["output_folder"]) / f"final_mixed_{timestamp}.mp3"
+
+            if music_enabled:
+                # Get background music
+                music_styles = music_config.get("styles", ["meditation"])
+                music_style = random.choice(music_styles)
+                music_path = self.music_manager.get_background_music(
+                    duration=total_audio_duration,
+                    style=music_style
+                )
+
+                # Mix voiceover with background music
+                self.music_manager.concatenate_and_mix(
+                    audio_segments=audio_file_paths,
+                    music_path=music_path,
+                    output_path=str(final_audio_path),
+                    music_volume=music_volume
+                )
+                logger.info(f"✅ Mixed audio with background music at {music_volume*100:.0f}% volume")
+            else:
+                # No background music - just concatenate voiceovers
+                logger.info("Background music disabled - using voiceover only")
+                from pydub import AudioSegment
+                combined = AudioSegment.empty()
+                for audio_path in audio_file_paths:
+                    combined += AudioSegment.from_file(audio_path)
+                combined.export(str(final_audio_path), format='mp3')
+
+            # ========================================================================
+            # STEP 4: Create background video clip
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 4: Creating background video")
+            logger.info("="*70)
+
+            background_clip = self._create_background_clip(category, total_audio_duration)
+
+            # ========================================================================
+            # STEP 5: Create text overlays using ACTUAL audio durations
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 5: Creating text overlays with dynamic timing")
+            logger.info("="*70)
+
             text_overlays = []
-            audio_files = []
-            current_time = 0
+            current_time = 0.0
 
             for scene_type in ["hook", "meaning", "action", "cta"]:
-                logger.info(f"Creating {scene_type} text overlay...")
+                segment_info = audio_segments[scene_type]
+                scene_text = segment_info['text']
+                # Use ACTUAL audio duration (not fixed timing)
+                duration = segment_info['duration']
 
-                # Get text for this scene
-                scene_text = content.get(scene_type, "")
-                if not scene_text:
-                    logger.warning(f"No text for {scene_type} scene, using placeholder")
-                    scene_text = f"{scene_type.upper()}"
+                logger.info(f"  {scene_type}: {duration:.2f}s @ {current_time:.2f}s")
 
                 # Create transparent text overlay
                 text_img = self._create_transparent_text_overlay(
@@ -542,55 +726,38 @@ class VideoGenerator:
                 )
 
                 # Save temporarily
-                temp_img_path = Path("output") / f"temp_{scene_type}_transparent.png"
+                temp_img_path = Path("output") / f"temp_{scene_type}_{timestamp}_transparent.png"
                 temp_img_path.parent.mkdir(exist_ok=True)
                 text_img.save(temp_img_path)
 
-                # Create clip with timing
-                duration = self.scene_timings[scene_type]
-
-                # For MoviePy 2.x, create ImageClip and set start time
+                # Create clip with DYNAMIC timing (actual audio duration)
                 text_clip = ImageClip(str(temp_img_path), duration=duration, is_mask=False)
                 text_clip = text_clip.with_start(current_time)
 
                 text_overlays.append(text_clip)
-
-                # Generate voiceover for this scene
-                audio_path = Path(self.audio_settings["output_folder"]) / f"temp_{scene_type}.mp3"
-                self._generate_voiceover(scene_text, str(audio_path))
-                audio_files.append(str(audio_path))
-
                 current_time += duration
 
-            # Step 3: Composite background + all text overlays
-            logger.info("Compositing final video...")
+            # ========================================================================
+            # STEP 6: Composite video and add mixed audio
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 6: Compositing final video")
+            logger.info("="*70)
+
             all_clips = [background_clip] + text_overlays
             final_video = CompositeVideoClip(all_clips)
 
-            # Load and concatenate audio
-            audio_clips = []
-            for i, audio_file in enumerate(audio_files):
-                audio = AudioFileClip(audio_file)
-                scene_duration = self.scene_timings[list(self.scene_timings.keys())[i]]
+            # Add the mixed audio (voiceover + background music)
+            final_audio_clip = AudioFileClip(str(final_audio_path))
+            final_video = final_video.with_audio(final_audio_clip) if hasattr(final_video, 'with_audio') else final_video
 
-                # Trim audio to match scene duration if needed
-                if audio.duration > scene_duration:
-                    audio = audio.subclipped(0, scene_duration) if hasattr(audio, 'subclipped') else audio
+            # ========================================================================
+            # STEP 7: Export final video
+            # ========================================================================
+            logger.info("\n" + "="*70)
+            logger.info("STEP 7: Exporting final video")
+            logger.info("="*70)
 
-                audio_clips.append(audio)
-
-            # Concatenate audio clips (simpler approach for moviepy 2.x)
-            try:
-                from moviepy import concatenate_audioclips
-                final_audio = concatenate_audioclips(audio_clips)
-            except:
-                # Fallback: use first audio clip only
-                final_audio = audio_clips[0] if audio_clips else None
-
-            if final_audio:
-                final_video = final_video.with_audio(final_audio) if hasattr(final_video, 'with_audio') else final_video
-
-            # Export final video
             logger.info(f"Exporting video to {output_path}...")
             final_video.write_videofile(
                 str(output_path),
@@ -602,31 +769,43 @@ class VideoGenerator:
                 preset='medium'
             )
 
-            # Clean up temporary files
+            # ========================================================================
+            # STEP 8: Clean up temporary files
+            # ========================================================================
+            logger.info("Cleaning up temporary files...")
+
+            # Clean up audio segment files
+            for segment_info in audio_segments.values():
+                audio_path = Path(segment_info['path'])
+                if audio_path.exists():
+                    audio_path.unlink()
+
+            # Clean up text overlay images
             for scene_type in ["hook", "meaning", "action", "cta"]:
-                # Clean up old temp files (if any)
-                temp_img = Path("output") / f"temp_{scene_type}.png"
+                temp_img = Path("output") / f"temp_{scene_type}_{timestamp}_transparent.png"
                 if temp_img.exists():
                     temp_img.unlink()
 
-                # Clean up new transparent temp files
-                temp_img_transparent = Path("output") / f"temp_{scene_type}_transparent.png"
-                if temp_img_transparent.exists():
-                    temp_img_transparent.unlink()
-
-                temp_audio = Path(self.audio_settings["output_folder"]) / f"temp_{scene_type}.mp3"
-                if temp_audio.exists():
-                    temp_audio.unlink()
+            # Clean up mixed audio file
+            if final_audio_path.exists():
+                final_audio_path.unlink()
 
             # Close clips
             for clip in text_overlays:
                 clip.close()
             background_clip.close()
             final_video.close()
+            final_audio_clip.close()
 
-            logger.info(f"Video generated successfully: {output_path}")
-            logger.info(f"Duration: 17 seconds")
+            logger.info("\n" + "="*70)
+            logger.info("✅ VIDEO GENERATION COMPLETE")
+            logger.info("="*70)
+            logger.info(f"Output: {output_path}")
+            logger.info(f"Duration: {total_audio_duration:.2f} seconds")
             logger.info(f"Resolution: {self.width}x{self.height}")
+            logger.info(f"Background music: {'enabled' if music_enabled else 'disabled'}")
+            logger.info(f"Dynamic timing: enabled")
+            logger.info("="*70 + "\n")
 
             return str(output_path)
 
