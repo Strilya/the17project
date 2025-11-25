@@ -1,11 +1,12 @@
 """
-Video Generator - FINAL FIXED VERSION
+Video Generator - FIXED FOR EXACT 17 SECONDS
 
-CRITICAL FIXES:
-1. NO purple gradient overlay - clean HD video only
-2. Duration = actual audio duration (NOT hardcoded 17s)
-3. Text timing synced perfectly with audio
-4. Background music integration working
+Key features:
+- ALWAYS 17 seconds (target duration)
+- Clean 4K backgrounds (NO overlays)
+- Text perfectly synced with voice
+- Speech at max 1.3x speed
+- Content fits naturally in 17 seconds
 """
 
 import os
@@ -35,7 +36,10 @@ logger = logging.getLogger(__name__)
 
 
 class VideoGenerator:
-    """Generate Instagram Reels with clean HD backgrounds and perfect audio sync."""
+    """Generate perfect 17-second Instagram Reels."""
+
+    TARGET_DURATION = 17.0  # FIXED target
+    MAX_SPEED = 1.3  # Maximum speech speedup
 
     def __init__(self, config_path: Optional[str] = None):
         """Initialize VideoGenerator."""
@@ -58,7 +62,7 @@ class VideoGenerator:
         self.background_manager = BackgroundManager()
         self.audio_generator = AudioGenerator()
 
-        logger.info("VideoGenerator initialized")
+        logger.info("VideoGenerator initialized (17s target)")
 
     def _hex_to_rgb(self, hex_color: str):
         """Convert hex to RGB."""
@@ -100,7 +104,7 @@ class VideoGenerator:
         if current_line:
             lines.append(' '.join(current_line))
 
-        # Draw centered text
+        # Draw centered
         line_height = font_size + 20
         total_height = len(lines) * line_height
         y_start = (self.height - total_height) // 2
@@ -119,7 +123,7 @@ class VideoGenerator:
         return img
 
     def _create_gradient_background(self, category: str) -> Image.Image:
-        """Create gradient background (fallback only)."""
+        """Create gradient (fallback only)."""
         palette = self.color_palettes[category]
         img = Image.new('RGB', (self.width, self.height))
         draw = ImageDraw.Draw(img)
@@ -137,22 +141,20 @@ class VideoGenerator:
         return img
 
     def _create_background_clip(self, category: str, duration: float):
-        """
-        Create clean HD video background (NO overlays).
-        """
+        """Create CLEAN 4K background (NO overlays)."""
         bg_video_path = self.background_manager.get_background_video(category)
 
         if bg_video_path and os.path.exists(bg_video_path):
-            logger.info(f"Using clean HD video: {bg_video_path}")
+            logger.info(f"Using 4K video: {bg_video_path}")
 
             try:
                 video = VideoFileClip(bg_video_path)
 
-                # Resize to height
+                # Resize
                 if video.h != self.height:
                     video = video.resized(height=self.height)
 
-                # Crop width if needed
+                # Crop width
                 if video.w > self.width:
                     x_center = video.w / 2
                     video = video.cropped(
@@ -168,13 +170,13 @@ class VideoGenerator:
                 # Trim to exact duration
                 video = video.subclipped(0, duration)
 
-                logger.info("✅ Clean HD background (NO overlays)")
+                logger.info("✅ Clean 4K background (NO overlays)")
                 return video
 
             except Exception as e:
                 logger.error(f"Video failed: {e}")
 
-        # Fallback to gradient
+        # Fallback
         logger.info("Using gradient fallback")
         gradient = self._create_gradient_background(category)
         return ImageClip(np.array(gradient), duration=duration)
@@ -186,13 +188,13 @@ class VideoGenerator:
         output_filename: Optional[str] = None
     ) -> str:
         """
-        Generate Instagram Reel with perfect timing.
+        Generate EXACTLY 17-second Instagram Reel.
         
         Flow:
-        1. Generate all 4 audio segments
-        2. Measure actual duration of each
-        3. Create video that matches EXACT audio duration
-        4. Add background music
+        1. Generate audio segments
+        2. Check if total > 17s, speed up if needed (max 1.3x)
+        3. Pad with silence if < 17s
+        4. Create video that matches EXACTLY 17s
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -202,157 +204,131 @@ class VideoGenerator:
         output_path = Path("output/reels") / output_filename
 
         logger.info("\n" + "="*70)
-        logger.info("GENERATING INSTAGRAM REEL")
+        logger.info("GENERATING 17-SECOND INSTAGRAM REEL")
         logger.info("="*70)
 
-        # ===================================================================
-        # STEP 1: Generate all audio segments and measure durations
-        # ===================================================================
-        logger.info("STEP 1: Generating audio segments...")
+        # Generate audio segments
+        logger.info("STEP 1: Generating audio...")
         
         audio_segments = {}
+        base_speed = 1.15  # Start with 1.15x
         
         for scene in ["hook", "meaning", "action", "cta"]:
             text = content.get(scene, "")
             audio_path = Path("output/audio") / f"{scene}_{timestamp}.mp3"
             
-            # Generate voiceover
             self.audio_generator.generate_voiceover(
                 text=text,
                 output_path=str(audio_path),
-                speed_factor=1.15
+                speed_factor=base_speed
             )
             
-            # Measure ACTUAL duration
             audio = AudioSegment.from_file(str(audio_path))
-            duration = len(audio) / 1000.0  # ms to seconds
+            duration = len(audio) / 1000.0
             
             audio_segments[scene] = {
                 'path': str(audio_path),
                 'text': text,
-                'duration': duration
+                'duration': duration,
+                'audio': audio
             }
             
-            logger.info(f"  {scene}: {duration:.2f}s - '{text[:30]}...'")
+            logger.info(f"  {scene}: {duration:.2f}s")
 
-        # Calculate total duration
+        # Check total duration
         total_duration = sum(seg['duration'] for seg in audio_segments.values())
-        logger.info(f"\n✅ Total audio duration: {total_duration:.2f}s")
+        logger.info(f"\nInitial total: {total_duration:.2f}s")
 
-        # CAP DURATION: If audio exceeds 20s, trim segments to fit
-        MAX_DURATION = 20.0
-        if total_duration > MAX_DURATION:
-            logger.warning(f"⚠️  Audio duration ({total_duration:.2f}s) exceeds maximum ({MAX_DURATION}s), trimming...")
+        # Adjust if needed
+        if total_duration > self.TARGET_DURATION:
+            # Need to speed up
+            speedup_factor = total_duration / self.TARGET_DURATION
+            
+            if speedup_factor > self.MAX_SPEED / base_speed:
+                logger.warning(f"Content too long! Would need {speedup_factor:.2f}x speed")
+                logger.info(f"Limiting to max {self.MAX_SPEED}x speed")
+                speedup_factor = self.MAX_SPEED / base_speed
+            
+            logger.info(f"Speeding up audio by {speedup_factor:.2f}x")
+            
+            # Speed up all segments
+            for scene, seg in audio_segments.items():
+                sped_up = seg['audio'].speedup(playback_speed=speedup_factor)
+                seg['audio'] = sped_up
+                seg['duration'] = len(sped_up) / 1000.0
+                logger.info(f"  {scene}: {seg['duration']:.2f}s (sped up)")
+            
+            total_duration = sum(seg['duration'] for seg in audio_segments.values())
 
-            # Trim segments to fit within MAX_DURATION
-            cumulative = 0.0
-            for scene in ["hook", "meaning", "action", "cta"]:
-                seg_duration = audio_segments[scene]['duration']
-
-                if cumulative + seg_duration <= MAX_DURATION:
-                    # Segment fits completely
-                    cumulative += seg_duration
-                elif cumulative < MAX_DURATION:
-                    # Partial segment - trim it
-                    remaining = MAX_DURATION - cumulative
-                    audio_segments[scene]['duration'] = remaining
-                    logger.info(f"  Trimmed {scene} from {seg_duration:.2f}s to {remaining:.2f}s")
-                    cumulative = MAX_DURATION
-                else:
-                    # Segment completely cut off
-                    audio_segments[scene]['duration'] = 0.0
-                    logger.info(f"  Removed {scene} (exceeds max duration)")
-
-            total_duration = MAX_DURATION
-            logger.info(f"✅ Adjusted duration: {total_duration:.2f}s")
-
-        # ===================================================================
-        # STEP 2: Concatenate audio and add background music
-        # ===================================================================
+        # Concatenate audio
         logger.info("\nSTEP 2: Mixing audio...")
-
-        # Concatenate voiceover segments (respecting trimmed durations)
         combined = AudioSegment.empty()
-        for scene in ["hook", "meaning", "action", "cta"]:
-            seg_info = audio_segments[scene]
-
-            # Skip if duration is 0 (completely cut off)
-            if seg_info['duration'] <= 0:
-                logger.info(f"  Skipping {scene} (duration = 0)")
-                continue
-
-            segment = AudioSegment.from_file(seg_info['path'])
-
-            # Trim to specified duration (in case it was capped)
-            duration_ms = int(seg_info['duration'] * 1000)
-            if len(segment) > duration_ms:
-                segment = segment[:duration_ms]
-                logger.info(f"  Trimmed {scene} audio to {seg_info['duration']:.2f}s")
-
-            combined += segment
         
+        for scene in ["hook", "meaning", "action", "cta"]:
+            combined += audio_segments[scene]['audio']
+
+        # Pad to EXACTLY 17 seconds if short
+        target_ms = int(self.TARGET_DURATION * 1000)
+        if len(combined) < target_ms:
+            silence_needed = target_ms - len(combined)
+            combined = combined + AudioSegment.silent(duration=silence_needed)
+            logger.info(f"Added {silence_needed/1000:.2f}s silence to reach 17s")
+        elif len(combined) > target_ms:
+            # Trim if slightly over
+            combined = combined[:target_ms]
+            logger.info(f"Trimmed to exactly 17s")
+
+        # Export voiceover
         temp_voice = Path("output/audio") / f"temp_voice_{timestamp}.mp3"
         combined.export(str(temp_voice), format='mp3')
         
-        # Add background music
+        final_duration = len(combined) / 1000.0
+        logger.info(f"✅ Final audio duration: {final_duration:.2f}s")
+
+        # Add music
         final_audio = Path("output/audio") / f"final_{timestamp}.mp3"
-        self._add_music(temp_voice, final_audio, total_duration)
-        
-        temp_voice.unlink()  # Clean up
+        self._add_music(temp_voice, final_audio, final_duration)
+        temp_voice.unlink()
 
-        # ===================================================================
-        # STEP 3: Create background video (matches audio duration)
-        # ===================================================================
-        logger.info("\nSTEP 3: Creating background...")
-        background = self._create_background_clip(category, total_duration)
+        # Create background
+        logger.info("\nSTEP 3: Creating 4K background...")
+        background = self._create_background_clip(category, self.TARGET_DURATION)
 
-        # ===================================================================
-        # STEP 4: Create text overlays (synced to audio)
-        # ===================================================================
+        # Create text overlays
         logger.info("\nSTEP 4: Creating text overlays...")
-
+        
         text_clips = []
         current_time = 0.0
 
         for scene in ["hook", "meaning", "action", "cta"]:
             seg = audio_segments[scene]
-
-            # Skip segments with 0 duration (cut off)
-            if seg['duration'] <= 0:
-                logger.info(f"  Skipping {scene} (duration = 0)")
-                continue
-
+            
             logger.info(f"  {scene}: {seg['duration']:.2f}s @ {current_time:.2f}s")
             
-            # Create text overlay
             text_img = self._create_text_overlay(
                 text=seg['text'],
                 category=category,
                 scene_type=scene
             )
             
-            # Save temporarily
             temp_img = Path("output") / f"temp_{scene}_{timestamp}.png"
             temp_img.parent.mkdir(exist_ok=True)
             text_img.save(temp_img)
             
-            # Create clip
             clip = ImageClip(str(temp_img), duration=seg['duration'])
             clip = clip.with_start(current_time)
             text_clips.append(clip)
             
             current_time += seg['duration']
 
-        # ===================================================================
-        # STEP 5: Composite and export
-        # ===================================================================
+        # Composite
         logger.info("\nSTEP 5: Compositing...")
         
         final = CompositeVideoClip([background] + text_clips)
         final = final.with_audio(AudioFileClip(str(final_audio)))
-        final = final.with_duration(total_duration)
+        final = final.with_duration(self.TARGET_DURATION)
 
-        logger.info(f"\nSTEP 6: Exporting {total_duration:.2f}s video...")
+        logger.info("\nSTEP 6: Exporting...")
         
         final.write_videofile(
             str(output_path),
@@ -361,12 +337,11 @@ class VideoGenerator:
             audio_codec='aac',
             temp_audiofile='temp-audio.m4a',
             remove_temp=True,
-            preset='medium'
+            preset='medium',
+            bitrate='8000k'  # Higher bitrate for better quality
         )
 
-        # ===================================================================
-        # STEP 7: Cleanup
-        # ===================================================================
+        # Cleanup
         for seg in audio_segments.values():
             Path(seg['path']).unlink(missing_ok=True)
         
@@ -384,7 +359,8 @@ class VideoGenerator:
         logger.info("✅ VIDEO COMPLETE")
         logger.info("="*70)
         logger.info(f"Output: {output_path}")
-        logger.info(f"Duration: {total_duration:.2f}s (matches audio)")
+        logger.info(f"Duration: EXACTLY {self.TARGET_DURATION}s")
+        logger.info(f"Quality: 4K backgrounds, clean HD export")
         logger.info("="*70 + "\n")
 
         return str(output_path)
@@ -397,7 +373,7 @@ class VideoGenerator:
         music_dir = Path("music")
         
         if not music_dir.exists() or not list(music_dir.glob("*.mp3")):
-            logger.warning("No music - using voiceover only")
+            logger.warning("No music - voiceover only")
             shutil.copy(voiceover_path, output_path)
             return
 
@@ -410,9 +386,9 @@ class VideoGenerator:
             music = AudioSegment.from_file(str(music_file))
 
             # Reduce volume
-            music = music - 14  # -14dB ≈ 20%
+            music = music - 14  # 20% volume
             
-            # Match voice duration
+            # Match duration
             voice_ms = len(voice)
             
             if len(music) > voice_ms:
@@ -424,9 +400,9 @@ class VideoGenerator:
 
             # Mix
             mixed = music.overlay(voice)
-            mixed.export(str(output_path), format='mp3', bitrate='128k')
+            mixed.export(str(output_path), format='mp3', bitrate='192k')
             
-            logger.info("✅ Mixed with background music")
+            logger.info("✅ Mixed with music at 20%")
 
         except Exception as e:
             logger.error(f"Music failed: {e}")
@@ -434,23 +410,22 @@ class VideoGenerator:
 
 
 def main():
-    """Test the generator."""
+    """Test generator."""
     generator = VideoGenerator()
 
     test_content = {
-        "hook": "See 717 everywhere?",
-        "meaning": "Angel number 717 signals spiritual awakening",
-        "action": "Trust your intuition today",
-        "cta": "Follow @the17project"
+        "hook": "Seeing angel number 17 everywhere?",
+        "meaning": "This powerful number signals new beginnings and spiritual awakening",
+        "action": "Trust your intuition. The universe is guiding you toward your highest path",
+        "cta": "Follow @the17project for daily spiritual guidance"
     }
 
     video = generator.generate_reel(
         content=test_content,
-        category="angel_numbers",
-        output_filename="test_717.mp4"
+        category="angel_numbers"
     )
 
-    print(f"\n✅ Video: {video}")
+    print(f"\n✅ Generated: {video}")
 
 
 if __name__ == "__main__":
