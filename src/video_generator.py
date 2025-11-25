@@ -331,10 +331,11 @@ class VideoGenerator:
         """
         try:
             # Use AudioGenerator for optimized voiceover with speed adjustment
+            # INCREASED to 2.0x (double speed) to fit content within 17 seconds
             return self.audio_generator.generate_voiceover(
                 text=text,
                 output_path=output_path,
-                speed_factor=1.15  # 15% faster for better pacing
+                speed_factor=2.0  # 2x faster to fit verbose content in ~17 seconds
             )
         except Exception as e:
             logger.error(f"Failed to generate voiceover: {e}")
