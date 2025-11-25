@@ -129,7 +129,25 @@
       "tld": "us",
       "slow": false
     },
-    "output_folder": "output/audio"
+    "output_folder": "output/audio",
+    "background_music": {
+      "enabled": true,
+      "volume": 0.25,
+      "music_dir": "music",
+      "styles": [
+        "meditation",
+        "432hz",
+        "ambient_space",
+        "spiritual_healing"
+      ]
+    },
+    "dynamic_timing": {
+      "enabled": true,
+      "target_duration": 17.0,
+      "max_speedup_factor": 1.3,
+      "min_duration": 15.0,
+      "max_duration": 17.5
+    }
   },
   "branding": {
     "watermark_text": "@the17project",
