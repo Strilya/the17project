@@ -660,12 +660,16 @@ class VideoGenerator:
                 combined_voice += segment
                 logger.debug(f"  Segment {i+1}: {len(segment)/1000:.2f}s")
 
-            logger.info(f"Concatenated voiceover: {len(combined_voice)/1000:.2f}s")
+            original_duration = len(combined_voice) / 1000.0
+            logger.info(f"Concatenated voiceover: {original_duration:.2f}s")
 
-            # Ensure exact 17-second duration (cut or pad as needed)
+            # Calculate scaling factor if voiceover is too long
             target_ms = int(FIXED_DURATION * 1000)
+            scaling_factor = 1.0
+
             if len(combined_voice) > target_ms:
-                logger.warning(f"Cutting voiceover from {len(combined_voice)/1000:.1f}s to {FIXED_DURATION}s")
+                scaling_factor = FIXED_DURATION / original_duration
+                logger.warning(f"Voiceover ({original_duration:.1f}s) exceeds 17s - scaling text overlays by {scaling_factor:.3f}x")
                 combined_voice = combined_voice[:target_ms]
             elif len(combined_voice) < target_ms:
                 silence = AudioSegment.silent(duration=target_ms - len(combined_voice))
@@ -675,6 +679,15 @@ class VideoGenerator:
             # Export final voiceover
             combined_voice.export(str(final_audio_path), format='mp3')
             logger.info(f"✅ Final voiceover: {FIXED_DURATION}s (NO music)")
+
+            # Scale audio segment durations to match the 17-second constraint
+            if scaling_factor < 1.0:
+                logger.info(f"Scaling segment durations by {scaling_factor:.3f}x to fit 17 seconds")
+                for scene_type in audio_segments:
+                    original_dur = audio_segments[scene_type]['duration']
+                    scaled_dur = original_dur * scaling_factor
+                    audio_segments[scene_type]['duration'] = scaled_dur
+                    logger.debug(f"  {scene_type}: {original_dur:.2f}s → {scaled_dur:.2f}s")
 
             # Set total_audio_duration to FIXED_DURATION for video creation
             total_audio_duration = FIXED_DURATION
@@ -701,7 +714,7 @@ class VideoGenerator:
             for scene_type in ["hook", "meaning", "action", "cta"]:
                 segment_info = audio_segments[scene_type]
                 scene_text = segment_info['text']
-                # Use ACTUAL audio duration (not fixed timing)
+                # Use SCALED duration (fits within 17 seconds)
                 duration = segment_info['duration']
 
                 logger.info(f"  {scene_type}: {duration:.2f}s @ {current_time:.2f}s")
@@ -718,12 +731,21 @@ class VideoGenerator:
                 temp_img_path.parent.mkdir(exist_ok=True)
                 text_img.save(temp_img_path)
 
-                # Create clip with DYNAMIC timing (actual audio duration)
+                # Create clip with SCALED timing (fits within 17 seconds)
                 text_clip = ImageClip(str(temp_img_path), duration=duration, is_mask=False)
                 text_clip = text_clip.with_start(current_time)
 
                 text_overlays.append(text_clip)
                 current_time += duration
+
+            # Verify total overlay duration matches target
+            total_overlay_duration = sum(seg['duration'] for seg in audio_segments.values())
+            logger.info(f"Total text overlay duration: {total_overlay_duration:.2f}s (target: {FIXED_DURATION}s)")
+
+            if abs(total_overlay_duration - FIXED_DURATION) > 0.1:
+                logger.warning(f"⚠️  Overlay duration mismatch: {total_overlay_duration:.2f}s vs {FIXED_DURATION}s")
+            else:
+                logger.info(f"✅ Text overlays fit perfectly within {FIXED_DURATION}s")
 
             # ========================================================================
             # STEP 6: Composite video and add mixed audio
