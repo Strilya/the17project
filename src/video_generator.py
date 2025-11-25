@@ -706,24 +706,24 @@ class VideoGenerator:
             logger.info("STEP 2: Validating total audio duration")
             logger.info("="*70)
 
-            # CRITICAL: Video is ALWAYS 17 seconds - never flexible!
-            FIXED_DURATION = 17.0
+            # Calculate DYNAMIC duration from actual audio
+            total_audio_duration = sum(seg['duration'] for seg in audio_segments.values())
 
-            logger.info(f"Total voiceover duration: {sum(seg['duration'] for seg in audio_segments.values()):.2f}s")
-            logger.info(f"Target video duration: {FIXED_DURATION}s (FIXED - never changes)")
+            logger.info(f"Total voiceover duration: {total_audio_duration:.2f}s")
+            logger.info(f"Video duration will match audio: {total_audio_duration:.2f}s (DYNAMIC)")
 
             # ========================================================================
-            # STEP 3: Concatenate voiceover segments (VOICEOVER ONLY - NO MUSIC)
+            # STEP 3: Concatenate voiceover segments (with background music)
             # ========================================================================
             logger.info("\n" + "="*70)
-            logger.info("STEP 3: Concatenating voiceover (NO music mixing)")
+            logger.info("STEP 3: Concatenating voiceover")
             logger.info("="*70)
 
             # Collect all audio segment paths
             audio_file_paths = [seg['path'] for seg in audio_segments.values()]
 
             # Path for final audio
-            final_audio_path = Path(self.audio_settings["output_folder"]) / f"final_voiceover_{timestamp}.mp3"
+            final_audio_path = Path(self.audio_settings["output_folder"]) / f"final_audio_{timestamp}.mp3"
 
             # Concatenate all voiceover segments
             logger.info("Concatenating voiceover segments...")
@@ -734,49 +734,16 @@ class VideoGenerator:
                 combined_voice += segment
                 logger.debug(f"  Segment {i+1}: {len(segment)/1000:.2f}s")
 
-            original_duration = len(combined_voice) / 1000.0
-            logger.info(f"Concatenated voiceover: {original_duration:.2f}s")
+            actual_duration = len(combined_voice) / 1000.0
+            logger.info(f"Concatenated voiceover: {actual_duration:.2f}s")
 
-            # Calculate scaling factor for text overlays if we need to cut audio
-            target_ms = int(FIXED_DURATION * 1000)
-            scaling_factor = 1.0
-
-            if len(combined_voice) > target_ms:
-                logger.warning(f"Voiceover ({original_duration:.1f}s) exceeds 17s - trimming segments to fit exactly")
-
-                # Cut audio at 17 seconds
-                combined_voice = combined_voice[:target_ms]
-
-                # Calculate which segments actually fit within 17 seconds
-                # Use ACTUAL durations, not proportional scaling
-                cumulative_time = 0.0
-                for scene_type in ["hook", "meaning", "action", "cta"]:
-                    segment_duration = audio_segments[scene_type]['duration']
-
-                    if cumulative_time + segment_duration <= FIXED_DURATION:
-                        # Segment fits completely
-                        logger.info(f"  {scene_type}: {segment_duration:.2f}s (fully included)")
-                        cumulative_time += segment_duration
-                    elif cumulative_time < FIXED_DURATION:
-                        # Segment is partially included - trim it
-                        remaining_time = FIXED_DURATION - cumulative_time
-                        audio_segments[scene_type]['duration'] = remaining_time
-                        logger.warning(f"  {scene_type}: trimmed from {segment_duration:.2f}s to {remaining_time:.2f}s")
-                        cumulative_time = FIXED_DURATION
-                    else:
-                        # Segment is completely cut off
-                        audio_segments[scene_type]['duration'] = 0.0
-                        logger.warning(f"  {scene_type}: completely cut (no time remaining)")
-
-            elif len(combined_voice) < target_ms:
-                silence = AudioSegment.silent(duration=target_ms - len(combined_voice))
-                combined_voice = combined_voice + silence
-                logger.info(f"Padded voiceover to {FIXED_DURATION}s")
+            # NO CUTTING - use full audio duration
+            logger.info(f"Using FULL audio duration: {actual_duration:.2f}s (no cutting)")
 
             # Export voiceover (temporary - will mix with music)
             temp_voiceover_path = Path(self.audio_settings["output_folder"]) / f"temp_voiceover_{timestamp}.mp3"
             combined_voice.export(str(temp_voiceover_path), format='mp3')
-            logger.info(f"✅ Voiceover generated: {FIXED_DURATION}s")
+            logger.info(f"✅ Voiceover generated: {actual_duration:.2f}s")
 
             # ========================================================================
             # STEP 3B: Add background music from music/ folder
@@ -785,14 +752,15 @@ class VideoGenerator:
             logger.info("STEP 3B: Adding background music")
             logger.info("="*70)
 
-            final_audio_path = self._add_background_music(temp_voiceover_path, final_audio_path, FIXED_DURATION)
+            final_audio_path = self._add_background_music(temp_voiceover_path, final_audio_path, actual_duration)
 
             # Clean up temp voiceover
             if temp_voiceover_path.exists():
                 temp_voiceover_path.unlink()
 
-            # Set total_audio_duration to FIXED_DURATION for video creation
-            total_audio_duration = FIXED_DURATION
+            # Video duration matches audio duration
+            total_audio_duration = actual_duration
+            logger.info(f"Final video duration: {total_audio_duration:.2f}s")
 
             # ========================================================================
             # STEP 4: Create background video clip
@@ -847,12 +815,12 @@ class VideoGenerator:
 
             # Verify total overlay duration matches target
             total_overlay_duration = sum(seg['duration'] for seg in audio_segments.values())
-            logger.info(f"Total text overlay duration: {total_overlay_duration:.2f}s (target: {FIXED_DURATION}s)")
+            logger.info(f"Total text overlay duration: {total_overlay_duration:.2f}s (matches audio)")
 
-            if abs(total_overlay_duration - FIXED_DURATION) > 0.1:
-                logger.warning(f"⚠️  Overlay duration mismatch: {total_overlay_duration:.2f}s vs {FIXED_DURATION}s")
+            if abs(total_overlay_duration - total_audio_duration) > 0.1:
+                logger.warning(f"⚠️  Overlay duration mismatch: {total_overlay_duration:.2f}s vs {total_audio_duration:.2f}s")
             else:
-                logger.info(f"✅ Text overlays fit perfectly within {FIXED_DURATION}s")
+                logger.info(f"✅ Text overlays perfectly match audio duration")
 
             # ========================================================================
             # STEP 6: Composite video and add mixed audio
@@ -864,9 +832,10 @@ class VideoGenerator:
             all_clips = [background_clip] + text_overlays
             final_video = CompositeVideoClip(all_clips)
 
-            # Add the voiceover audio (NO music)
+            # Add the final audio (voiceover + background music)
             final_audio_clip = AudioFileClip(str(final_audio_path))
             final_video = final_video.with_audio(final_audio_clip) if hasattr(final_video, 'with_audio') else final_video
+            final_video = final_video.with_duration(total_audio_duration)
 
             # ========================================================================
             # STEP 7: Export final video
@@ -918,9 +887,9 @@ class VideoGenerator:
             logger.info("✅ VIDEO GENERATION COMPLETE")
             logger.info("="*70)
             logger.info(f"Output: {output_path}")
-            logger.info(f"Duration: 17.00 seconds (FIXED)")
+            logger.info(f"Duration: {total_audio_duration:.2f} seconds (DYNAMIC - matches audio)")
             logger.info(f"Resolution: {self.width}x{self.height}")
-            logger.info(f"Audio: British voiceover @ 1.15x speed (NO music)")
+            logger.info(f"Audio: British voiceover @ 1.15x + background music @ 20%")
             logger.info("="*70 + "\n")
 
             return str(output_path)
