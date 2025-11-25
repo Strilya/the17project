@@ -94,9 +94,23 @@ Edit `config/video_config.json` to adjust music settings:
 }
 ```
 
+## Auto-Download Feature (GitHub Actions)
+
+**NEW**: The GitHub Actions workflow automatically downloads background music on each run!
+
+The workflow (`.github/workflows/daily-content.yml`) includes a step that:
+- Downloads 3 short (30-second) CC0 ambient meditation tracks using yt-dlp
+- Extracts only the first 30 seconds to keep file sizes small
+- Saves to this `music/` directory before content generation
+- Falls back gracefully if downloads fail
+
+This keeps the repo lightweight while ensuring music is always available for mixing.
+
+**Note**: YouTube video IDs in the workflow are placeholders. Replace with actual verified CC0/public domain tracks for production use.
+
 ## No Music? No Problem!
 
-If no music files are found, the system will automatically fall back to voiceover-only mode. Videos will still generate successfully without background music.
+If no music files are found (locally or after workflow downloads), the system will automatically fall back to voiceover-only mode. Videos will still generate successfully without background music.
 
 ## Legal Notice
 
