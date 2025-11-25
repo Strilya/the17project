@@ -223,6 +223,19 @@ class ContentGenerator:
             # Log that we received a response
             logger.info("Received response from Claude AI")
 
+            # Extract JSON from response (handle markdown code blocks if present)
+            # Claude sometimes wraps JSON in ```json ... ``` blocks
+            if "```json" in content_text:
+                # Extract content between ```json and ```
+                start = content_text.find("```json") + 7
+                end = content_text.find("```", start)
+                content_text = content_text[start:end].strip()
+            elif "```" in content_text:
+                # Extract content between ``` and ```
+                start = content_text.find("```") + 3
+                end = content_text.find("```", start)
+                content_text = content_text[start:end].strip()
+
             # Parse the response text as JSON
             # Claude should return structured JSON based on our prompt
             content = json.loads(content_text)
