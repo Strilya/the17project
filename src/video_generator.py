@@ -44,9 +44,6 @@ from background_manager import BackgroundManager
 # AudioGenerator for optimized voiceovers
 from audio_generator import AudioGenerator
 
-# MusicManager for background music
-from music_manager import MusicManager
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -103,10 +100,6 @@ class VideoGenerator:
 
         # Initialize audio generator for optimized voiceovers
         self.audio_generator = AudioGenerator()
-
-        # Initialize music manager for background music
-        music_dir = self.audio_settings.get("background_music", {}).get("music_dir", "music")
-        self.music_manager = MusicManager(music_dir=music_dir)
 
         logger.info("VideoGenerator initialized successfully")
         logger.info(f"Resolution: {self.width}x{self.height} @ {self.fps}fps")
@@ -331,11 +324,11 @@ class VideoGenerator:
         """
         try:
             # Use AudioGenerator for optimized voiceover with speed adjustment
-            # INCREASED to 2.0x (double speed) to fit content within 17 seconds
+            # British accent with 1.15x speedup for natural pacing
             return self.audio_generator.generate_voiceover(
                 text=text,
                 output_path=output_path,
-                speed_factor=2.0  # 2x faster to fit verbose content in ~17 seconds
+                speed_factor=1.15  # 1.15x speedup for natural, clear voiceover
             )
         except Exception as e:
             logger.error(f"Failed to generate voiceover: {e}")
@@ -591,11 +584,12 @@ class VideoGenerator:
         output_filename: Optional[str] = None
     ) -> str:
         """
-        Generate a complete Instagram Reel with dynamic timing and background music.
+        Generate a complete Instagram Reel with dynamic timing and clear voiceover.
 
-        NEW FEATURES:
+        FEATURES:
         - Dynamic timing: Text overlays match actual audio duration (not fixed)
-        - Background music: Spiritual ambient music mixed with voiceover
+        - Clear British voiceover: 1.15x speedup for natural pacing
+        - Voiceover only: NO background music to ensure clarity
 
         Args:
             content: Dictionary containing video content with keys:
@@ -645,26 +639,19 @@ class VideoGenerator:
             logger.info(f"Target video duration: {FIXED_DURATION}s (FIXED - never changes)")
 
             # ========================================================================
-            # STEP 3: Concatenate voiceover and mix with music (ALWAYS 17 seconds)
+            # STEP 3: Concatenate voiceover segments (VOICEOVER ONLY - NO MUSIC)
             # ========================================================================
             logger.info("\n" + "="*70)
-            logger.info("STEP 3: Mixing audio (fixed 17-second duration)")
+            logger.info("STEP 3: Concatenating voiceover (NO music mixing)")
             logger.info("="*70)
-
-            music_config = self.audio_settings.get("background_music", {})
-            music_enabled = music_config.get("enabled", False)
-            music_volume = music_config.get("volume", 0.25)
 
             # Collect all audio segment paths
             audio_file_paths = [seg['path'] for seg in audio_segments.values()]
 
-            # Path for concatenated voiceover (temp)
-            temp_voice_path = Path(self.audio_settings["output_folder"]) / f"temp_concatenated_{timestamp}.mp3"
+            # Path for final audio
+            final_audio_path = Path(self.audio_settings["output_folder"]) / f"final_voiceover_{timestamp}.mp3"
 
-            # Path for final mixed audio
-            final_audio_path = Path(self.audio_settings["output_folder"]) / f"final_mixed_{timestamp}.mp3"
-
-            # Step 3a: Concatenate all voiceover segments
+            # Concatenate all voiceover segments
             logger.info("Concatenating voiceover segments...")
             from pydub import AudioSegment
             combined_voice = AudioSegment.empty()
@@ -673,36 +660,21 @@ class VideoGenerator:
                 combined_voice += segment
                 logger.debug(f"  Segment {i+1}: {len(segment)/1000:.2f}s")
 
-            # Save concatenated voiceover
-            combined_voice.export(str(temp_voice_path), format='mp3')
             logger.info(f"Concatenated voiceover: {len(combined_voice)/1000:.2f}s")
 
-            # Step 3b: Mix with music (or just use voiceover)
-            if music_enabled:
-                logger.info("Mixing with background music...")
-                self.music_manager.mix_with_music(
-                    voiceover_path=str(temp_voice_path),
-                    output_path=str(final_audio_path),
-                    target_duration=FIXED_DURATION,  # ALWAYS 17 seconds
-                    music_volume=music_volume
-                )
-            else:
-                logger.info("Background music disabled - using voiceover only")
-                # Still need to ensure exact 17-second duration
-                target_ms = int(FIXED_DURATION * 1000)
-                if len(combined_voice) > target_ms:
-                    logger.warning(f"Cutting voiceover from {len(combined_voice)/1000:.1f}s to {FIXED_DURATION}s")
-                    combined_voice = combined_voice[:target_ms]
-                elif len(combined_voice) < target_ms:
-                    silence = AudioSegment.silent(duration=target_ms - len(combined_voice))
-                    combined_voice = combined_voice + silence
-                    logger.info(f"Padded voiceover to {FIXED_DURATION}s")
+            # Ensure exact 17-second duration (cut or pad as needed)
+            target_ms = int(FIXED_DURATION * 1000)
+            if len(combined_voice) > target_ms:
+                logger.warning(f"Cutting voiceover from {len(combined_voice)/1000:.1f}s to {FIXED_DURATION}s")
+                combined_voice = combined_voice[:target_ms]
+            elif len(combined_voice) < target_ms:
+                silence = AudioSegment.silent(duration=target_ms - len(combined_voice))
+                combined_voice = combined_voice + silence
+                logger.info(f"Padded voiceover to {FIXED_DURATION}s")
 
-                combined_voice.export(str(final_audio_path), format='mp3')
-
-            # Clean up temp voiceover file
-            if temp_voice_path.exists():
-                temp_voice_path.unlink()
+            # Export final voiceover
+            combined_voice.export(str(final_audio_path), format='mp3')
+            logger.info(f"✅ Final voiceover: {FIXED_DURATION}s (NO music)")
 
             # Set total_audio_duration to FIXED_DURATION for video creation
             total_audio_duration = FIXED_DURATION
@@ -763,7 +735,7 @@ class VideoGenerator:
             all_clips = [background_clip] + text_overlays
             final_video = CompositeVideoClip(all_clips)
 
-            # Add the mixed audio (voiceover + background music)
+            # Add the voiceover audio (NO music)
             final_audio_clip = AudioFileClip(str(final_audio_path))
             final_video = final_video.with_audio(final_audio_clip) if hasattr(final_video, 'with_audio') else final_video
 
@@ -819,7 +791,7 @@ class VideoGenerator:
             logger.info(f"Output: {output_path}")
             logger.info(f"Duration: 17.00 seconds (FIXED)")
             logger.info(f"Resolution: {self.width}x{self.height}")
-            logger.info(f"Background music: {'enabled' if music_enabled else 'disabled'}")
+            logger.info(f"Audio: British voiceover @ 1.15x speed (NO music)")
             logger.info("="*70 + "\n")
 
             return str(output_path)
