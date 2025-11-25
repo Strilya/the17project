@@ -55,6 +55,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
+      # Step 4.5: Download background music (FreePD - Public Domain)
+      - name: Download background music
+        run: |
+          echo "Downloading public domain background music from FreePD..."
+          mkdir -p music
+
+          # Download 3 ambient meditation tracks from FreePD (100% public domain)
+          # These are stable direct links that will not expire
+
+          # Track 1: Ambient meditation
+          curl -L "https://freepd.com/music/Ambient%20Piano.mp3" -o "music/432hz_ambient_meditation.mp3" || echo "Track 1 failed"
+
+          # Track 2: Peaceful ambient
+          curl -L "https://freepd.com/music/Meditation.mp3" -o "music/spiritual_healing_frequency.mp3" || echo "Track 2 failed"
+
+          # Track 3: Relaxing atmosphere
+          curl -L "https://freepd.com/music/Relaxing%20Ballad.mp3" -o "music/meditation_peaceful_flow.mp3" || echo "Track 3 failed"
+
+          # Verify downloads
+          echo "Checking downloaded music files:"
+          ls -lh music/*.mp3 || echo "Warning: No music files downloaded"
+          echo "Music download complete"
+
       # Step 5: Verify environment setup
       - name: Verify environment
         run: |
