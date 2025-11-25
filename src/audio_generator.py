@@ -39,11 +39,10 @@ class AudioGenerator:
     """
 
     def __init__(self):
-        """Initialize the AudioGenerator with rotating TLD accents."""
-        # Rotate TLD daily for accent variety
-        self.tld_options = ['com', 'co.uk', 'com.au', 'co.in']
-        self.current_tld = self._get_daily_tld()
-        logger.info(f"AudioGenerator initialized with TLD: {self.current_tld}")
+        """Initialize the AudioGenerator with British accent (co.uk)."""
+        # Use British accent for clarity and consistency
+        self.current_tld = 'co.uk'
+        logger.info(f"AudioGenerator initialized with British accent (TLD: {self.current_tld})")
 
     def _get_daily_tld(self) -> str:
         """
