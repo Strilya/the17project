@@ -55,40 +55,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      # Step 4.5: Download background music (CC0 ambient tracks)
-      - name: Download background music
-        run: |
-          echo "Downloading royalty-free background music..."
-          mkdir -p music
-
-          # Install yt-dlp for downloading audio
-          pip install yt-dlp
-
-          # Download 3 short CC0 432Hz ambient meditation tracks from YouTube
-          # These are public domain / CC0 licensed tracks suitable for commercial use
-
-          # Track 1: 432Hz Ambient Meditation (20-30 seconds)
-          yt-dlp -x --audio-format mp3 --audio-quality 128K \
-            --download-sections "*0-30" \
-            -o "music/432hz_ambient_meditation.%(ext)s" \
-            "https://www.youtube.com/watch?v=1ZYbU82GVz4" || echo "Track 1 download failed"
-
-          # Track 2: Spiritual Healing Frequency (20-30 seconds)
-          yt-dlp -x --audio-format mp3 --audio-quality 128K \
-            --download-sections "*0-30" \
-            -o "music/spiritual_healing_frequency.%(ext)s" \
-            "https://www.youtube.com/watch?v=wruQVZZC5nY" || echo "Track 2 download failed"
-
-          # Track 3: Peaceful Ambient Flow (20-30 seconds)
-          yt-dlp -x --audio-format mp3 --audio-quality 128K \
-            --download-sections "*0-30" \
-            -o "music/meditation_peaceful_flow.%(ext)s" \
-            "https://www.youtube.com/watch?v=kYVe5vAH1gE" || echo "Track 3 download failed"
-
-          # Verify downloads
-          ls -lh music/*.mp3 || echo "Warning: No music files downloaded - will use voiceover only"
-          echo "Background music setup complete"
-
       # Step 5: Verify environment setup
       - name: Verify environment
         run: |

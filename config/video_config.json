@@ -131,7 +131,7 @@
     },
     "output_folder": "output/audio",
     "background_music": {
-      "enabled": true,
+      "enabled": false,
       "volume": 0.25,
       "music_dir": "music",
       "styles": [
