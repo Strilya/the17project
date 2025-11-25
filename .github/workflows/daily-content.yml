@@ -55,39 +55,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      # Step 4.5: Download background music (CC0 ambient tracks)
+      # Step 4.5: Download background music (FreePD - Public Domain)
       - name: Download background music
         run: |
-          echo "Downloading royalty-free background music..."
+          echo "Downloading public domain background music from FreePD..."
           mkdir -p music
 
-          # Install yt-dlp for downloading audio
-          pip install yt-dlp
+          # Download 3 ambient meditation tracks from FreePD (100% public domain)
+          # These are stable direct links that will not expire
 
-          # Download 3 short CC0 432Hz ambient meditation tracks from YouTube
-          # These are public domain / CC0 licensed tracks suitable for commercial use
+          # Track 1: Ambient meditation
+          curl -L "https://freepd.com/music/Ambient%20Piano.mp3" -o "music/432hz_ambient_meditation.mp3" || echo "Track 1 failed"
 
-          # Track 1: 432Hz Ambient Meditation (20-30 seconds)
-          yt-dlp -x --audio-format mp3 --audio-quality 128K \
-            --download-sections "*0-30" \
-            -o "music/432hz_ambient_meditation.%(ext)s" \
-            "https://www.youtube.com/watch?v=1ZYbU82GVz4" || echo "Track 1 download failed"
+          # Track 2: Peaceful ambient
+          curl -L "https://freepd.com/music/Meditation.mp3" -o "music/spiritual_healing_frequency.mp3" || echo "Track 2 failed"
 
-          # Track 2: Spiritual Healing Frequency (20-30 seconds)
-          yt-dlp -x --audio-format mp3 --audio-quality 128K \
-            --download-sections "*0-30" \
-            -o "music/spiritual_healing_frequency.%(ext)s" \
-            "https://www.youtube.com/watch?v=wruQVZZC5nY" || echo "Track 2 download failed"
-
-          # Track 3: Peaceful Ambient Flow (20-30 seconds)
-          yt-dlp -x --audio-format mp3 --audio-quality 128K \
-            --download-sections "*0-30" \
-            -o "music/meditation_peaceful_flow.%(ext)s" \
-            "https://www.youtube.com/watch?v=kYVe5vAH1gE" || echo "Track 3 download failed"
+          # Track 3: Relaxing atmosphere
+          curl -L "https://freepd.com/music/Relaxing%20Ballad.mp3" -o "music/meditation_peaceful_flow.mp3" || echo "Track 3 failed"
 
           # Verify downloads
-          ls -lh music/*.mp3 || echo "Warning: No music files downloaded - will use voiceover only"
-          echo "Background music setup complete"
+          echo "Checking downloaded music files:"
+          ls -lh music/*.mp3 || echo "Warning: No music files downloaded"
+          echo "Music download complete"
 
       # Step 5: Verify environment setup
       - name: Verify environment
