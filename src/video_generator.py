@@ -663,31 +663,23 @@ class VideoGenerator:
             original_duration = len(combined_voice) / 1000.0
             logger.info(f"Concatenated voiceover: {original_duration:.2f}s")
 
-            # Calculate scaling factor if voiceover is too long
+            # Calculate scaling factor for text overlays if we need to cut audio
             target_ms = int(FIXED_DURATION * 1000)
-            additional_speedup = 1.0
+            scaling_factor = 1.0
 
             if len(combined_voice) > target_ms:
-                # Instead of cutting, speed up the audio to fit exactly 17 seconds
-                additional_speedup = original_duration / FIXED_DURATION
-                logger.warning(f"Voiceover ({original_duration:.1f}s) exceeds 17s - speeding up by {additional_speedup:.3f}x")
+                # Calculate how much we're cutting
+                scaling_factor = FIXED_DURATION / original_duration
+                logger.warning(f"Voiceover ({original_duration:.1f}s) exceeds 17s - cutting to 17s and scaling text overlays by {scaling_factor:.3f}x")
 
-                # Speed up the audio using pydub (preserves all content)
-                sped_up_voice = combined_voice._spawn(
-                    combined_voice.raw_data,
-                    overrides={
-                        "frame_rate": int(combined_voice.frame_rate * additional_speedup)
-                    }
-                ).set_frame_rate(combined_voice.frame_rate)
+                # Cut audio at 17 seconds (simple approach - keeps voiceover clear)
+                combined_voice = combined_voice[:target_ms]
 
-                combined_voice = sped_up_voice
-                logger.info(f"Audio sped up: {len(combined_voice)/1000:.2f}s")
-
-                # Scale segment durations to match sped-up audio
-                logger.info(f"Scaling segment durations by {1/additional_speedup:.3f}x to match audio")
+                # Scale text overlay durations to fit within 17 seconds
+                logger.info(f"Scaling text overlay durations by {scaling_factor:.3f}x to fit 17s")
                 for scene_type in audio_segments:
                     original_dur = audio_segments[scene_type]['duration']
-                    scaled_dur = original_dur / additional_speedup
+                    scaled_dur = original_dur * scaling_factor
                     audio_segments[scene_type]['duration'] = scaled_dur
                     logger.debug(f"  {scene_type}: {original_dur:.2f}s → {scaled_dur:.2f}s")
 
@@ -818,16 +810,13 @@ class VideoGenerator:
             final_video.close()
             final_audio_clip.close()
 
-            # Calculate total speedup (initial 1.15x + additional speedup if needed)
-            total_speedup = 1.15 * additional_speedup if 'additional_speedup' in locals() else 1.15
-
             logger.info("\n" + "="*70)
             logger.info("✅ VIDEO GENERATION COMPLETE")
             logger.info("="*70)
             logger.info(f"Output: {output_path}")
             logger.info(f"Duration: 17.00 seconds (FIXED)")
             logger.info(f"Resolution: {self.width}x{self.height}")
-            logger.info(f"Audio: British voiceover @ {total_speedup:.2f}x speed (NO music)")
+            logger.info(f"Audio: British voiceover @ 1.15x speed (NO music)")
             logger.info("="*70 + "\n")
 
             return str(output_path)
