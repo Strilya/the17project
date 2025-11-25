@@ -94,23 +94,43 @@ Edit `config/video_config.json` to adjust music settings:
 }
 ```
 
-## Auto-Download Feature (GitHub Actions)
+## Setup Instructions
 
-**NEW**: The GitHub Actions workflow automatically downloads background music on each run!
+### Option 1: Manual Download (Recommended)
 
-The workflow (`.github/workflows/daily-content.yml`) includes a step that:
-- Downloads 3 short (30-second) CC0 ambient meditation tracks using yt-dlp
-- Extracts only the first 30 seconds to keep file sizes small
-- Saves to this `music/` directory before content generation
-- Falls back gracefully if downloads fail
+1. **Download Music**: Get 3-5 ambient meditation tracks from free sources:
+   - [Pixabay Music](https://pixabay.com/music/search/meditation/) - CC0, no attribution required
+   - [Free Music Archive](https://freemusicarchive.org/search?quicksearch=meditation) - Various CC licenses
+   - Search terms: "meditation", "432hz", "ambient", "spiritual healing"
 
-This keeps the repo lightweight while ensuring music is always available for mixing.
+2. **Add to Repository**:
+   - Place MP3 files in this `music/` directory
+   - For small files (<5MB each): Commit directly to git
+   - For large files: Use [Git LFS](https://git-lfs.github.com/) or host externally
 
-**Note**: YouTube video IDs in the workflow are placeholders. Replace with actual verified CC0/public domain tracks for production use.
+3. **Naming** (optional): Include keywords in filenames for better matching:
+   - `432hz_healing_frequency.mp3`
+   - `meditation_peaceful_flow.mp3`
+   - `spiritual_ambient_space.mp3`
 
-## No Music? No Problem!
+### Option 2: No Music (Voiceover Only)
 
-If no music files are found (locally or after workflow downloads), the system will automatically fall back to voiceover-only mode. Videos will still generate successfully without background music.
+The system works perfectly without background music! If no MP3 files are found, videos will be generated with:
+- ✅ Voiceover narration only
+- ✅ All visual elements (backgrounds, text, animations)
+- ✅ Proper 17-second duration
+- ✅ Complete video output
+
+This is ideal for:
+- Testing and development
+- When you want pure voiceover content
+- Avoiding music licensing concerns
+
+## How the System Handles Music
+
+- **Music Found**: Automatically mixes at 25% volume with voiceover
+- **No Music Found**: Falls back gracefully to voiceover-only mode
+- **No Errors**: Videos generate successfully either way
 
 ## Legal Notice
 
