@@ -49,7 +49,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 4: Verify environment setup
+      # Step 4: Install ffmpeg (required by pydub for audio processing)
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      # Step 5: Verify environment setup
       - name: Verify environment
         run: |
           python --version
@@ -57,7 +63,7 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Python path: $(which python)"
 
-      # Step 5: Run the content generation workflow
+      # Step 6: Run the content generation workflow
       - name: Generate Instagram content
         env:
           # Anthropic Claude API key (stored in GitHub Secrets)
@@ -82,7 +88,7 @@ jobs:
           echo "Starting content generation workflow..."
           python src/main.py
 
-      # Step 6: Upload generated videos as artifacts
+      # Step 7: Upload generated videos as artifacts
       - name: Upload generated videos
         if: always()  # Run even if previous steps fail
         uses: actions/upload-artifact@v4
@@ -92,7 +98,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-      # Step 7: Upload logs as artifacts (for debugging)
+      # Step 8: Upload logs as artifacts (for debugging)
       - name: Upload logs
         if: always()  # Run even if previous steps fail
         uses: actions/upload-artifact@v4
@@ -103,7 +109,7 @@ jobs:
             *.log
           retention-days: 30
 
-      # Step 8: Notify on failure (optional - sends GitHub notification)
+      # Step 9: Notify on failure (optional - sends GitHub notification)
       - name: Notify on failure
         if: failure()
         run: |
