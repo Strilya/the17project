@@ -455,12 +455,12 @@ class VideoGenerator:
 
                 # Resize to fit our dimensions (1080x1920)
                 if background.h != self.height:
-                    background = background.resize(height=self.height)
+                    background = background.resized(height=self.height)
 
                 if background.w > self.width:
                     # Crop to center if too wide
                     x_center = background.w / 2
-                    background = background.crop(x1=x_center - self.width/2, x2=x_center + self.width/2)
+                    background = background.cropped(x1=x_center - self.width/2, x2=x_center + self.width/2)
 
                 # Loop if shorter than duration
                 if background.duration < duration:
@@ -471,7 +471,7 @@ class VideoGenerator:
                     background = concatenate_videoclips(looped_clips)
 
                 # Trim to exact duration
-                background = background.subclip(0, duration)
+                background = background.subclipped(0, duration)
 
                 # Add semi-transparent color overlay to maintain brand colors
                 overlay_color = self._hex_to_rgb(palette["gradient_start"])
@@ -649,7 +649,9 @@ class VideoGenerator:
 
             if not is_valid:
                 logger.warning(f"Audio duration ({total_audio_duration:.2f}s) exceeds maximum ({max_duration:.2f}s)")
-                logger.info("Continuing anyway - video will be slightly longer")
+                excess_pct = ((total_audio_duration - max_duration) / max_duration) * 100
+                logger.warning(f"Video will be {excess_pct:.0f}% longer than target duration")
+                logger.info("Continuing with extended duration - consider shortening content text")
 
             # ========================================================================
             # STEP 3: Get background music and mix with voiceover
@@ -684,7 +686,12 @@ class VideoGenerator:
                     output_path=str(final_audio_path),
                     music_volume=music_volume
                 )
-                logger.info(f"✅ Mixed audio with background music at {music_volume*100:.0f}% volume")
+
+                # Log the actual result (music might not be available)
+                if music_path:
+                    logger.info(f"✅ Mixed audio with background music at {music_volume*100:.0f}% volume")
+                else:
+                    logger.info("✅ Audio created (voiceover only - no music files found)")
             else:
                 # No background music - just concatenate voiceovers
                 logger.info("Background music disabled - using voiceover only")
