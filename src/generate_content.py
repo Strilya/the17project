@@ -237,30 +237,45 @@ class ContentGenerator:
                 content_text = content_text[start:end].strip()
 
             # Parse the response text as JSON
-            # Try parsing first, if it fails due to control characters, clean and retry
+            # Try parsing first, if it fails, attempt various cleaning strategies
             try:
                 content = json.loads(content_text)
             except json.JSONDecodeError as e:
-                # If parsing fails with control character error, try cleaning the JSON
-                if "control character" in str(e).lower():
-                    logger.warning("JSON has control characters, attempting to clean...")
-                    # Replace literal control characters with escaped versions
-                    # This is a simple approach - replaces literal newlines/tabs/returns
-                    import re
-                    # Find all string values and escape control characters within them
-                    def escape_control_chars(match):
-                        text = match.group(0)
-                        text = text.replace('\n', '\\n')
-                        text = text.replace('\r', '\\r')
-                        text = text.replace('\t', '\\t')
-                        return text
-                    # Apply to content between quotes (string values)
-                    content_text_cleaned = re.sub(r'"[^"]*"', escape_control_chars, content_text)
+                logger.error(f"JSON parsing failed: {e}")
+                logger.error(f"Failed JSON (first 500 chars): {content_text[:500]}")
+                logger.error(f"Failed JSON (last 500 chars): {content_text[-500:]}")
+
+                # Try cleaning the JSON
+                logger.warning("Attempting to clean and fix JSON...")
+                import re
+
+                # Strategy 1: Escape control characters within strings
+                def escape_control_chars(match):
+                    text = match.group(0)
+                    text = text.replace('\n', '\\n')
+                    text = text.replace('\r', '\\r')
+                    text = text.replace('\t', '\\t')
+                    # Also escape backslashes that aren't already escaping something
+                    text = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', text)
+                    return text
+
+                # Apply to content between quotes (more robust pattern)
+                content_text_cleaned = re.sub(r'"(?:[^"\\]|\\.)*"', escape_control_chars, content_text)
+
+                # Strategy 2: Remove trailing commas before } or ]
+                content_text_cleaned = re.sub(r',(\s*[}\]])', r'\1', content_text_cleaned)
+
+                # Strategy 3: Fix missing commas between JSON properties/elements
+                # Pattern: "value" \n "nextKey": (missing comma after value)
+                content_text_cleaned = re.sub(r'(["}\]])\s*\n\s*"', r'\1,\n"', content_text_cleaned)
+
+                try:
                     content = json.loads(content_text_cleaned)
                     logger.info("Successfully cleaned and parsed JSON")
-                else:
-                    # Re-raise if not a control character issue
-                    raise
+                except json.JSONDecodeError as e2:
+                    logger.error(f"Cleaning failed: {e2}")
+                    logger.error(f"Cleaned JSON (first 500 chars): {content_text_cleaned[:500]}")
+                    raise ValueError(f"Invalid JSON response from Claude AI: {e}") from e
 
             # DEBUG: Log the raw structure of what Claude returned
             logger.info(f"Raw content structure from Claude: {json.dumps(content, indent=2)}")
