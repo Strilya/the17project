@@ -153,3 +153,13 @@ jobs:
           echo "Check logs for details"
           echo "Run number: ${{ github.run_number }}"
           echo "Triggered by: ${{ github.event_name }}"
+
+          # Step 10: Commit updated topic tracker state
+      - name: Commit updated topic tracker
+        if: success()  # Only commit if workflow succeeded
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/topic_tracker.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: Update topic tracker [skip ci]"
+          git push
