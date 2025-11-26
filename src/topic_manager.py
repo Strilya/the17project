@@ -31,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration constants
-DAYS_BEFORE_REPEAT = 14  # Don't repeat same topic within 90 days
+DAYS_BEFORE_REPEAT = 90  # Don't repeat same topic within 90 days
 ROTATION_STRATEGY = "round_robin"  # Rotate categories evenly
 
 
