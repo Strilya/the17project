@@ -373,27 +373,38 @@ class VideoGenerator:
         # Concatenate audio
         logger.info("\nSTEP 2: Mixing audio...")
         combined = AudioSegment.empty()
-        
+
         for scene in ["hook", "meaning", "action", "cta"]:
             combined += audio_segments[scene]['audio']
 
-        # Add 0.5s end padding for clean finish
-        combined = combined + AudioSegment.silent(duration=500)
+        # Calculate actual duration after all processing
+        actual_duration_ms = len(combined)
+        actual_duration = actual_duration_ms / 1000.0
 
-        # Pad to minimum if short, otherwise use natural length
-        voice_duration_ms = len(combined)
         min_ms = int(self.TARGET_DURATION_MIN * 1000)
+        max_ms = int(self.TARGET_DURATION_MAX * 1000)
 
-        if voice_duration_ms < min_ms:
-            # Pad to minimum (16s)
-            silence_needed = min_ms - voice_duration_ms
+        # Pad ONLY if below minimum
+        if actual_duration_ms < min_ms:
+            silence_needed = min_ms - actual_duration_ms
             combined = combined + AudioSegment.silent(duration=silence_needed)
-            logger.info(f"Added {silence_needed/1000:.2f}s silence to reach {self.TARGET_DURATION_MIN}s minimum")
             final_duration = self.TARGET_DURATION_MIN
+            logger.info(f"Padded to {final_duration:.2f}s minimum")
+        # Trim if above maximum
+        elif actual_duration_ms > max_ms:
+            combined = combined[:max_ms]
+            final_duration = self.TARGET_DURATION_MAX
+            logger.info(f"Trimmed to {final_duration:.2f}s maximum")
+        # Use natural length if in range
         else:
-            # Use natural length (no trimming!)
-            final_duration = voice_duration_ms / 1000.0
-            logger.info(f"✅ Using natural duration: {final_duration:.2f}s (no trimming)")
+            final_duration = actual_duration
+            logger.info(f"✅ Natural duration: {final_duration:.2f}s (perfect!)")
+
+        # Debug logging
+        logger.info(f"\n🎬 FINAL AUDIO SPECS:")
+        logger.info(f"  Combined audio: {len(combined)/1000.0:.2f}s")
+        logger.info(f"  Final duration: {final_duration:.2f}s")
+        logger.info(f"  Target range: {self.TARGET_DURATION_MIN}-{self.TARGET_DURATION_MAX}s")
 
         temp_voice = Path("output/audio") / f"temp_voice_{timestamp}.mp3"
         combined.export(str(temp_voice), format='mp3')
