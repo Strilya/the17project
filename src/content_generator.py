@@ -44,7 +44,7 @@ class ContentGenerator:
 
         logger.info("ContentGenerator initialized (17s optimized)")
 
-    def generate_reel_content(
+    def generate_content(
         self,
         topic: str,
         category: str = "angel_numbers",
