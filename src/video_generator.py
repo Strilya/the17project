@@ -37,7 +37,9 @@ logger = logging.getLogger(__name__)
 class VideoGenerator:
     """Generate perfect 17-second Reels with smart color contrast."""
 
-    TARGET_DURATION = 17.0
+    TARGET_DURATION_MIN = 16.0  # Minimum duration
+    TARGET_DURATION_MAX = 19.0  # Maximum duration
+    TARGET_DURATION_IDEAL = 17.0  # Ideal target
     MAX_SPEED = 1.3
 
     # COLOR PALETTE - Purple/Gold/White
@@ -343,22 +345,30 @@ class VideoGenerator:
         total_duration = sum(seg['duration'] for seg in audio_segments.values())
         logger.info(f"\nInitial total: {total_duration:.2f}s")
 
-        # Speed up if needed
-        if total_duration > self.TARGET_DURATION:
-            speedup_factor = total_duration / self.TARGET_DURATION
-            
+        # Only adjust if WAY too long (>19s)
+        if total_duration > self.TARGET_DURATION_MAX:
+            # Need to speed up to max acceptable length
+            speedup_factor = total_duration / self.TARGET_DURATION_MAX
+
             if speedup_factor > self.MAX_SPEED / base_speed:
-                logger.warning(f"Content too long! Limiting to {self.MAX_SPEED}x")
+                logger.warning(f"Content too long! Would need {speedup_factor:.2f}x speed")
+                logger.info(f"Limiting to max {self.MAX_SPEED}x speed")
                 speedup_factor = self.MAX_SPEED / base_speed
-            
-            logger.info(f"Speeding up by {speedup_factor:.2f}x")
-            
+
+            logger.info(f"Speeding up audio by {speedup_factor:.2f}x to fit in {self.TARGET_DURATION_MAX}s")
+
+            # Speed up all segments
             for scene, seg in audio_segments.items():
                 sped_up = seg['audio'].speedup(playback_speed=speedup_factor)
                 seg['audio'] = sped_up
                 seg['duration'] = len(sped_up) / 1000.0
-            
+                logger.info(f"  {scene}: {seg['duration']:.2f}s (sped up)")
+
             total_duration = sum(seg['duration'] for seg in audio_segments.values())
+        elif total_duration < self.TARGET_DURATION_MIN:
+            logger.info(f"Content short ({total_duration:.2f}s), will pad to {self.TARGET_DURATION_MIN}s")
+        else:
+            logger.info(f"✅ Content naturally fits ({total_duration:.2f}s) - no adjustment needed")
 
         # Concatenate audio
         logger.info("\nSTEP 2: Mixing audio...")
@@ -370,27 +380,31 @@ class VideoGenerator:
         # Add 0.5s end padding for clean finish
         combined = combined + AudioSegment.silent(duration=500)
 
-        # Then pad to EXACTLY 17 seconds if short
-        target_ms = int(self.TARGET_DURATION * 1000)
-        if len(combined) < target_ms:
-            silence_needed = target_ms - len(combined)
+        # Pad to minimum if short, otherwise use natural length
+        voice_duration_ms = len(combined)
+        min_ms = int(self.TARGET_DURATION_MIN * 1000)
+
+        if voice_duration_ms < min_ms:
+            # Pad to minimum (16s)
+            silence_needed = min_ms - voice_duration_ms
             combined = combined + AudioSegment.silent(duration=silence_needed)
-            logger.info(f"Added {silence_needed/1000:.2f}s silence to reach 17s")
-        elif len(combined) > target_ms:
-            # Trim if slightly over (but keep the 0.5s padding we added)
-            combined = combined[:target_ms]
-            logger.info(f"Trimmed to exactly 17s (with 0.5s end padding)")
+            logger.info(f"Added {silence_needed/1000:.2f}s silence to reach {self.TARGET_DURATION_MIN}s minimum")
+            final_duration = self.TARGET_DURATION_MIN
+        else:
+            # Use natural length (no trimming!)
+            final_duration = voice_duration_ms / 1000.0
+            logger.info(f"✅ Using natural duration: {final_duration:.2f}s (no trimming)")
 
         temp_voice = Path("output/audio") / f"temp_voice_{timestamp}.mp3"
         combined.export(str(temp_voice), format='mp3')
 
         final_audio = Path("output/audio") / f"final_{timestamp}.mp3"
-        self._add_music(temp_voice, final_audio, self.TARGET_DURATION)
+        self._add_music(temp_voice, final_audio, final_duration)
         temp_voice.unlink()
 
-        # Create background
-        logger.info("\nSTEP 3: Creating 4K background...")
-        background, bg_path = self._create_background_clip(category, self.TARGET_DURATION)
+        # Create background (use actual final duration)
+        logger.info(f"\nSTEP 3: Creating 4K background ({final_duration:.2f}s)...")
+        background, bg_path = self._create_background_clip(category, final_duration)
 
         # Analyze background and pick text color
         if bg_path:
@@ -427,10 +441,10 @@ class VideoGenerator:
 
         # Composite
         logger.info("\nSTEP 5: Compositing...")
-        
+
         final = CompositeVideoClip([background] + text_clips)
         final = final.with_audio(AudioFileClip(str(final_audio)))
-        final = final.with_duration(self.TARGET_DURATION)
+        final = final.with_duration(final_duration)
 
         logger.info("\nSTEP 6: Exporting...")
         
@@ -463,7 +477,7 @@ class VideoGenerator:
         logger.info("✅ VIDEO COMPLETE")
         logger.info("="*70)
         logger.info(f"Output: {output_path}")
-        logger.info(f"Duration: {self.TARGET_DURATION}s")
+        logger.info(f"Duration: {final_duration:.2f}s (dynamic, no cutoff)")
         logger.info(f"Text color: {text_color_key.upper()} ({self.TEXT_COLORS[text_color_key]})")
         logger.info("="*70 + "\n")
 
