@@ -31,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration constants
-DAYS_BEFORE_REPEAT = 90  # Don't repeat same topic within 90 days
+DAYS_BEFORE_REPEAT = 14  # Don't repeat same topic within 90 days
 ROTATION_STRATEGY = "round_robin"  # Rotate categories evenly
 
 
@@ -120,6 +120,10 @@ class TopicManager:
         cat_data = self.tracker["topics"][category]
 
         if category == "angel_numbers":
+            # New simplified structure: just "numbers" list
+            if "numbers" in cat_data:
+                return len(cat_data.get("numbers", []))
+            # Fallback for old structure
             return len(cat_data.get("high_priority", [])) + len(cat_data.get("interesting", []))
         elif category == "productivity":
             return len(cat_data.get("techniques", []))
@@ -143,7 +147,10 @@ class TopicManager:
         cat_data = self.tracker["topics"][category]
 
         if category == "angel_numbers":
-            # High priority first, then interesting
+            # New simplified structure: just "numbers" list
+            if "numbers" in cat_data:
+                return cat_data.get("numbers", [])
+            # Fallback for old structure
             return cat_data.get("high_priority", []) + cat_data.get("interesting", [])
         elif category == "productivity":
             return cat_data.get("techniques", [])
