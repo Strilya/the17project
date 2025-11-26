@@ -80,9 +80,17 @@ class ContentGenerator:
             
             # Validate length
             self._validate_length(content)
-            
+
             logger.info("✅ Content generated (17s optimized)")
-            return content
+
+            # Format for workflow
+            caption = f"{content['hook']} {content['meaning']} {content['action']} {content['cta']}"
+
+            return {
+                "video_scenes": content,
+                "caption": caption,
+                "hashtags": "#the17project #angelnumbers #spirituality #manifestation"
+            }
 
         except Exception as e:
             logger.error(f"Generation failed: {e}")
@@ -204,11 +212,19 @@ Generate now:"""
 
     def _get_fallback_content(self, topic: str) -> Dict[str, str]:
         """Fallback content if generation fails."""
-        return {
+        content = {
             "hook": "Ready for transformation?",
             "meaning": "Small daily actions create massive shifts in your reality.",
             "action": "Choose one positive change. Start today. Stay consistent.",
             "cta": "Follow @the17project for guidance."
+        }
+
+        caption = f"{content['hook']} {content['meaning']} {content['action']} {content['cta']}"
+
+        return {
+            "video_scenes": content,
+            "caption": caption,
+            "hashtags": "#the17project #angelnumbers #spirituality"
         }
 
 
