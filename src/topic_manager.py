@@ -5,7 +5,7 @@ This module handles intelligent topic tracking and rotation for The17Project
 content generation. It ensures content stays fresh by:
 - Rotating through topics in a round-robin fashion across categories
 - Tracking used topics to prevent repeats
-- Maintaining a 90-day history buffer
+- Maintaining a 14-day history buffer
 - Resetting categories when all topics have been used
 
 Main functionality:
@@ -13,7 +13,7 @@ Main functionality:
 - Select next unused topic from rotation
 - Mark topics as used
 - Reset categories when exhausted
-- Check 90-day history for recent repeats
+- Check 14-day history for recent repeats
 """
 
 import os
@@ -22,6 +22,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 from pathlib import Path
+import random
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration constants
-DAYS_BEFORE_REPEAT = 90  # Don't repeat same topic within 90 days
+DAYS_BEFORE_REPEAT = 14  # Don't repeat same topic within 14 days
 ROTATION_STRATEGY = "round_robin"  # Rotate categories evenly
 
 
@@ -43,7 +44,7 @@ class TopicManager:
     1. Rotating through categories in round-robin fashion
     2. Prioritizing high-priority topics within each category
     3. Tracking used topics to prevent repeats
-    4. Maintaining 90-day history to avoid recent repeats
+    4. Maintaining 14-day history to avoid recent repeats
     5. Auto-resetting categories when all topics exhausted
     """
 
@@ -177,15 +178,15 @@ class TopicManager:
         unused = [t for t in all_topics if t not in used_topics]
         return unused
 
-    def check_90_day_history(self, topic: str) -> bool:
+    def check_14_day_history(self, topic: str) -> bool:
         """
-        Check if topic was used within the last 90 days.
+        Check if topic was used within the last 14 days.
 
         Args:
             topic: Topic to check
 
         Returns:
-            True if topic was used recently (within 90 days), False otherwise
+            True if topic was used recently (within 14 days), False otherwise
         """
         history = self.tracker.get("content_history", [])
         cutoff_date = datetime.now() - timedelta(days=DAYS_BEFORE_REPEAT)
@@ -194,7 +195,7 @@ class TopicManager:
             if entry.get("topic") == topic:
                 entry_date = datetime.fromisoformat(entry.get("date", "1900-01-01"))
                 if entry_date > cutoff_date:
-                    logger.info(f"Topic '{topic}' was used within 90 days (on {entry_date.date()})")
+                    logger.info(f"Topic '{topic}' was used within 14 days (on {entry_date.date()})")
                     return True
 
         return False
@@ -254,7 +255,7 @@ class TopicManager:
         This method:
         1. Gets the current category from rotation
         2. Finds an unused topic (prioritizing high-priority)
-        3. Checks 90-day history to avoid recent repeats
+        3. Checks 14-day history to avoid recent repeats
         4. Returns the topic and advances rotation
 
         Returns:
@@ -274,11 +275,12 @@ class TopicManager:
 
             # Get unused topics
             unused = self.get_unused_topics(category)
+            random.shuffle(unused)  # ← THIS IS THE FIX
             logger.info(f"  Unused topics in {category}: {len(unused)}")
 
-            # Find a topic not used in last 90 days
+            # Find a topic not used in last 14 days
             for topic in unused:
-                if not self.check_90_day_history(topic):
+                if not self.check_14_day_history(topic):
                     logger.info(f"Selected topic: '{topic}' from category '{category}'")
 
                     # Advance to next category for next time
@@ -291,7 +293,7 @@ class TopicManager:
                     }
 
             # If all unused topics were recently used, try next category
-            logger.warning(f"All unused topics in '{category}' were used within 90 days")
+            logger.warning(f"All unused topics in '{category}' were used within 14 days")
             self._advance_category_index()
             attempts += 1
 
@@ -330,7 +332,7 @@ class TopicManager:
         }
         self.tracker["content_history"].append(history_entry)
 
-        # Trim history to last 365 days (keep some buffer beyond 90 days)
+        # Trim history to last 365 days (keep some buffer beyond 14 days)
         self._trim_history(365)
 
         # Save changes
