@@ -13,7 +13,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -272,10 +272,11 @@ class VideoGenerator:
 
     def _create_background_clip(self, category: str, duration: float) -> Tuple[object, str]:
         """
-        Create clean 4K background.
+        Create 4K video background OR high-res photo slideshow.
         
-        Returns: (video_clip, video_path_or_none)
+        Returns: (video_clip, video_path_or_type)
         """
+        # Try 4K video first
         bg_video_path = self.background_manager.get_background_video(category)
 
         if bg_video_path and os.path.exists(bg_video_path):
@@ -300,15 +301,107 @@ class VideoGenerator:
 
                 video = video.subclipped(0, duration)
 
-                logger.info("✅ Clean 4K background")
+                logger.info("✅ 4K video background")
                 return (video, bg_video_path)
 
             except Exception as e:
                 logger.error(f"Video failed: {e}")
 
-        logger.info("Using gradient fallback")
+        # No 4K video found - create photo slideshow
+        logger.info("🖼️  No 4K video - creating high-res photo slideshow")
+        
+        # Download photos
+        photos = self.background_manager.download_photos_for_slideshow(
+            category=category,
+            count=int(duration * 2) + 5  # ~2 photos per second + buffer
+        )
+        
+        if photos:
+            slideshow_clip = self._create_photo_slideshow(photos, duration)
+            logger.info("✅ High-res photo slideshow background")
+            return (slideshow_clip, "photo_slideshow")
+        
+        # Final fallback: gradient
+        logger.warning("Using gradient fallback")
         gradient = self._create_gradient_background(category)
-        return (ImageClip(np.array(gradient), duration=duration), None)
+        return (ImageClip(np.array(gradient), duration=duration), "gradient")
+
+    def _create_photo_slideshow(self, photo_paths: List[Path], duration: float) -> object:
+        """
+        Create smooth photo slideshow with Ken Burns effect.
+        
+        Args:
+            photo_paths: List of photo file paths
+            duration: Total duration in seconds
+            
+        Returns:
+            VideoClip of slideshow
+        """
+        if not photo_paths:
+            raise ValueError("No photos provided for slideshow")
+        
+        logger.info(f"\n🎬 CREATING PHOTO SLIDESHOW")
+        logger.info(f"  Duration: {duration:.2f}s")
+        logger.info(f"  Photos: {len(photo_paths)}")
+        
+        photo_duration = 0.5  # seconds per photo
+        transition_duration = 0.2  # crossfade duration
+        
+        clips = []
+        
+        for i, photo_path in enumerate(photo_paths):
+            try:
+                # Load and resize photo
+                img = Image.open(photo_path)
+                
+                # Ensure portrait orientation
+                if img.width > img.height:
+                    img = img.rotate(90, expand=True)
+                
+                # Resize to 1080x1920
+                img = img.resize((self.width, self.height), Image.Resampling.LANCZOS)
+                
+                # Convert to numpy array
+                img_array = np.array(img)
+                
+                # Create clip with Ken Burns effect (slow zoom)
+                clip = ImageClip(img_array, duration=photo_duration)
+                
+                # Apply slow zoom: 1.0x to 1.1x scale
+                def zoom_effect(t):
+                    scale = 1.0 + (t / photo_duration) * 0.1  # 1.0 → 1.1
+                    return clip.resized(scale).set_position('center')
+                
+                clip = clip.time_transform(zoom_effect, apply_to=['mask'])
+                clip = clip.resized(lambda t: 1.0 + (t / photo_duration) * 0.1)
+                
+                # Add crossfade
+                if i > 0:
+                    clip = clip.crossfadein(transition_duration)
+                
+                clips.append(clip)
+                
+                # Stop when we have enough for duration
+                total_time = len(clips) * photo_duration
+                if total_time >= duration:
+                    break
+                    
+            except Exception as e:
+                logger.warning(f"Failed to load photo {photo_path}: {e}")
+                continue
+        
+        if not clips:
+            raise ValueError("No valid photos loaded for slideshow")
+        
+        # Concatenate all clips
+        final_clip = concatenate_videoclips(clips, method="compose")
+        
+        # Trim to exact duration
+        final_clip = final_clip.subclipped(0, min(duration, final_clip.duration))
+        
+        logger.info(f"✅ Slideshow created: {len(clips)} photos, {final_clip.duration:.2f}s")
+        
+        return final_clip
 
     def generate_reel(
         self,
