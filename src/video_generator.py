@@ -184,12 +184,12 @@ class VideoGenerator:
         try:
             font_path = Path(__file__).parent.parent / "fonts" / "DejaVuSans-Bold.ttf"
             font_sizes = {
-                "hook": 110,
-                "meaning": 85,
-                "action": 85,
-                "cta": 95
+                "hook": 82,    # 25% smaller
+                "meaning": 64,  # 25% smaller
+                "action": 64,   # 25% smaller
+                "cta": 71       # 25% smaller
             }
-            font_size = font_sizes.get(scene_type, 85)
+            font_size = font_sizes.get(scene_type, 64)
             font = ImageFont.truetype(str(font_path), font_size)
         except:
             font = ImageFont.load_default()
@@ -223,10 +223,14 @@ class VideoGenerator:
             x = (self.width - text_width) // 2
             y = y_start + (i * line_height)
 
-            # Strong shadow for readability
-            for offset in [(0, 4), (4, 0), (0, -4), (-4, 0), (4, 4), (-4, -4), (4, -4), (-4, 4)]:
-                draw.text((x + offset[0], y + offset[1]), line, font=font, fill=(0, 0, 0, 220))
-            
+            # Extra strong shadow with glow effect
+            # Outer glow
+            for offset in [(0, 6), (6, 0), (0, -6), (-6, 0), (6, 6), (-6, -6), (6, -6), (-6, 6)]:
+                draw.text((x + offset[0], y + offset[1]), line, font=font, fill=(0, 0, 0, 180))
+            # Inner shadow
+            for offset in [(0, 3), (3, 0), (0, -3), (-3, 0), (3, 3), (-3, -3), (3, -3), (-3, 3)]:
+                draw.text((x + offset[0], y + offset[1]), line, font=font, fill=(0, 0, 0, 240))
+
             # Main text
             draw.text((x, y), line, font=font, fill=text_color)
 

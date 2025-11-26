@@ -103,10 +103,10 @@ class ContentGenerator:
 YOUR CRITICAL TASK: Generate content that fits in EXACTLY 17 SECONDS when read aloud.
 
 STRICT WORD LIMITS (NON-NEGOTIABLE):
-- Hook: 8-12 words (3-4 seconds)
-- Meaning: 15-20 words (5-6 seconds)
-- Action: 15-20 words (5-6 seconds)
-- CTA: 6-10 words (2-3 seconds)
+- Hook: 10-12 words MINIMUM (3-4 seconds)
+- Meaning: 18-22 words MINIMUM (5-6 seconds)
+- Action: 18-22 words MINIMUM (5-6 seconds)
+- CTA: 8-10 words MINIMUM (2-3 seconds)
 
 STYLE RULES:
 - Direct, punchy, powerful
@@ -123,10 +123,10 @@ ACTION: [15-20 words max]
 CTA: [6-10 words max]
 
 EXAMPLE (GOOD LENGTH):
-HOOK: Seeing 717 everywhere?
-MEANING: Angel number 717 signals spiritual awakening and new beginnings approaching fast.
-ACTION: Trust your intuition today. The universe is guiding you forward.
-CTA: Follow @the17project for daily guidance.
+HOOK: Keep seeing 717 everywhere you look today?
+MEANING: Angel number 717 signals powerful spiritual awakening and new beginnings approaching fast in your life.
+ACTION: Trust your intuition today and tomorrow. The universe is guiding you forward toward your dreams.
+CTA: Follow @the17project now for daily spiritual guidance.
 
 DO NOT exceed word limits. Quality over quantity."""
 
@@ -149,10 +149,10 @@ Style: {style}
 Context: {context}
 
 CRITICAL REQUIREMENTS:
-1. Hook: 8-12 words MAX - grab attention immediately
-2. Meaning: 15-20 words MAX - core message, spiritual insight
-3. Action: 15-20 words MAX - practical step they can take TODAY
-4. CTA: 6-10 words MAX - must end with @the17project
+1. Hook: 10-12 words MINIMUM - grab attention immediately
+2. Meaning: 18-22 words MINIMUM - core message, spiritual insight
+3. Action: 18-22 words MINIMUM - practical step they can take TODAY
+4. CTA: 8-10 words MINIMUM - must end with @the17project
 
 TONE: Mystical yet grounded, inspiring yet practical
 
@@ -193,10 +193,10 @@ Generate now:"""
     def _validate_length(self, content: Dict[str, str]):
         """Validate word counts."""
         limits = {
-            "hook": (8, 12),
-            "meaning": (15, 20),
-            "action": (15, 20),
-            "cta": (6, 10)
+            "hook": (10, 12),
+            "meaning": (18, 22),
+            "action": (18, 22),
+            "cta": (8, 10)
         }
 
         for scene, text in content.items():
