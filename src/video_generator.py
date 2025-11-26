@@ -367,14 +367,19 @@ class VideoGenerator:
         for scene in ["hook", "meaning", "action", "cta"]:
             combined += audio_segments[scene]['audio']
 
-        # Pad to exactly 17s
+        # Add 0.5s end padding for clean finish
+        combined = combined + AudioSegment.silent(duration=500)
+
+        # Then pad to EXACTLY 17 seconds if short
         target_ms = int(self.TARGET_DURATION * 1000)
         if len(combined) < target_ms:
-            silence = target_ms - len(combined)
-            combined = combined + AudioSegment.silent(duration=silence)
-            logger.info(f"Added {silence/1000:.2f}s silence")
+            silence_needed = target_ms - len(combined)
+            combined = combined + AudioSegment.silent(duration=silence_needed)
+            logger.info(f"Added {silence_needed/1000:.2f}s silence to reach 17s")
         elif len(combined) > target_ms:
+            # Trim if slightly over (but keep the 0.5s padding we added)
             combined = combined[:target_ms]
+            logger.info(f"Trimmed to exactly 17s (with 0.5s end padding)")
 
         temp_voice = Path("output/audio") / f"temp_voice_{timestamp}.mp3"
         combined.export(str(temp_voice), format='mp3')
