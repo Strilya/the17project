@@ -27,48 +27,39 @@ logger = logging.getLogger(__name__)
 class BackgroundManager:
     """Manages 4K video backgrounds from Pexels with strict filtering."""
 
-    # STRICT 4K SEARCH QUERIES - ONLY THESE
+    # PORTRAIT VIDEO SEARCH QUERIES - Optimized for vertical
     SPIRITUAL_QUERIES = [
-        "4k purple nebula space stars",
-        "4k aurora borealis night sky",
-        "4k milky way galaxy stars",
-        "4k cosmic space purple gold",
-        "4k starry night sky timelapse",
-        "4k deep space nebula purple",
-        "4k galaxy stars cosmos",
-        "4k northern lights purple"
+        "purple space stars vertical",
+        "aurora borealis vertical video",
+        "galaxy stars portrait",
+        "nebula purple vertical",
+        "night sky stars vertical"
     ]
-    
+
     NATURE_QUERIES = [
-        "4k ocean waves sunset",
-        "4k mountain landscape sunrise",
-        "4k forest waterfall nature",
-        "4k peaceful lake reflection",
-        "4k beach sunset golden hour",
-        "4k tropical beach turquoise",
-        "4k mountain peak clouds",
-        "4k river flowing nature"
+        "ocean waves vertical video",
+        "waterfall nature vertical",
+        "beach sunset vertical",
+        "forest vertical video",
+        "mountain landscape vertical"
     ]
-    
+
     FIRE_QUERIES = [
-        "4k campfire flames close up",
-        "4k fire burning abstract",
-        "4k candles meditation peaceful",
-        "4k bonfire flames night"
+        "campfire flames vertical",
+        "fire abstract vertical",
+        "candles vertical video"
     ]
-    
+
     NEON_QUERIES = [
-        "4k neon lights cityscape night",
-        "4k neon signs city abstract",
-        "4k city lights night timelapse",
-        "4k urban neon reflections"
+        "neon lights vertical cityscape",
+        "city lights vertical night",
+        "neon signs vertical video"
     ]
-    
+
     RETREAT_QUERIES = [
-        "4k spa stones water peaceful",
-        "4k meditation room candles",
-        "4k yoga retreat nature",
-        "4k zen garden peaceful"
+        "spa water vertical peaceful",
+        "meditation vertical calm",
+        "zen garden vertical"
     ]
 
     def __init__(self, config_path: Optional[Path] = None):
@@ -146,7 +137,7 @@ class BackgroundManager:
             "query": query,
             "orientation": "portrait",
             "size": "large",
-            "per_page": 15  # Get more results to filter
+            "per_page": 30  # Get more results to find portrait videos
         }
 
         max_retries = 3
@@ -199,22 +190,27 @@ class BackgroundManager:
         return None
 
     def _is_4k_quality(self, video_data: Dict) -> bool:
-        """Check if video is 4K quality."""
+        """Check if video is HD quality (1080p+)."""
         width = video_data.get('width', 0)
         height = video_data.get('height', 0)
-        
-        # Minimum 4K: 3840x2160 or portrait equivalent (2160x3840)
-        # But we'll accept 1080p minimum for portrait
+
+        # Accept Full HD+ for portrait: 1080x1920 minimum
         if width < 1080 or height < 1920:
             logger.debug(f"Rejected: Low resolution {width}x{height}")
             return False
-        
+
+        # Prefer higher quality
+        if width >= 2160 and height >= 3840:
+            logger.debug(f"✅ 4K quality: {width}x{height}")
+        elif width >= 1080 and height >= 1920:
+            logger.debug(f"✅ Full HD quality: {width}x{height}")
+
         # Check duration
         duration = video_data.get('duration', 0)
         if duration < 15:
             logger.debug(f"Rejected: Too short ({duration}s)")
             return False
-        
+
         return True
 
     def _is_acceptable_content(self, video_data: Dict) -> bool:
