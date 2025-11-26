@@ -1,11 +1,12 @@
 """
-Video Generator - 17 SECONDS + SMART COLOR CONTRAST
+Video Generator - DYNAMIC 17-19s + SMART COLOR CONTRAST
 
 Features:
-- Exact 17-second videos
+- Dynamic 17-19 second videos (natural pacing)
 - Clean 4K backgrounds
 - Smart text colors that CONTRAST with background
 - Purple/Gold/White palette
+- Flexible duration for comfortable speech
 """
 
 import os
@@ -35,10 +36,25 @@ logger = logging.getLogger(__name__)
 
 
 class VideoGenerator:
-    """Generate perfect 17-second Reels with smart color contrast."""
+    """Generate 17-19 second Reels with natural pacing and smart color contrast."""
 
-    TARGET_DURATION = 17.0  # FIXED target - always 17s
-    MAX_SPEED = 1.5  # Allow up to 1.5x for longer content
+    # ========================================================================
+    # OPTION A: EXACT 17 SECONDS (WORKING - BACKUP)
+    # Uses math to calculate exact speed needed to fit content in 17s
+    # Result: Always 17s but may feel rushed if content is long
+    # ========================================================================
+    # TARGET_DURATION = 17.0  # FIXED target - always 17s
+    # MAX_SPEED = 1.5  # Allow up to 1.5x for longer content
+
+    # ========================================================================
+    # OPTION B: DYNAMIC 17-19 SECONDS (ACTIVE)
+    # Allows natural pacing with flexible duration
+    # Result: More natural speech, better user experience
+    # ========================================================================
+    TARGET_DURATION_MIN = 17.0   # Minimum video length
+    TARGET_DURATION_MAX = 19.0   # Maximum video length
+    TARGET_DURATION_IDEAL = 18.0 # Target middle point
+    MAX_SPEED = 1.3              # Max speedup (more conservative)
 
     # COLOR PALETTE - Purple/Gold/White
     TEXT_COLORS = {
@@ -340,33 +356,60 @@ class VideoGenerator:
             
             logger.info(f"  {scene}: {duration:.2f}s - '{text}'")
 
+        # ========================================================================
+        # DYNAMIC DURATION LOGIC (17-19s)
+        #
+        # Flow:
+        # 1. Measure natural content duration at base speed (1.15x)
+        # 2. If < 17s: Pad with silence to reach 17s minimum
+        # 3. If 17-19s: Keep natural duration (PERFECT - no changes)
+        # 4. If > 19s: Speed up to fit in 19s maximum (up to 1.3x total)
+        #
+        # This ensures natural pacing while staying Instagram-friendly
+        # ========================================================================
+
         # STEP 1: Measure natural duration
         natural_duration = sum(seg['duration'] for seg in audio_segments.values())
-        logger.info(f"\nNatural duration: {natural_duration:.2f}s")
+        logger.info(f"\nNatural duration at 1.15x: {natural_duration:.2f}s")
 
-        # STEP 2: Calculate exact speed needed for 17s
-        required_speed = natural_duration / self.TARGET_DURATION
-        logger.info(f"Speed calculation: {natural_duration:.2f}s / {self.TARGET_DURATION}s = {required_speed:.3f}x")
+        # STEP 2: Determine if adjustment needed
+        if natural_duration < self.TARGET_DURATION_MIN:
+            # Content is short - will pad to 17s minimum
+            logger.info(f"✅ Content is short ({natural_duration:.2f}s)")
+            logger.info(f"   Will pad with silence to reach {self.TARGET_DURATION_MIN}s")
+            required_speed = 1.0  # No speed adjustment needed
+            final_duration = self.TARGET_DURATION_MIN
 
-        # STEP 3: Check if speed is acceptable
-        if required_speed > self.MAX_SPEED:
-            logger.warning(f"Content too long! Needs {required_speed:.2f}x, limiting to {self.MAX_SPEED}x")
-            required_speed = self.MAX_SPEED
-            final_duration = natural_duration / required_speed
-            logger.info(f"Will produce {final_duration:.2f}s video instead of 17s")
-        elif required_speed < 1.0:
-            # Content is short, don't slow down, just pad later
-            logger.info(f"Content is short, will pad to 17s (no slowdown)")
-            required_speed = 1.0
-            final_duration = self.TARGET_DURATION
+        elif natural_duration <= self.TARGET_DURATION_MAX:
+            # Content fits perfectly in 17-19s range - use natural duration
+            logger.info(f"✅ Perfect! Content naturally fits in range ({natural_duration:.2f}s)")
+            logger.info(f"   No speed adjustment needed - using natural pacing")
+            required_speed = 1.0  # No speed adjustment needed
+            final_duration = natural_duration
+
         else:
-            # Perfect, can speed up to exactly 17s
-            logger.info(f"✅ Will speed up {required_speed:.3f}x to achieve exactly 17s")
-            final_duration = self.TARGET_DURATION
+            # Content is too long - need to speed up to fit in 19s max
+            # Calculate speed needed: if content is 22s, need 22/19 = 1.16x additional speed
+            # Since base is already 1.15x, total would be 1.15 * 1.16 = 1.33x
+            required_speed = natural_duration / self.TARGET_DURATION_MAX
 
-        # STEP 4: Apply speed adjustment to all segments
+            # Check if within acceptable range
+            total_speed = 1.15 * required_speed  # Base speed * additional speed
+
+            if total_speed > self.MAX_SPEED:
+                logger.warning(f"⚠️  Content too long! Needs {total_speed:.2f}x total speed")
+                logger.info(f"   Limiting to {self.MAX_SPEED}x maximum")
+                required_speed = self.MAX_SPEED / 1.15
+                final_duration = natural_duration / required_speed
+                logger.info(f"   Will produce {final_duration:.2f}s video")
+            else:
+                logger.info(f"⚠️  Content long ({natural_duration:.2f}s), speeding up to {self.TARGET_DURATION_MAX}s")
+                logger.info(f"   Additional speed factor: {required_speed:.3f}x (total: {total_speed:.2f}x)")
+                final_duration = self.TARGET_DURATION_MAX
+
+        # STEP 3: Apply speed adjustment if needed
         if required_speed != 1.0:
-            logger.info(f"\nApplying {required_speed:.3f}x speed to all segments...")
+            logger.info(f"\nApplying {required_speed:.3f}x additional speed...")
             for scene, seg in audio_segments.items():
                 original_duration = seg['duration']
                 sped_up = seg['audio'].speedup(playback_speed=required_speed)
@@ -374,18 +417,26 @@ class VideoGenerator:
                 seg['duration'] = len(sped_up) / 1000.0
                 logger.info(f"  {scene}: {original_duration:.2f}s → {seg['duration']:.2f}s")
 
-        # STEP 5: Concatenate all audio segments
+        # ========================================================================
+        # CONCATENATE AND PAD (if needed)
+        # ========================================================================
+
+        # STEP 4: Concatenate all audio segments
         logger.info("\nSTEP 2: Concatenating audio...")
         combined = AudioSegment.empty()
         for scene in ["hook", "meaning", "action", "cta"]:
             combined += audio_segments[scene]['audio']
 
-        # STEP 6: Pad to exact 17s if needed (only if content was short)
-        target_ms = int(final_duration * 1000)
-        actual_ms = len(combined)
+        actual_duration_ms = len(combined)
+        actual_duration = actual_duration_ms / 1000.0
 
-        if actual_ms < target_ms:
-            silence_needed = target_ms - actual_ms
+        logger.info(f"Combined audio duration: {actual_duration:.2f}s")
+
+        # STEP 5: Pad ONLY if below minimum (17s)
+        target_ms = int(final_duration * 1000)
+
+        if actual_duration_ms < target_ms:
+            silence_needed = target_ms - actual_duration_ms
             combined = combined + AudioSegment.silent(duration=silence_needed)
             logger.info(f"Added {silence_needed/1000:.2f}s silence to reach {final_duration:.2f}s")
 
@@ -394,9 +445,10 @@ class VideoGenerator:
         # Debug output
         logger.info("\n" + "="*70)
         logger.info("FINAL VIDEO SPECS:")
-        logger.info(f"  Target: {self.TARGET_DURATION}s")
+        logger.info(f"  Target range: {self.TARGET_DURATION_MIN}s - {self.TARGET_DURATION_MAX}s")
         logger.info(f"  Actual: {final_duration:.2f}s")
-        logger.info(f"  Speed applied: {required_speed:.3f}x")
+        logger.info(f"  Additional speed: {required_speed:.3f}x")
+        logger.info(f"  Total speed: {1.15 * required_speed:.2f}x")
         logger.info(f"  Audio length: {len(combined)/1000.0:.2f}s")
         logger.info("="*70)
 
@@ -482,8 +534,10 @@ class VideoGenerator:
         logger.info("✅ VIDEO COMPLETE")
         logger.info("="*70)
         logger.info(f"Output: {output_path}")
-        logger.info(f"Duration: {final_duration:.2f}s (speed: {required_speed:.3f}x)")
+        logger.info(f"Duration: {final_duration:.2f}s (dynamic 17-19s range)")
+        logger.info(f"Natural pacing: {1.15 * required_speed:.2f}x total speed")
         logger.info(f"Text color: {text_color_key.upper()} ({self.TEXT_COLORS[text_color_key]})")
+        logger.info(f"Quality: 4K backgrounds, clean HD export")
         logger.info("="*70 + "\n")
 
         return str(output_path)
