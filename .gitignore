@@ -38,4 +38,6 @@ Thumbs.db
 !config/topic_tracker.json
 !config/prompts.json
 !config/video_config.json
+!config/hashtag_pools.json
+!config/hashtag_tracker.json
 !package.json
