@@ -53,8 +53,10 @@
         "Affirmation techniques",
         "Energy alignment practices"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "Scripting your ideal day"
+      ],
+      "last_used_date": "2025-11-27T01:21:53.420331"
     },
     "spiritual_growth": {
       "topics": [
@@ -83,10 +85,15 @@
       "topic": "Evening 17-minute wind-down",
       "category": "productivity",
       "date": "2025-11-27T01:15:55.866789"
+    },
+    {
+      "topic": "Scripting your ideal day",
+      "category": "manifestation",
+      "date": "2025-11-27T01:21:53.420341"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 2,
+  "current_category_index": 3,
   "category_order": [
     "angel_numbers",
     "productivity",
