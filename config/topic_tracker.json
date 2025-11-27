@@ -19,7 +19,7 @@
       ],
       "used": [
         "1111",
-        "333"
+        "17"
       ],
       "last_used_date": "2025-11-27T13:34:29.665566"
     },
@@ -56,10 +56,9 @@
         "Energy alignment practices"
       ],
       "used": [
-        "Scripting your ideal day",
-        "Vision board creation"
+        "Scripting your ideal day"
       ],
-      "last_used_date": "2025-11-27T13:49:58.819755"
+      "last_used_date": "2025-11-27T01:21:53.420331"
     },
     "spiritual_growth": {
       "topics": [
@@ -110,15 +109,10 @@
       "topic": "17-minute exercise bursts",
       "category": "productivity",
       "date": "2025-11-27T13:39:55.920742"
-    },
-    {
-      "topic": "Vision board creation",
-      "category": "manifestation",
-      "date": "2025-11-27T13:49:58.819770"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 2,
   "category_order": [
     "angel_numbers",
     "productivity",
