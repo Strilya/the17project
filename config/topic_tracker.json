@@ -71,8 +71,10 @@
         "Mindfulness practices",
         "Spiritual protection"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "Higher self connection"
+      ],
+      "last_used_date": "2025-11-27T01:27:04.441442"
     }
   },
   "content_history": [
@@ -90,10 +92,15 @@
       "topic": "Scripting your ideal day",
       "category": "manifestation",
       "date": "2025-11-27T01:21:53.420341"
+    },
+    {
+      "topic": "Higher self connection",
+      "category": "spiritual_growth",
+      "date": "2025-11-27T01:27:04.441454"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
