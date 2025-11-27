@@ -75,9 +75,10 @@
         "Spiritual protection"
       ],
       "used": [
-        "Higher self connection"
+        "Higher self connection",
+        "Divine timing"
       ],
-      "last_used_date": "2025-11-27T01:27:04.441442"
+      "last_used_date": "2025-11-27T19:28:22.847538"
     }
   },
   "content_history": [
@@ -115,10 +116,15 @@
       "topic": "Vision board creation",
       "category": "manifestation",
       "date": "2025-11-27T14:04:02.350761"
+    },
+    {
+      "topic": "Divine timing",
+      "category": "spiritual_growth",
+      "date": "2025-11-27T19:28:22.847548"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
