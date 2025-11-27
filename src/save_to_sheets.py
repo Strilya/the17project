@@ -188,19 +188,13 @@ class SheetsManager:
             "Caption",           # B
             "Hashtags",          # C
             "Image_description", # D
-            "Topic",             # E - NEW: The specific topic used
-            "Category",          # F - NEW: Topic category (angel_numbers, productivity, etc.)
-            "Status",            # G
-            "Posted_Date",       # H
-            "Likes",             # I - NEW: For manual tracking
-            "Comments",          # J - NEW: For manual tracking
-            "Saves",             # K - NEW: For manual tracking
-            "Engagement_notes",  # L
-            "Video_Path"         # M - NEW: Path to generated video reel
+            "Status",            # E
+            "Posted_Date",       # F
+            "Engagement_notes"   # G
         ]
 
         worksheet.append_row(headers)
-        logger.info("Created header row in worksheet (13 columns)")
+        logger.info("Created header row in worksheet (7 columns)")
 
     def save_content(self, content: Dict[str, Any], topic: str = "", category: str = "", video_path: str = "") -> None:
         """
@@ -256,37 +250,26 @@ class SheetsManager:
             topic_value = topic or content.get("topic", "")
             category_value = category or content.get("category", "")
 
-            # Prepare row data matching column structure (13 columns):
+            # Prepare row data matching YOUR 7-column structure:
             # A: Date, B: Caption, C: Hashtags, D: Image_description,
-            # E: Topic, F: Category, G: Status, H: Posted_Date,
-            # I: Likes, J: Comments, K: Saves, L: Engagement_notes, M: Video_Path
+            # E: Status, F: Posted_Date, G: Engagement_notes
             row = [
                 date_formatted,        # A: Date
                 caption_formatted,     # B: Caption
                 hashtags_formatted,    # C: Hashtags
                 image_desc_formatted,  # D: Image_description
-                topic_value,           # E: Topic (NEW)
-                category_value,        # F: Category (NEW)
-                "",                    # G: Status (empty)
-                "",                    # H: Posted_Date (empty)
-                "",                    # I: Likes (empty, manual entry)
-                "",                    # J: Comments (empty, manual entry)
-                "",                    # K: Saves (empty, manual entry)
-                "",                    # L: Engagement_notes (empty)
-                video_path             # M: Video_Path (NEW)
+                "",                    # E: Status (empty)
+                "",                    # F: Posted_Date (empty)
+                ""                     # G: Engagement_notes (empty)
             ]
 
             # DEBUG: Log the exact row being written
-            logger.info(f"Row being written (13 columns):")
+            logger.info(f"Row being written (7 columns):")
             logger.info(f"  [0] Date: {row[0]}")
             logger.info(f"  [1] Caption: {row[1][:50]}..." if len(row[1]) > 50 else f"  [1] Caption: {row[1]}")
             logger.info(f"  [2] Hashtags: {row[2][:50]}..." if len(row[2]) > 50 else f"  [2] Hashtags: {row[2]}")
             logger.info(f"  [3] Image_desc: {row[3][:50]}..." if len(row[3]) > 50 else f"  [3] Image_desc: {row[3]}")
-            logger.info(f"  [4] Topic: '{row[4]}'")
-            logger.info(f"  [5] Category: '{row[5]}'")
-            logger.info(f"  [6] Status: '{row[6]}'")
-            logger.info(f"  [7-11] Empty analytics columns")
-            logger.info(f"  [12] Video_Path: '{row[12]}'")
+            logger.info(f"  [4-6] Empty columns (Status, Posted_Date, Notes)")
             logger.info(f"Row length: {len(row)} columns")
 
             # Append row to worksheet
