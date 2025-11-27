@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Dict, Optional
 from pathlib import Path
 from anthropic import Anthropic
+from hashtag_manager import HashtagManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,6 +62,9 @@ class ContentGenerator:
 
         self.client = Anthropic(api_key=api_key)
         self.model = "claude-sonnet-4-20250514"
+
+        # Initialize hashtag manager for dynamic rotation
+        self.hashtag_manager = HashtagManager()
 
         logger.info("ContentGenerator initialized (17s optimized)")
 
@@ -128,10 +132,20 @@ class ContentGenerator:
             # Format for workflow
             caption = f"{content['hook']} {content['meaning']} {content['action']} {content['cta']}"
 
+            # Generate dynamic hashtags (15 rotating + 8 core = 23 total)
+            hashtag_list = self.hashtag_manager.generate_hashtags(
+                category=category,
+                count=15
+            )
+            hashtags_str = " ".join(hashtag_list)
+
+            # Mark hashtags as used to avoid repeats
+            self.hashtag_manager.mark_hashtags_used(hashtag_list)
+
             return {
                 "video_scenes": content,
                 "caption": caption,
-                "hashtags": "#the17project #angelnumbers #spirituality #manifestation #lawofattraction"
+                "hashtags": hashtags_str
             }
 
         except Exception as e:
@@ -323,10 +337,19 @@ Generate NOW:"""
 
         caption = f"{content['hook']} {content['meaning']} {content['action']} {content['cta']}"
 
+        # Generate dynamic hashtags even for fallback
+        hashtag_list = self.hashtag_manager.generate_hashtags(
+            category="angel_numbers",
+            count=15
+        )
+        hashtags_str = " ".join(hashtag_list)
+
+        self.hashtag_manager.mark_hashtags_used(hashtag_list)
+
         return {
             "video_scenes": content,
             "caption": caption,
-            "hashtags": "#the17project #angelnumbers #spirituality"
+            "hashtags": hashtags_str
         }
 
 
