@@ -1,10 +1,28 @@
 {
   "topics": {
     "angel_numbers": {
-      "high_priority": ["17", "717", "1717", "911", "711", "111", "222", "444"],
-      "interesting": ["1111", "1212", "1010", "369", "555", "777", "818", "313", "1234", "321", "11:11", "12:12", "3:33"],
-      "used": [],
-      "last_used_date": null
+      "numbers": [
+        "17",
+        "111",
+        "222",
+        "333",
+        "444",
+        "555",
+        "717",
+        "711",
+        "911",
+        "1111",
+        "1212",
+        "1234",
+        "888",
+        "999"
+      ],
+      "used": [
+        "1111",
+        "333",
+        "17"
+      ],
+      "last_used_date": "2025-11-27T13:34:29.665566"
     },
     "productivity": {
       "techniques": [
@@ -19,8 +37,11 @@
         "17-minute exercise bursts",
         "17-minute creative sessions"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "Evening 17-minute wind-down",
+        "17-minute exercise bursts"
+      ],
+      "last_used_date": "2025-11-27T13:39:55.920730"
     },
     "manifestation": {
       "practices": [
@@ -35,8 +56,10 @@
         "Affirmation techniques",
         "Energy alignment practices"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "Scripting your ideal day"
+      ],
+      "last_used_date": "2025-11-27T01:21:53.420331"
     },
     "spiritual_growth": {
       "topics": [
@@ -51,12 +74,50 @@
         "Mindfulness practices",
         "Spiritual protection"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "Higher self connection"
+      ],
+      "last_used_date": "2025-11-27T01:27:04.441442"
     }
   },
-  "content_history": [],
+  "content_history": [
+    {
+      "topic": "1111",
+      "category": "angel_numbers",
+      "date": "2025-11-27T00:42:59.511092"
+    },
+    {
+      "topic": "Evening 17-minute wind-down",
+      "category": "productivity",
+      "date": "2025-11-27T01:15:55.866789"
+    },
+    {
+      "topic": "Scripting your ideal day",
+      "category": "manifestation",
+      "date": "2025-11-27T01:21:53.420341"
+    },
+    {
+      "topic": "Higher self connection",
+      "category": "spiritual_growth",
+      "date": "2025-11-27T01:27:04.441454"
+    },
+    {
+      "topic": "333",
+      "category": "angel_numbers",
+      "date": "2025-11-27T13:34:29.665577"
+    },
+    {
+      "topic": "17-minute exercise bursts",
+      "category": "productivity",
+      "date": "2025-11-27T13:39:55.920742"
+    }
+  ],
   "last_reset_date": null,
-  "current_category_index": 0,
-  "category_order": ["angel_numbers", "productivity", "manifestation", "spiritual_growth"]
+  "current_category_index": 2,
+  "category_order": [
+    "angel_numbers",
+    "productivity",
+    "manifestation",
+    "spiritual_growth"
+  ]
 }
