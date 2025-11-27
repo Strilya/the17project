@@ -1,10 +1,15 @@
 """
-Background Manager - FIXED FOR 4K NATURE/SPACE/FIRE/NEON ONLY
+Background Manager Module
 
-Strict filtering:
-- Only 4K resolution (3840x2160 minimum)
-- Only nature, space, fire, water, neon lights, cityscapes, beaches, retreat settings
-- NO people, NO activities, NO random content
+This module handles fetching and caching video backgrounds from Pexels API
+for Instagram Reels. It provides dynamic, engaging video backgrounds that
+match each content category's theme.
+
+Main functionality:
+- Search Pexels API for category-specific video backgrounds
+- Download and cache videos locally
+- Manage cache size and cleanup
+- Fallback to gradient backgrounds if API is unavailable
 """
 
 import os
@@ -14,9 +19,11 @@ import json
 import random
 import time
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, List, Dict, Tuple
 from datetime import datetime
+from PIL import Image
 
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -25,283 +32,434 @@ logger = logging.getLogger(__name__)
 
 
 class BackgroundManager:
-    """Manages 4K video backgrounds from Pexels with strict filtering."""
+    """
+    Manages video backgrounds from Pexels API with caching.
 
-    # PORTRAIT VIDEO SEARCH QUERIES - Optimized for vertical
-    SPIRITUAL_QUERIES = [
-        "purple space stars vertical",
-        "aurora borealis vertical video",
-        "galaxy stars portrait",
-        "nebula purple vertical",
-        "night sky stars vertical"
-    ]
-
-    NATURE_QUERIES = [
-        "ocean waves vertical video",
-        "waterfall nature vertical",
-        "beach sunset vertical",
-        "forest vertical video",
-        "mountain landscape vertical"
-    ]
-
-    FIRE_QUERIES = [
-        "campfire flames vertical",
-        "fire abstract vertical",
-        "candles vertical video"
-    ]
-
-    NEON_QUERIES = [
-        "neon lights vertical cityscape",
-        "city lights vertical night",
-        "neon signs vertical video"
-    ]
-
-    RETREAT_QUERIES = [
-        "spa water vertical peaceful",
-        "meditation vertical calm",
-        "zen garden vertical"
-    ]
+    This class handles:
+    1. Searching Pexels for category-specific videos
+    2. Downloading videos to local cache
+    3. Managing cache size and cleanup
+    4. Providing fallback to gradients if API fails
+    """
 
     def __init__(self, config_path: Optional[Path] = None):
-        """Initialize BackgroundManager."""
+        """
+        Initialize the BackgroundManager.
+
+        Args:
+            config_path: Path to video_config.json file
+        """
+        # Load config
         if config_path is None:
             config_path = Path(__file__).parent.parent / "config" / "video_config.json"
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
+
             self.config = config["background_videos"]
         except Exception as e:
             logger.error(f"Failed to load config: {e}")
-            self.config = {"enabled": False}
+            # Default config with backgrounds disabled
+            self.config = {
+                "enabled": False,
+                "fallback_to_gradient": True,
+                "cache_enabled": False
+            }
 
+        # Get API key from environment
         self.api_key = os.getenv("PEXELS_API_KEY")
-        
+
         if not self.api_key:
-            logger.warning("PEXELS_API_KEY not found")
+            logger.warning("PEXELS_API_KEY not found, will use gradient fallback")
             self.config["enabled"] = False
 
+        # Setup cache directory
         if self.config.get("cache_enabled", True):
             self.cache_dir = Path(self.config.get("cache_dir", "output/background_cache"))
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Cache directory: {self.cache_dir}")
         else:
             self.cache_dir = None
 
-        logger.info(f"BackgroundManager initialized (4K strict filtering)")
+        logger.info(f"BackgroundManager initialized (enabled: {self.config['enabled']})")
 
     def get_background_video(self, category: str) -> Optional[str]:
-        """Get 4K background video for category."""
+        """
+        Get background video for category, returns path or None.
+
+        Args:
+            category: Content category (angel_numbers, productivity, etc.)
+
+        Returns:
+            Path to video file, or None if fallback to gradient
+        """
         if not self.config["enabled"]:
-            logger.info("Backgrounds disabled, using gradient")
+            logger.info("Background videos disabled, using gradient fallback")
             return None
 
         try:
             # Check cache first
             cached = self._get_from_cache(category)
             if cached:
-                logger.info(f"Using cached 4K video: {cached}")
+                logger.info(f"Using cached background: {cached}")
                 return cached
 
-            # Get ALL possible queries for variety
-            all_queries = (
-                self.SPIRITUAL_QUERIES +
-                self.NATURE_QUERIES +
-                self.FIRE_QUERIES +
-                self.NEON_QUERIES +
-                self.RETREAT_QUERIES
-            )
-            
-            # Pick random query
-            query = random.choice(all_queries)
-            logger.info(f"Searching Pexels: {query}")
+            # Search Pexels
+            keywords = self.config.get("categories", {}).get(category, ["abstract purple"])
+            query = random.choice(keywords)
+            logger.info(f"Searching Pexels for: {query}")
 
-            video_url = self._search_pexels_4k(query)
+            video_url = self._search_pexels(query)
             if not video_url:
-                logger.warning(f"No 4K video found for: {query}")
+                logger.warning(f"No video found for query: {query}")
                 return None
 
-            # Download
+            # Download video
             video_path = self._download_video(video_url, category)
             return video_path
 
         except Exception as e:
-            logger.error(f"Failed to get background: {e}")
-            return None
+            logger.error(f"Failed to get background video: {e}")
+            if self.config.get("fallback_to_gradient", True):
+                logger.info("Falling back to gradient background")
+                return None
+            raise
 
-    def _search_pexels_4k(self, query: str) -> Optional[str]:
-        """Search Pexels for 4K videos ONLY."""
+    def _search_pexels(self, query: str) -> Optional[str]:
+        """
+        Search Pexels API for video with retry logic.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            Direct URL to video file, or None if not found
+        """
         url = "https://api.pexels.com/videos/search"
         headers = {"Authorization": self.api_key}
-        
+
+        video_settings = self.config.get("video_settings", {})
         params = {
             "query": query,
-            "orientation": "portrait",
-            "size": "large",
-            "per_page": 30  # Get more results to find portrait videos
+            "orientation": video_settings.get("orientation", "portrait"),
+            "size": video_settings.get("size", "large"),
+            "per_page": video_settings.get("per_page", 10)
         }
 
+        # Retry logic: 3 attempts with exponential backoff
         max_retries = 3
         for attempt in range(max_retries):
             try:
+                # Increased timeout from 10s to 30s to handle slow API responses
                 response = requests.get(url, headers=headers, params=params, timeout=30)
                 response.raise_for_status()
-                
+
                 data = response.json()
                 videos = data.get("videos", [])
 
                 if not videos:
+                    logger.warning(f"No videos found for query: {query}")
                     return None
 
-                # Filter for 4K portrait videos
+                # Find first VALIDATED 4K video ONLY (no HD/SD fallback)
                 for video in videos:
-                    if not self._is_4k_quality(video):
-                        continue
-                    
-                    if not self._is_acceptable_content(video):
+                    if not self._validate_video(video):
+                        logger.debug(f"Skipping video: failed validation")
                         continue
 
                     video_files = video.get("video_files", [])
-                    
-                    # Find best quality portrait video
-                    for vf in video_files:
-                        width = vf.get("width", 0)
-                        height = vf.get("height", 0)
-                        
-                        # Portrait and high quality
-                        if width > 0 and height > 0 and width < height and width >= 1080:
-                            logger.info(f"✅ Found 4K video: {width}x{height}")
-                            return vf["link"]
 
-                logger.warning("No 4K portrait videos found")
+                    # ONLY accept UHD (4K) quality
+                    for vf in video_files:
+                        if vf.get("quality") == "uhd":
+                            width = vf.get("width", 0)
+                            height = vf.get("height", 0)
+                            if width > 0 and height > 0 and width < height:
+                                logger.info(f"✅ Found validated 4K portrait video: {width}x{height}")
+                                return vf["link"]
+
+                logger.warning("No 4K videos found - will use photo slideshow instead")
                 return None
 
-            except requests.exceptions.Timeout:
+            except requests.exceptions.Timeout as e:
                 if attempt < max_retries - 1:
-                    wait = 2 ** attempt
-                    logger.warning(f"Timeout, retrying in {wait}s...")
-                    time.sleep(wait)
+                    wait_time = (2 ** attempt)  # Exponential backoff: 1s, 2s, 4s
+                    logger.warning(f"Pexels API timeout (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
                 else:
-                    logger.error("Timeout after retries")
+                    logger.error(f"Pexels API timeout after {max_retries} attempts: {e}")
+                    return None
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt)
+                    logger.warning(f"Pexels API request error (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    logger.error(f"Pexels API request error after {max_retries} attempts: {e}")
                     return None
             except Exception as e:
-                logger.error(f"Search error: {e}")
+                logger.error(f"Pexels API error: {e}")
                 return None
 
         return None
 
-    def _is_4k_quality(self, video_data: Dict) -> bool:
-        """Check if video is HD quality (1080p+)."""
+    def _validate_video(self, video_data: Dict) -> bool:
+        """
+        Validate video is appropriate for spiritual content (no people/activities).
+
+        Args:
+            video_data: Video metadata from Pexels API
+
+        Returns:
+            True if video is valid, False otherwise
+        """
+        # Check resolution - must be HD minimum
         width = video_data.get('width', 0)
         height = video_data.get('height', 0)
 
-        # Accept Full HD+ for portrait: 1080x1920 minimum
         if width < 1080 or height < 1920:
-            logger.debug(f"Rejected: Low resolution {width}x{height}")
+            logger.debug(f"Rejected: resolution too low ({width}x{height})")
             return False
 
-        # Prefer higher quality
-        if width >= 2160 and height >= 3840:
-            logger.debug(f"✅ 4K quality: {width}x{height}")
-        elif width >= 1080 and height >= 1920:
-            logger.debug(f"✅ Full HD quality: {width}x{height}")
-
-        # Check duration
+        # Check duration - prefer longer clips (minimum 10s)
         duration = video_data.get('duration', 0)
-        if duration < 15:
-            logger.debug(f"Rejected: Too short ({duration}s)")
+        if duration < 10:
+            logger.debug(f"Rejected: duration too short ({duration}s)")
             return False
 
-        return True
-
-    def _is_acceptable_content(self, video_data: Dict) -> bool:
-        """Strict content filtering - NO people or activities."""
-        # Get all text to check
-        tags_str = ' '.join([str(tag).lower() for tag in video_data.get('tags', [])])
+        # Check tags for red flag keywords (people/activities)
+        tags_str = ' '.join([tag.lower() for tag in video_data.get('tags', [])])
         url_str = video_data.get('url', '').lower()
         combined = f"{tags_str} {url_str}"
 
-        # STRICT BLOCKLIST - Reject anything with people or activities
-        blocklist = [
-            # People
+        # Reject if contains people-related keywords
+        bad_keywords = [
             'person', 'man', 'woman', 'people', 'guy', 'girl', 'face', 'body',
             'human', 'hand', 'hands', 'portrait', 'selfie', 'model', 'male', 'female',
-            'boy', 'child', 'adult', 'crowd', 'group', 'team', 
-            
-            # Activities
-            'yoga', 'exercise', 'workout', 'dance', 'dancing', 'running', 'walking',
-            'sitting', 'standing', 'jumping', 'swimming', 'surfing', 'climbing',
-            
-            # Random/weird stuff
-            'gypsy', 'fortune', 'carnival', 'festival', 'circus', 'party', 'concert',
-            'tourist', 'travel', 'vacation', 'shopping', 'market', 'restaurant',
-            'car', 'vehicle', 'traffic', 'road', 'street', 'building', 'architecture',
-            'indoor', 'room', 'house', 'apartment', 'office', 'store', 'shop'
+            'boy', 'child', 'adult', 'crowd', 'group', 'team', 'yoga', 'exercise',
+            'workout', 'dance', 'running', 'walking', 'sitting', 'standing'
         ]
 
-        for keyword in blocklist:
+        for keyword in bad_keywords:
             if keyword in combined:
-                logger.debug(f"Rejected: Contains '{keyword}'")
+                logger.debug(f"Rejected: contains keyword '{keyword}'")
                 return False
 
-        # MUST contain acceptable keywords
-        acceptable = [
-            'nature', 'space', 'star', 'galaxy', 'nebula', 'cosmos', 'aurora',
-            'ocean', 'sea', 'wave', 'beach', 'water', 'lake', 'river', 'waterfall',
-            'mountain', 'forest', 'tree', 'sky', 'cloud', 'sunset', 'sunrise',
-            'fire', 'flame', 'candle', 'neon', 'light', 'glow', 'abstract',
-            'peaceful', 'calm', 'zen', 'meditation', 'spiritual', 'purple', 'gold'
-        ]
-
-        has_acceptable = any(word in combined for word in acceptable)
-        
-        if not has_acceptable:
-            logger.debug("Rejected: No acceptable keywords")
-            return False
-
-        logger.debug("✅ Content validated")
+        logger.debug("Video passed validation")
         return True
 
+    def search_high_res_photos(self, category: str, count: int = 20) -> List[str]:
+        """
+        Search Pexels Photos API for high-resolution images.
+        
+        Args:
+            category: Content category
+            count: Number of photos to fetch
+            
+        Returns:
+            List of photo URLs
+        """
+        # Map categories to photo search terms
+        photo_queries = {
+            "angel_numbers": ["mystical sacred geometry", "spiritual symbols cosmos", "numerology divine light"],
+            "productivity": ["zen minimalist workspace", "peaceful nature meditation", "calm forest light"],
+            "manifestation": ["cosmic universe energy", "spiritual awakening light", "meditation sacred space"],
+            "spiritual_growth": ["spiritual nature light", "mystical forest cosmos", "divine energy meditation"]
+        }
+        
+        queries = photo_queries.get(category, ["spiritual nature", "cosmic light", "sacred geometry"])
+        all_photos = []
+        
+        url = "https://api.pexels.com/v1/search"
+        headers = {"Authorization": self.api_key}
+        
+        for query in queries:
+            try:
+                params = {
+                    "query": query,
+                    "orientation": "portrait",
+                    "size": "large",  # Highest resolution
+                    "per_page": 15
+                }
+                
+                logger.info(f"Searching photos: {query}")
+                response = requests.get(url, headers=headers, params=params, timeout=30)
+                response.raise_for_status()
+                
+                data = response.json()
+                photos = data.get("photos", [])
+                
+                for photo in photos:
+                    # Get highest quality source
+                    src = photo.get("src", {})
+                    photo_url = src.get("large2x") or src.get("large") or src.get("original")
+                    
+                    if photo_url:
+                        # Verify it's high resolution
+                        width = photo.get("width", 0)
+                        height = photo.get("height", 0)
+                        
+                        if width >= 1080 and height >= 1920:
+                            all_photos.append(photo_url)
+                            logger.info(f"  ✅ Found high-res photo: {width}x{height}")
+                        
+                        if len(all_photos) >= count:
+                            break
+                
+                if len(all_photos) >= count:
+                    break
+                    
+                time.sleep(0.5)  # Rate limiting between queries
+                
+            except Exception as e:
+                logger.warning(f"Photo search failed for '{query}': {e}")
+                continue
+        
+        logger.info(f"Collected {len(all_photos)} high-res photos")
+        return all_photos[:count]
+
+    def download_photo(self, url: str, save_path: Path) -> bool:
+        """
+        Download a single photo.
+        
+        Args:
+            url: Photo URL
+            save_path: Where to save the photo
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(save_path, 'wb') as f:
+                f.write(response.content)
+            
+            # Verify it's a valid image
+            img = Image.open(save_path)
+            img.verify()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to download photo: {e}")
+            if save_path.exists():
+                save_path.unlink()
+            return False
+
+    def download_photos_for_slideshow(self, category: str, count: int = 20) -> List[Path]:
+        """
+        Download multiple high-res photos for slideshow.
+        
+        Args:
+            category: Content category
+            count: Number of photos to download
+            
+        Returns:
+            List of paths to downloaded photos
+        """
+        logger.info(f"\n🖼️  DOWNLOADING {count} HIGH-RES PHOTOS FOR SLIDESHOW")
+        logger.info("="*70)
+        
+        # Search for photos
+        photo_urls = self.search_high_res_photos(category, count)
+        
+        if not photo_urls:
+            logger.error("No high-res photos found!")
+            return []
+        
+        # Download photos
+        downloaded_photos = []
+        cache_dir = self.cache_dir / "photos" / category
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        
+        for i, url in enumerate(photo_urls):
+            photo_path = cache_dir / f"photo_{i:03d}.jpg"
+            
+            if self.download_photo(url, photo_path):
+                downloaded_photos.append(photo_path)
+                logger.info(f"  [{i+1}/{len(photo_urls)}] Downloaded: {photo_path.name}")
+            
+            if len(downloaded_photos) >= count:
+                break
+        
+        logger.info(f"\n✅ Downloaded {len(downloaded_photos)} photos successfully")
+        logger.info("="*70)
+        
+        return downloaded_photos
+
     def _download_video(self, url: str, category: str) -> str:
-        """Download video to cache."""
+        """
+        Download video to cache.
+
+        Args:
+            url: Direct URL to video file
+            category: Content category for naming
+
+        Returns:
+            Path to downloaded video file
+        """
         if not self.cache_dir:
-            raise RuntimeError("Cache disabled")
+            raise RuntimeError("Cache is disabled")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{category}_{timestamp}.mp4"
         filepath = self.cache_dir / filename
 
-        logger.info(f"Downloading 4K video: {filename}")
+        logger.info(f"Downloading video from Pexels: {filename}")
 
-        response = requests.get(url, stream=True, timeout=60)
-        response.raise_for_status()
+        try:
+            response = requests.get(url, stream=True, timeout=60)
+            response.raise_for_status()
 
-        with open(filepath, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
 
-        logger.info(f"✅ Downloaded: {filepath}")
-        self._cleanup_cache()
-        
-        return str(filepath)
+            logger.info(f"Downloaded background video: {filepath}")
+
+            # Cleanup old cache files
+            self._cleanup_cache()
+
+            return str(filepath)
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to download video: {e}")
+            if filepath.exists():
+                filepath.unlink()
+            raise
 
     def _get_from_cache(self, category: str) -> Optional[str]:
-        """Get random cached video."""
-        if not self.cache_dir:
+        """
+        Get random cached video for category.
+
+        Args:
+            category: Content category
+
+        Returns:
+            Path to cached video, or None if no cache available
+        """
+        if not self.config.get("cache_enabled", True) or not self.cache_dir:
             return None
 
         try:
             cached_files = list(self.cache_dir.glob(f"{category}_*.mp4"))
             if cached_files:
                 selected = random.choice(cached_files)
+                logger.info(f"Found {len(cached_files)} cached videos for {category}")
                 return str(selected)
         except Exception as e:
-            logger.error(f"Cache error: {e}")
+            logger.error(f"Error accessing cache: {e}")
 
         return None
 
     def _cleanup_cache(self):
-        """Remove old videos if cache too large."""
+        """Remove old videos if cache is too large."""
         if not self.cache_dir:
             return
 
@@ -313,33 +471,57 @@ class BackgroundManager:
             )
 
             if len(cached_files) > max_size:
-                to_remove = cached_files[:-max_size]
-                for old_file in to_remove:
+                files_to_remove = cached_files[:-max_size]
+                for old_file in files_to_remove:
                     old_file.unlink()
-                logger.info(f"Cache cleanup: removed {len(to_remove)} old files")
+                    logger.info(f"Removed old cache file: {old_file.name}")
+
+                logger.info(f"Cache cleanup: removed {len(files_to_remove)} old files")
 
         except Exception as e:
-            logger.error(f"Cleanup failed: {e}")
+            logger.error(f"Cache cleanup failed: {e}")
 
 
 def main():
-    """Test BackgroundManager."""
-    manager = BackgroundManager()
-    
-    print("\n" + "="*70)
-    print("TESTING 4K BACKGROUND MANAGER")
-    print("="*70)
-    
-    video_path = manager.get_background_video("angel_numbers")
-    
-    if video_path:
-        print(f"\n✅ Got 4K video: {video_path}")
-        size_mb = Path(video_path).stat().st_size / (1024 * 1024)
-        print(f"   Size: {size_mb:.2f} MB")
-    else:
-        print("\n❌ No video found")
-    
-    print("="*70 + "\n")
+    """
+    Main function for testing BackgroundManager locally.
+
+    Usage:
+        python src/background_manager.py
+    """
+    try:
+        print("\n" + "="*70)
+        print("TESTING BACKGROUND MANAGER")
+        print("="*70)
+
+        # Initialize manager
+        manager = BackgroundManager()
+
+        # Test each category
+        categories = ["angel_numbers", "productivity", "manifestation", "spiritual_growth"]
+
+        for category in categories:
+            print(f"\n--- Testing {category} ---")
+            video_path = manager.get_background_video(category)
+
+            if video_path:
+                print(f"✅ Got video: {video_path}")
+                # Check file exists and has size
+                if Path(video_path).exists():
+                    size_mb = Path(video_path).stat().st_size / (1024 * 1024)
+                    print(f"   File size: {size_mb:.2f} MB")
+                else:
+                    print(f"❌ File does not exist!")
+            else:
+                print(f"⚠ No video (using gradient fallback)")
+
+        print("\n" + "="*70)
+        print("BACKGROUND MANAGER TEST COMPLETE")
+        print("="*70)
+
+    except Exception as e:
+        logger.error(f"Test failed: {e}")
+        raise
 
 
 if __name__ == "__main__":

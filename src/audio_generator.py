@@ -1,25 +1,20 @@
 """
-Audio Generator Module
+Audio Generator - IMPROVED WITH MULTIPLE VOICES
 
-This module handles generating and optimizing voiceovers for Instagram Reels.
-It uses gTTS for text-to-speech and pydub for audio speed optimization.
-
-Main functionality:
-- Generate voiceovers with gTTS
-- Speed up audio by 15% for better pacing
-- Rotate TLD accents for variety
-- Optimize audio quality for Instagram
+Features:
+- 3 different Google Neural2 voices for variety
+- Random voice selection per video
+- Better audio quality
+- Each voice has unique personality
 """
 
 import os
 import logging
-from pathlib import Path
+import random
 from typing import Optional
-from datetime import datetime
-from gtts import gTTS
-from pydub import AudioSegment
+from pathlib import Path
+from google.cloud import texttospeech
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -28,161 +23,138 @@ logger = logging.getLogger(__name__)
 
 
 class AudioGenerator:
-    """
-    Generates optimized voiceovers for Instagram Reels.
+    """Generate voiceovers with MULTIPLE Neural2 voices for variety."""
 
-    Features:
-    - Text-to-speech with gTTS
-    - 15% speed increase for better pacing
-    - Daily TLD rotation for accent variety
-    - Smooth audio transitions
-    """
+    # VOICE VARIETY - Rotate these for engagement
+    VOICES = {
+        "warm_friendly": {
+            "name": "en-US-Neural2-F",
+            "description": "Warm, friendly female - approachable and comforting",
+            "pitch": 0.0
+        },
+        "calming_mature": {
+            "name": "en-US-Neural2-C",
+            "description": "Calming, mature female - wise and soothing",
+            "pitch": -2.0  # Slightly lower for gravitas
+        },
+        "energetic_bright": {
+            "name": "en-US-Neural2-H",
+            "description": "Energetic, enthusiastic female - uplifting and inspiring",
+            "pitch": 2.0  # Slightly higher for energy
+        }
+    }
 
     def __init__(self):
-        """Initialize the AudioGenerator with British accent (co.uk)."""
-        # Use British accent for clarity and consistency
-        self.current_tld = 'co.uk'
-        logger.info(f"AudioGenerator initialized with British accent (TLD: {self.current_tld})")
-
-    def _get_daily_tld(self) -> str:
-        """
-        Get TLD that rotates daily for accent variety.
-
-        Returns:
-            TLD string (com, co.uk, com.au, or co.in)
-        """
-        # Rotate based on day of year
-        day_of_year = datetime.now().timetuple().tm_yday
-        index = day_of_year % len(self.tld_options)
-        return self.tld_options[index]
+        """Initialize audio generator with Google Cloud Neural2."""
+        # Google Cloud credentials from environment
+        self.client = texttospeech.TextToSpeechClient()
+        
+        logger.info("AudioGenerator initialized with 3 Neural2 voice options")
+        for voice_key, voice_info in self.VOICES.items():
+            logger.info(f"  - {voice_key}: {voice_info['description']}")
 
     def generate_voiceover(
         self,
         text: str,
         output_path: str,
-        speed_factor: float = 1.15
+        speed_factor: float = 1.15,
+        voice_key: Optional[str] = None
     ) -> str:
         """
-        Generate optimized voiceover with speed adjustment.
-
+        Generate voiceover using Google Cloud Neural2 TTS.
+        
         Args:
             text: Text to convert to speech
-            output_path: Path to save the audio file
-            speed_factor: Speed multiplier (1.15 = 15% faster)
-
+            output_path: Path to save MP3 file
+            speed_factor: Speed multiplier (1.0 = normal, 1.15 = 15% faster)
+            voice_key: Specific voice to use (or None for random)
+        
         Returns:
             Path to generated audio file
         """
         try:
-            # Ensure output directory exists
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-            # Generate initial audio with gTTS
-            temp_path = output_path.replace('.mp3', '_temp.mp3')
-            logger.info(f"Generating TTS audio with TLD: {self.current_tld}")
-
-            tts = gTTS(text=text, lang='en', tld=self.current_tld, slow=False)
-            tts.save(temp_path)
-
-            # Load audio with pydub
-            logger.info(f"Loading audio for speed optimization...")
-            audio = AudioSegment.from_mp3(temp_path)
-
-            # Speed up audio by specified factor
-            logger.info(f"Speeding up audio by {speed_factor}x...")
-            sped_up_audio = self._speedup_audio(audio, speed_factor)
-
-            # Export optimized audio
-            sped_up_audio.export(
-                output_path,
-                format="mp3",
-                bitrate="128k",
-                parameters=["-q:a", "2"]  # High quality
+            # Pick random voice if not specified
+            if voice_key is None or voice_key not in self.VOICES:
+                voice_key = random.choice(list(self.VOICES.keys()))
+            
+            voice_config = self.VOICES[voice_key]
+            
+            logger.info(f"Generating Neural2 voiceover:")
+            logger.info(f"  Voice: {voice_key} ({voice_config['description']})")
+            logger.info(f"  Speed: {speed_factor}x")
+            
+            # Configure voice
+            voice = texttospeech.VoiceSelectionParams(
+                language_code="en-US",
+                name=voice_config["name"],
+                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
             )
-
-            # Clean up temp file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
-            logger.info(f"Generated optimized voiceover: {output_path}")
-            return output_path
-
+            
+            # Prepare synthesis input
+            synthesis_input = texttospeech.SynthesisInput(text=text)
+            
+            # Audio config with speed and pitch
+            audio_config = texttospeech.AudioConfig(
+                audio_encoding=texttospeech.AudioEncoding.MP3,
+                speaking_rate=speed_factor,
+                pitch=voice_config["pitch"],
+                effects_profile_id=["small-bluetooth-speaker-class-device"]
+            )
+            
+            # Generate speech
+            response = self.client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice,
+                audio_config=audio_config
+            )
+            
+            # Save to file
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(output_path, "wb") as out:
+                out.write(response.audio_content)
+            
+            logger.info(f"✅ Neural2 voiceover saved: {output_path}")
+            return str(output_path)
+            
         except Exception as e:
-            logger.error(f"Failed to generate voiceover: {e}")
+            logger.error(f"Voiceover generation failed: {e}")
             raise
 
-    def _speedup_audio(
-        self,
-        audio: AudioSegment,
-        speed_factor: float = 1.15
-    ) -> AudioSegment:
-        """
-        Speed up audio without changing pitch.
-
-        Args:
-            audio: AudioSegment to speed up
-            speed_factor: Speed multiplier (1.15 = 15% faster)
-
-        Returns:
-            Sped up AudioSegment
-        """
-        # Use speedup with optimized parameters for smooth audio
-        # chunk_size=150 and crossfade=25 prevent choppiness
-        sped_up = audio.speedup(
-            playback_speed=speed_factor,
-            chunk_size=150,
-            crossfade=25
-        )
-        return sped_up
+    def get_random_voice_key(self) -> str:
+        """Get random voice key for variety."""
+        return random.choice(list(self.VOICES.keys()))
 
 
 def main():
-    """
-    Main function for testing AudioGenerator locally.
+    """Test audio generator with all voices."""
+    generator = AudioGenerator()
 
-    Usage:
-        python src/audio_generator.py
-    """
-    try:
-        print("\n" + "="*70)
-        print("TESTING AUDIO GENERATOR")
-        print("="*70)
+    test_text = "Angel number 717 signals powerful spiritual awakening and transformation in your life right now."
 
-        # Initialize generator
-        generator = AudioGenerator()
+    print("\n" + "="*70)
+    print("TESTING NEURAL2 VOICE VARIETY")
+    print("="*70)
 
-        # Test text
-        test_text = "Seeing 17 everywhere? The universe is sending you a powerful message about new beginnings and spiritual awakening."
-
-        print(f"\nGenerating test audio with TLD: {generator.current_tld}")
-        print(f"Text: {test_text}")
-
-        # Generate audio
-        output_path = "output/audio/test_audio.mp3"
-        result_path = generator.generate_voiceover(
+    for voice_key, voice_info in generator.VOICES.items():
+        print(f"\n🎤 Testing: {voice_key}")
+        print(f"   {voice_info['description']}")
+        
+        output_path = f"test_{voice_key}.mp3"
+        
+        generator.generate_voiceover(
             text=test_text,
-            output_path=output_path
+            output_path=output_path,
+            speed_factor=1.15,
+            voice_key=voice_key
         )
+        
+        print(f"   ✅ Saved: {output_path}")
 
-        print(f"\n✅ Audio generated: {result_path}")
-
-        # Check file exists
-        if Path(result_path).exists():
-            size_kb = Path(result_path).stat().st_size / 1024
-            print(f"   File size: {size_kb:.2f} KB")
-
-            # Load and check duration
-            audio = AudioSegment.from_mp3(result_path)
-            duration = len(audio) / 1000.0  # Convert ms to seconds
-            print(f"   Duration: {duration:.2f} seconds")
-
-        print("\n" + "="*70)
-        print("AUDIO GENERATOR TEST COMPLETE")
-        print("="*70)
-
-    except Exception as e:
-        logger.error(f"Test failed: {e}")
-        raise
+    print("\n" + "="*70)
+    print("Test complete! Listen to the MP3 files to compare voices.")
+    print("="*70 + "\n")
 
 
 if __name__ == "__main__":

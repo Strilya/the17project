@@ -13,9 +13,12 @@ Total: ~16-19 seconds of natural speech at 1.15-1.25x speed
 import os
 import json
 import logging
+import random
+from datetime import datetime
 from typing import Dict, Optional
 from pathlib import Path
 from anthropic import Anthropic
+from hashtag_manager import HashtagManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +28,25 @@ logger = logging.getLogger(__name__)
 
 
 class ContentGenerator:
-    """Generate SHORT Instagram Reel content using Claude API."""
+    """Generate HIGH-QUALITY Instagram Reel content with VARIETY."""
+    
+    # CONTENT VARIETY - Rotate hook styles for engagement
+    HOOK_STYLES = [
+        "question",      # "Ever wonder why 717 keeps appearing?"
+        "statement",     # "Here's what 717 really means..."
+        "statistic",     # "717 appears in 3 major spiritual texts"
+        "challenge",     # "Next time you see 717, do this..."
+        "revelation"     # "I just learned something about 717..."
+    ]
+    
+    # CTA VARIETY - Rotate calls to action
+    CTA_TEMPLATES = [
+        "Follow @the17project for daily {topic} guidance",
+        "Want more {topic} wisdom? Follow @the17project daily",
+        "@the17project drops {topic} secrets every single day",
+        "Follow @the17project for your daily {topic} dose",
+        "Get daily {topic} insights at @the17project now"
+    ]
 
     def __init__(self, config_path: Optional[str] = None):
         """Initialize ContentGenerator."""
@@ -42,6 +63,9 @@ class ContentGenerator:
         self.client = Anthropic(api_key=api_key)
         self.model = "claude-sonnet-4-20250514"
 
+        # Initialize hashtag manager for dynamic rotation
+        self.hashtag_manager = HashtagManager()
+
         logger.info("ContentGenerator initialized (17s optimized)")
 
     def generate_content(
@@ -51,15 +75,19 @@ class ContentGenerator:
         style: str = "spiritual"
     ) -> Dict[str, str]:
         """
-        Generate SHORT 4-scene reel content.
+        Generate HIGH-QUALITY varied content.
         
-        CRITICAL: Content must fit in 17 seconds total.
+        CRITICAL: Content must fit in 17-21 seconds total.
         """
-        logger.info(f"\nGenerating content for: {topic} ({category})")
+        logger.info(f"\nGenerating QUALITY content: {topic} ({category})")
 
-        # Build strict prompt
-        system_prompt = self._build_system_prompt()
-        user_prompt = self._build_user_prompt(topic, category, style)
+        # Pick random hook style for VARIETY
+        hook_style = random.choice(self.HOOK_STYLES)
+        logger.info(f"Using hook style: {hook_style}")
+
+        # Build strict prompt with variety
+        system_prompt = self._build_system_prompt(hook_style)
+        user_prompt = self._build_user_prompt(topic, category, style, hook_style)
 
         try:
             response = self.client.messages.create(
@@ -81,84 +109,172 @@ class ContentGenerator:
             # Validate length
             self._validate_length(content)
 
-            logger.info("✅ Content generated (17s optimized)")
+            logger.info("✅ Content generated with VARIETY")
 
+            # Pick random CTA template
+            cta_topic_map = {
+                "angel_numbers": "angel number",
+                "productivity": "productivity",
+                "manifestation": "manifestation",
+                "spiritual_growth": "spiritual"
+            }
+            cta_topic = cta_topic_map.get(category, "spiritual")
+            
+            # Use random CTA template OR keep generated CTA if it's good
+            if "@the17project" in content['cta']:
+                # Generated CTA is good, keep it
+                pass
+            else:
+                # Use random template as fallback
+                cta_template = random.choice(self.CTA_TEMPLATES)
+                content['cta'] = cta_template.format(topic=cta_topic)
+            
             # Format for workflow
             caption = f"{content['hook']} {content['meaning']} {content['action']} {content['cta']}"
+
+            # Generate dynamic hashtags (15 rotating + 8 core = 23 total)
+            hashtag_list = self.hashtag_manager.generate_hashtags(
+                category=category,
+                count=15
+            )
+            hashtags_str = " ".join(hashtag_list)
+
+            # Mark hashtags as used to avoid repeats
+            self.hashtag_manager.mark_hashtags_used(hashtag_list)
 
             return {
                 "video_scenes": content,
                 "caption": caption,
-                "hashtags": "#the17project #angelnumbers #spirituality #manifestation"
+                "hashtags": hashtags_str
             }
 
         except Exception as e:
             logger.error(f"Generation failed: {e}")
             return self._get_fallback_content(topic)
 
-    def _build_system_prompt(self) -> str:
-        """Build system prompt with STRICT length requirements."""
-        return """You are an expert Instagram Reel content creator for The17Project - a spiritual productivity brand.
+    def _build_system_prompt(self, hook_style: str) -> str:
+        """Build system prompt with VARIETY and quality."""
+        
+        hook_instructions = {
+            "question": "Start with a compelling QUESTION that makes them curious",
+            "statement": "Start with a bold STATEMENT that challenges assumptions",
+            "statistic": "Start with a surprising FACT or STATISTIC",
+            "challenge": "Start with a direct CHALLENGE or invitation to try something",
+            "revelation": "Start with 'I just discovered' or 'Here's what nobody tells you'"
+        }
+        
+        hook_instruction = hook_instructions.get(hook_style, "Start with an attention-grabbing hook")
+        
+        return f"""You are an EXPERT Instagram Reel content creator for The17Project - a spiritual productivity brand.
 
-YOUR CRITICAL TASK: Generate content that fits in EXACTLY 17 SECONDS when read aloud.
+YOUR MISSION: Create ENGAGING, VARIED content that feels fresh every time.
 
-STRICT WORD LIMITS (NON-NEGOTIABLE):
-- Hook: 10-12 words MINIMUM (3-4 seconds)
-- Meaning: 18-22 words MINIMUM (5-6 seconds)
-- Action: 18-22 words MINIMUM (5-6 seconds)
-- CTA: 8-10 words MINIMUM (2-3 seconds)
+TODAY'S HOOK STYLE: {hook_style.upper()}
+{hook_instruction}
 
-STYLE RULES:
-- Direct, punchy, powerful
-- No fluff or filler words
-- Every word must count
-- Spiritual but actionable
-- Use "you" and "your" (personal)
-- End CTA with @the17project
+STRICT WORD LIMITS:
+- Hook: 10-12 words ({hook_style} style)
+- Meaning: 18-22 words (deep insight with specifics)
+- Action: 18-22 words (concrete, actionable step)
+- CTA: 8-10 words (natural, not salesy)
 
-OUTPUT FORMAT (EXACTLY THIS):
-HOOK: [8-12 words max]
-MEANING: [15-20 words max]
-ACTION: [15-20 words max]
-CTA: [6-10 words max]
+QUALITY RULES:
+âœ… Use specific numbers, examples, or details (not generic fluff)
+âœ… Make it feel personal ("you", "your")
+âœ… Include concrete actions they can take TODAY
+âœ… Vary your language - don't repeat the same phrases
+âœ… Sound like a real human, not a bot
 
-EXAMPLE (GOOD LENGTH):
-HOOK: Keep seeing 717 everywhere you look today?
-MEANING: Angel number 717 signals powerful spiritual awakening and new beginnings approaching fast in your life.
-ACTION: Trust your intuition today and tomorrow. The universe is guiding you forward toward your dreams.
-CTA: Follow @the17project now for daily spiritual guidance.
+❌ NO generic spiritual clichÃ©s
+❌ NO vague platitudes
+❌ NO repetitive patterns
 
-DO NOT exceed word limits. Quality over quantity."""
+OUTPUT FORMAT:
+HOOK: [10-12 words, {hook_style} style]
+MEANING: [18-22 words with specific insight]
+ACTION: [18-22 words with concrete steps]
+CTA: [8-10 words, natural and engaging]
 
-    def _build_user_prompt(self, topic: str, category: str, style: str) -> str:
-        """Build user prompt for specific topic."""
+EXAMPLE ({hook_style} style):
+{self._get_example_for_style(hook_style)}
+
+Generate content that people will STOP scrolling for."""
+
+    def _get_example_for_style(self, hook_style: str) -> str:
+        """Get example content for specific hook style."""
+        examples = {
+            "question": """HOOK: Why does 717 keep showing up in your life right now?
+MEANING: Angel number 717 signals major spiritual awakening and your soul aligning with its true purpose today.
+ACTION: Close your eyes. Take three deep breaths. Ask your intuition what message 717 has for you.
+CTA: Follow @the17project for daily angel number guidance and wisdom.""",
+            
+            "statement": """HOOK: Most people miss the real meaning behind angel number 717 completely.
+MEANING: It's not just awakening - 717 means your manifestation power is reaching its absolute peak right now.
+ACTION: Write down one impossible dream today. The universe is literally conspiring to make it real for you.
+CTA: Want more spiritual insights like this? Follow @the17project for daily wisdom.""",
+            
+            "statistic": """HOOK: Angel number 717 appears during life's three most transformative spiritual moments predictably.
+MEANING: Before major awakening, during soul purpose alignment, and right when manifestation ability peaks in your journey.
+ACTION: Notice when you see 717 next. That's the universe confirming you're on your highest path forward.
+CTA: Get daily angel number secrets at @the17project - follow us now today.""",
+            
+            "challenge": """HOOK: Next time you see 717, stop everything and do this immediately.
+MEANING: Angel number 717 is your soul's alarm clock, signaling that spiritual awakening is happening right this moment.
+ACTION: Pause. Close your eyes. Ask yourself: what am I being called to do differently starting today?
+CTA: Follow @the17project daily for more spiritual challenges and ancient wisdom revealed.""",
+            
+            "revelation": """HOOK: I just discovered what 717 really means and it changes everything completely.
+MEANING: It's not random synchronicity - 717 appears when your soul is ready for its next quantum leap forward.
+ACTION: Trust the path you're on right now. The universe is preparing something incredible for you soon.
+CTA: @the17project drops daily spiritual revelations - follow for your daily dose of wisdom."""
+        }
+        return examples.get(hook_style, examples["question"])
+
+    def _build_user_prompt(self, topic: str, category: str, style: str, hook_style: str) -> str:
+        """Build user prompt with variety and context."""
+        
+        # Get current month for seasonal context
+        current_month = datetime.now().strftime("%B")
         
         category_context = {
-            "angel_numbers": "Focus on spiritual meaning, synchronicity, and divine guidance",
-            "productivity": "Focus on actionable systems, results, and efficiency",
-            "manifestation": "Focus on visualization, energy, and conscious creation",
-            "spiritual_growth": "Focus on inner transformation, awareness, and evolution"
+            "angel_numbers": f"Focus on spiritual meaning, synchronicity, divine timing. Consider {current_month} energy.",
+            "productivity": f"Focus on actionable systems, real results. Make it relevant to {current_month} goals.",
+            "manifestation": f"Focus on visualization, energy alignment. Tie to {current_month} intentions.",
+            "spiritual_growth": f"Focus on transformation, awareness. Connect to {current_month} spiritual themes."
         }
         
         context = category_context.get(category, "Focus on practical spiritual wisdom")
         
-        return f"""Generate a 17-SECOND Instagram Reel about: {topic}
+        # Map category to CTA topic
+        cta_topics = {
+            "angel_numbers": "angel number",
+            "productivity": "productivity",
+            "manifestation": "manifestation",
+            "spiritual_growth": "spiritual growth"
+        }
+        cta_topic = cta_topics.get(category, "spiritual")
+        
+        return f"""Generate a HIGH-QUALITY Instagram Reel about: {topic}
 
 Category: {category}
-Style: {style}
+Hook Style: {hook_style} (MUST use this specific style)
 Context: {context}
+Month: {current_month} (consider seasonal relevance if applicable)
 
-CRITICAL REQUIREMENTS:
-1. Hook: 10-12 words MINIMUM - grab attention immediately
-2. Meaning: 18-22 words MINIMUM - core message, spiritual insight
-3. Action: 18-22 words MINIMUM - practical step they can take TODAY
-4. CTA: 8-10 words MINIMUM - must end with @the17project
+REQUIREMENTS:
+1. Hook: 10-12 words - Use {hook_style} style (question/statement/statistic/challenge/revelation)
+2. Meaning: 18-22 words - Provide SPECIFIC insight with details (not generic fluff)
+3. Action: 18-22 words - Give CONCRETE steps they can take TODAY
+4. CTA: 8-10 words - Natural language, must include @the17project
 
-TONE: Mystical yet grounded, inspiring yet practical
+MAKE IT QUALITY:
+✅ Specific (use numbers, examples, concrete details)
+✅ Personal (use "you", "your" - make it feel direct)
+✅ Actionable (clear next steps, not vague advice)
+✅ Fresh (avoid clichés and overused spiritual phrases)
+✅ Engaging (make them WANT to watch til the end)
 
-Remember: This will be READ ALOUD in 17 seconds. Keep it SHORT and POWERFUL.
-
-Generate now:"""
+Generate NOW:"""
 
     def _parse_content(self, text: str) -> Dict[str, str]:
         """Parse Claude's response into 4 scenes."""
@@ -221,10 +337,19 @@ Generate now:"""
 
         caption = f"{content['hook']} {content['meaning']} {content['action']} {content['cta']}"
 
+        # Generate dynamic hashtags even for fallback
+        hashtag_list = self.hashtag_manager.generate_hashtags(
+            category="angel_numbers",
+            count=15
+        )
+        hashtags_str = " ".join(hashtag_list)
+
+        self.hashtag_manager.mark_hashtags_used(hashtag_list)
+
         return {
             "video_scenes": content,
             "caption": caption,
-            "hashtags": "#the17project #angelnumbers #spirituality"
+            "hashtags": hashtags_str
         }
 
 

@@ -27,7 +27,7 @@ mypy>=1.8.0
 # Video generation for Instagram Reels
 Pillow>=10.2.0
 moviepy>=1.0.3
-gTTS>=2.5.0
+google-cloud-texttospeech>=2.14.0
 numpy>=1.26.0
 requests>=2.31.0
 pydub>=0.25.1

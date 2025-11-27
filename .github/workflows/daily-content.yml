@@ -89,11 +89,21 @@ jobs:
           echo "Working directory: $(pwd)"
           echo "Python path: $(which python)"
 
+      # Step 5.5: Set up Google Cloud credentials for Neural2 TTS
+      - name: Set up Google Cloud credentials
+        run: |
+          echo "Setting up Google Cloud credentials for Neural2 TTS..."
+          echo '${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}' > /tmp/gcloud-key.json
+          echo "✅ Google Cloud credentials configured"
+
       # Step 6: Run the content generation workflow
       - name: Generate Instagram content
         env:
           # Anthropic Claude API key (stored in GitHub Secrets)
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Google Cloud credentials for Neural2 TTS (stored in GitHub Secrets)
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud-key.json
 
           # Google Sheets configuration (stored in GitHub Secrets)
           GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
@@ -143,3 +153,13 @@ jobs:
           echo "Check logs for details"
           echo "Run number: ${{ github.run_number }}"
           echo "Triggered by: ${{ github.event_name }}"
+
+      # Step 10: Commit updated topic tracker state
+      - name: Commit updated topic tracker
+        if: success()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add config/topic_tracker.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: Update topic tracker [skip ci]"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:master
