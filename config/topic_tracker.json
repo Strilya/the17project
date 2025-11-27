@@ -79,9 +79,10 @@
       ],
       "used": [
         "Higher self connection",
-        "Divine timing"
+        "Divine timing",
+        "Soul purpose discovery"
       ],
-      "last_used_date": "2025-11-27T19:28:22.847538"
+      "last_used_date": "2025-11-27T20:57:55.273888"
     }
   },
   "content_history": [
@@ -139,10 +140,15 @@
       "topic": "Morning manifestation ritual",
       "category": "manifestation",
       "date": "2025-11-27T20:19:35.725541"
+    },
+    {
+      "topic": "Soul purpose discovery",
+      "category": "spiritual_growth",
+      "date": "2025-11-27T20:57:55.273898"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
