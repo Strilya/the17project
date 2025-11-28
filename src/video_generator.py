@@ -269,7 +269,9 @@ class VideoGenerator:
             start_y = 300
         elif position == "bottom_third":
             start_y = 1300
-        else:  # center
+        elif position == "center_lower":
+            start_y = 1000  # Below center but not bottom
+        else:  # center (default)
             start_y = 800
 
         line_height = font_size + 20
@@ -597,11 +599,22 @@ class VideoGenerator:
         background, bg_path = self._create_background_clip(category, final_duration)
 
         # STEP 4: ANALYZE AND PICK TEXT COLOR
-        if bg_path:
+        if bg_path and bg_path != "gradient" and bg_path != "photo_slideshow":
+            # Real video file - analyze it
             text_color_key = self._analyze_background_color(bg_path, selected_style['colors'])
         else:
-            # For gradient, pick random color from style
-            text_color_key = random.choice(list(selected_style['colors'].keys()))
+            # Gradient or photo slideshow - pick smart default based on style
+            available_colors = list(selected_style['colors'].keys())
+            
+            # Prefer bright/light colors for gradients (they're usually dark)
+            preferred = [c for c in available_colors if any(x in c for x in ['white', 'gold', 'light', 'neon', 'bright'])]
+            
+            if preferred:
+                text_color_key = random.choice(preferred)
+            else:
+                text_color_key = available_colors[0]
+            
+            logger.info(f"Using default color for {bg_path}: {text_color_key}")
 
         logger.info(f"✅ Text color: {text_color_key.upper()}")
 
@@ -631,15 +644,20 @@ class VideoGenerator:
             current_time += seg['duration']
 
         # Add attribution watermark (required by Pexels/Pixabay API terms)
-        attribution_source = "Pexels"  # Default
-        if bg_path and isinstance(bg_path, str):
-            if "pixabay" in bg_path.lower():
-                attribution_source = "Pixabay"
-            elif "photo_slideshow" in bg_path:
-                attribution_source = "Pexels Photos"
-        
-        attribution_clip = self._create_attribution_watermark(attribution_source, final_duration)
-        text_clips.append(attribution_clip)
+        # Only add if we used API content (not for gradients)
+        if bg_path and bg_path != "gradient":
+            attribution_source = "Pexels"  # Default
+            if isinstance(bg_path, str):
+                if "pixabay" in bg_path.lower():
+                    attribution_source = "Pixabay"
+                elif "photo_slideshow" in bg_path:
+                    attribution_source = "Pexels Photos"
+            
+            attribution_clip = self._create_attribution_watermark(attribution_source, final_duration)
+            text_clips.append(attribution_clip)
+            logger.info(f"✅ Added attribution: {attribution_source}")
+        else:
+            logger.info("No API content used - no attribution needed")
 
         # STEP 6: COMPOSITE
         logger.info("\nSTEP 5: Compositing...")
