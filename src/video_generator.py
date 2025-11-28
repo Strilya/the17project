@@ -239,10 +239,37 @@ class VideoGenerator:
             font_config = self.fonts[font_name]
             font_path = Path(__file__).parent.parent / font_config['path']
             font_size = font_config['sizes'][scene_type]
-            font = ImageFont.truetype(str(font_path), font_size)
+            
+            # Try style font first
+            if font_path.exists():
+                font = ImageFont.truetype(str(font_path), font_size)
+            else:
+                # Fallback to DejaVu Bold
+                raise FileNotFoundError("Style font not found, using DejaVu")
         except Exception as e:
-            logger.warning(f"Font load failed: {e}, using default")
-            font = ImageFont.load_default()
+            logger.warning(f"Font load failed: {e}, using DejaVu fallback")
+            # Try system DejaVu fonts
+            font_size = 70  # Default large size
+            dejavu_paths = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf",  # Mac
+                "C:\\Windows\\Fonts\\arialbd.ttf",  # Windows
+                Path(__file__).parent.parent / "fonts" / "DejaVuSans-Bold.ttf"
+            ]
+            
+            font = None
+            for path in dejavu_paths:
+                try:
+                    font = ImageFont.truetype(str(path), font_size)
+                    logger.info(f"Using fallback font: {path}")
+                    break
+                except:
+                    continue
+            
+            if font is None:
+                # Last resort - load_default() but it's TINY
+                logger.error("No fonts available! Using tiny default font")
+                font = ImageFont.load_default()
 
         # Word wrapping
         words = text.split()
@@ -266,7 +293,7 @@ class VideoGenerator:
         position = style['text_position']
         
         if position == "top_third":
-            start_y = 300
+            start_y = 450  # Was 300, moved down 15% (150px) to avoid iPhone island
         elif position == "bottom_third":
             start_y = 1300
         elif position == "center_lower":
@@ -638,21 +665,14 @@ class VideoGenerator:
             logger.info(f"   {scene}: {current_time:.2f}s → {current_time + seg['duration']:.2f}s")
             current_time += seg['duration']
 
-        # Add attribution watermark (required by Pexels/Pixabay API terms)
-        # Only add if we used API content (not for gradients)
-        if bg_path and bg_path != "gradient":
-            attribution_source = "Pexels"  # Default
-            if isinstance(bg_path, str):
-                if "pixabay" in bg_path.lower():
-                    attribution_source = "Pixabay"
-                elif "photo_slideshow" in bg_path:
-                    attribution_source = "Pexels Photos"
-            
-            attribution_clip = self._create_attribution_watermark(attribution_source, final_duration)
+        # Add attribution watermark (ONLY for Pexels - required by their API terms)
+        # Videvo is free with no attribution requirement
+        if bg_path and bg_path != "gradient" and isinstance(bg_path, str) and "pexels" in bg_path.lower():
+            attribution_clip = self._create_attribution_watermark("Pexels", final_duration)
             text_clips.append(attribution_clip)
-            logger.info(f"✅ Added attribution: {attribution_source}")
+            logger.info(f"✅ Added attribution: Pexels")
         else:
-            logger.info("No API content used - no attribution needed")
+            logger.info("No attribution needed (not Pexels)")
 
         # STEP 6: COMPOSITE
         logger.info("\nSTEP 5: Compositing...")
