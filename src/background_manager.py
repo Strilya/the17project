@@ -64,15 +64,11 @@ class BackgroundManager:
                 "cache_enabled": False
             }
 
-        # Get API keys from environment
+        # Get API key from environment (only Pexels now)
         self.pexels_key = os.getenv("PEXELS_API_KEY")
-        self.pixabay_key = os.getenv("PIXABAY_API_KEY", "")  # Pixabay works without key but limited
         
         if not self.pexels_key:
-            logger.warning("PEXELS_API_KEY not found")
-        
-        if not self.pixabay_key:
-            logger.info("PIXABAY_API_KEY not found (will use limited free access)")
+            logger.warning("PEXELS_API_KEY not found, will use Videvo and photo fallbacks")
 
         # Setup cache directory
         if self.config.get("cache_enabled", True):
@@ -82,19 +78,19 @@ class BackgroundManager:
         else:
             self.cache_dir = None
 
-        logger.info(f"BackgroundManager initialized (Multi-source mode)")
+        logger.info(f"BackgroundManager initialized")
         logger.info(f"  - Pexels: {'✅' if self.pexels_key else '❌'}")
-        logger.info(f"  - Pixabay: {'✅' if self.pixabay_key else '⚠️ Limited'}")
-        logger.info(f"  - Videvo: ✅ (no key needed)")
+        logger.info(f"  - Videvo: ✅ (free, always available)")
+        logger.info(f"  - Photo slideshows: ✅")
 
     def get_background_video(self, category: str) -> Optional[str]:
         """
         Get background video from ANY available source.
         
-        Tries sources in order until one works:
+        Tries sources in order:
         1. Cached videos
-        2. Pexels API
-        3. Pixabay API
+        2. Pexels API (if key available)
+        3. Videvo (free scraping, no key needed)
         4. Returns None (triggers photo slideshow/gradient fallback)
         
         Args:
@@ -135,16 +131,15 @@ class BackgroundManager:
                     except Exception as e:
                         logger.warning(f"Pexels failed for '{query}': {e}")
 
-                # Try Pixabay second
-                if self.pixabay_key:
-                    logger.info("Trying Pixabay...")
-                    try:
-                        video_url = self._search_pixabay(query)
-                        if video_url:
-                            video_path = self._download_video(video_url, category, "pixabay")
-                            return video_path
-                    except Exception as e:
-                        logger.warning(f"Pixabay failed for '{query}': {e}")
+                # Try Videvo second (free, no API key)
+                logger.info("Trying Videvo (free)...")
+                try:
+                    video_url = self._search_videvo(query)
+                    if video_url:
+                        video_path = self._download_video(video_url, category, "videvo")
+                        return video_path
+                except Exception as e:
+                    logger.warning(f"Videvo failed for '{query}': {e}")
                 
                 # Wait a bit before trying next keyword
                 time.sleep(0.5)
@@ -213,58 +208,79 @@ class BackgroundManager:
 
         return None
 
-    def _search_pixabay(self, query: str) -> Optional[str]:
+    def _search_videvo(self, query: str) -> Optional[str]:
         """
-        Search Pixabay API for portrait video.
+        Search Videvo for free videos (no API key needed).
         
-        Note: Pixabay API is free but has rate limits.
+        Videvo has thousands of free stock videos.
+        We scrape their free video section.
+        
+        Args:
+            query: Search query
+            
+        Returns:
+            Direct URL to MP4 file, or None
         """
-        url = "https://pixabay.com/api/videos/"
-        
-        params = {
-            "key": self.pixabay_key if self.pixabay_key else "your_default_key_here",
-            "q": query,
-            "video_type": "all",
-            "orientation": "vertical",
-            "per_page": 20
-        }
-
         try:
-            response = requests.get(url, params=params, timeout=30)
+            # Videvo free videos search
+            base_url = "https://www.videvo.net"
+            search_url = f"{base_url}/free-videos/?q={query.replace(' ', '+')}"
             
-            # Pixabay returns 200 even with invalid key, check for error in JSON
-            data = response.json()
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
             
-            if "hits" not in data:
-                logger.warning("Pixabay API: invalid response (bad key?)")
+            response = requests.get(search_url, headers=headers, timeout=30)
+            
+            if response.status_code != 200:
+                logger.warning(f"Videvo returned status {response.status_code}")
                 return None
             
-            videos = data.get("hits", [])
-
-            if not videos:
+            # Look for video links in the page
+            # Videvo structure: video pages have direct MP4 links
+            import re
+            
+            # Find video page links first
+            video_page_pattern = r'href="(/video/[^"]+)"'
+            video_pages = re.findall(video_page_pattern, response.text)
+            
+            if not video_pages:
+                logger.warning("No Videvo videos found in search results")
                 return None
-
-            # Find suitable video
-            for video in videos:
-                # Pixabay videos are in video.videos dict
-                video_sizes = video.get("videos", {})
-                
-                # Try to get highest quality vertical video
-                for size_key in ["large", "medium", "small"]:
-                    if size_key in video_sizes:
-                        video_info = video_sizes[size_key]
-                        width = video_info.get("width", 0)
-                        height = video_info.get("height", 0)
+            
+            # Try first few video pages to find a downloadable MP4
+            for video_page_path in video_pages[:3]:
+                try:
+                    video_page_url = base_url + video_page_path
+                    video_response = requests.get(video_page_url, headers=headers, timeout=30)
+                    
+                    if video_response.status_code != 200:
+                        continue
+                    
+                    # Look for direct MP4 download links
+                    mp4_pattern = r'"(https://[^"]+\.mp4[^"]*)"'
+                    mp4_matches = re.findall(mp4_pattern, video_response.text)
+                    
+                    for mp4_url in mp4_matches:
+                        # Skip thumbnails and previews
+                        if any(x in mp4_url.lower() for x in ['thumb', 'preview', 'watermark']):
+                            continue
                         
-                        # Check if portrait orientation
-                        if height > width and width >= 720:
-                            logger.info(f"✅ Found Pixabay video: {width}x{height}")
-                            return video_info["url"]
-
+                        # Found a valid MP4!
+                        logger.info(f"✅ Found Videvo video: {mp4_url[:80]}...")
+                        return mp4_url
+                    
+                    time.sleep(0.5)  # Be nice to their servers
+                    
+                except Exception as e:
+                    logger.debug(f"Failed to check video page: {e}")
+                    continue
+            
+            logger.warning("No downloadable Videvo videos found")
             return None
-
+            
         except Exception as e:
-            logger.error(f"Pixabay API error: {e}")
+            logger.error(f"Videvo search failed: {e}")
             return None
 
     def _validate_video(self, video_data: Dict) -> bool:
