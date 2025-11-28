@@ -129,9 +129,10 @@
         "17-minute meditation",
         "17-minute power naps",
         "17-minute deep work sessions",
-        "Morning 17-minute ritual"
+        "Morning 17-minute ritual",
+        "17-minute planning session"
       ],
-      "last_used_date": "2025-11-28T21:16:13.596794"
+      "last_used_date": "2025-11-28T22:21:30.173756"
     },
     "manifestation": {
       "practices": [
@@ -349,10 +350,15 @@
       "topic": "666",
       "category": "angel_numbers",
       "date": "2025-11-28T22:04:14.561309"
+    },
+    {
+      "topic": "17-minute planning session",
+      "category": "productivity",
+      "date": "2025-11-28T22:21:30.173767"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 1,
+  "current_category_index": 2,
   "category_order": [
     "angel_numbers",
     "productivity",
