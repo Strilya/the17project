@@ -38,7 +38,7 @@ from send_slack_notification import SlackNotifier, is_slack_configured
 # TopicManager handles intelligent topic rotation and tracking
 from topic_manager import TopicManager
 # VideoGenerator handles 17-second Instagram Reel generation
-from src.video_generator import VideoGenerator
+from video_generator import VideoGenerator
 
 # Configure logging
 logging.basicConfig(
