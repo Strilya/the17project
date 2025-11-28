@@ -293,56 +293,203 @@ class VideoGenerator:
 
         return img
 
-    def _create_background_clip(self, category: str, duration: float) -> Tuple[VideoFileClip, Optional[str]]:
-        """Create background video with variety tracking."""
-        bg_config = self.config.get("background_videos", {})
+    def _create_attribution_watermark(self, source: str, duration: float) -> ImageClip:
+        """
+        Create small attribution watermark for API compliance.
         
-        if not bg_config.get("enabled", True):
-            # Fallback gradient
-            logger.info("Creating gradient background")
-            return self._create_gradient_background(duration), None
-
+        Per Pexels/Pixabay terms: "show your users where the images and videos 
+        are from, whenever search results are displayed."
+        
+        Args:
+            source: Source name (Pexels, Pixabay, etc.)
+            duration: Duration of the clip
+            
+        Returns:
+            ImageClip with attribution text
+        """
+        # Create transparent image
+        img = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        
+        # Small attribution text
+        attribution_text = f"Video: {source}"
+        
         try:
-            # Get background search terms
-            search_terms = bg_config['categories'].get(category, bg_config['categories']['angel_numbers'])
-            
-            # Try multiple times to avoid recent backgrounds
-            max_attempts = 5
-            for attempt in range(max_attempts):
-                search_term = random.choice(search_terms)
-                bg_path = self.background_manager.get_background(search_term, duration)
-                
-                if bg_path:
-                    # Generate hash for this background
-                    bg_hash = hashlib.md5(str(bg_path).encode()).hexdigest()[:8]
-                    
-                    # Check if recently used
-                    if not self.style_history.should_avoid_background(bg_hash):
-                        self.style_history.add_background(bg_hash)
-                        logger.info(f"✅ Background: {search_term}")
-                        
-                        video = VideoFileClip(bg_path)
-                        
-                        if video.duration < duration:
-                            loops = int(duration / video.duration) + 1
-                            video = concatenate_videoclips([video] * loops)
-                        
-                        video = video.subclipped(0, duration)
-                        video = video.resized((self.width, self.height))
-                        
-                        return video, bg_path
-                    else:
-                        logger.info(f"⏭️  Skipping recent background: {search_term}")
-            
-            # If all attempts failed, use gradient
-            logger.warning("All backgrounds recently used, falling back to gradient")
-            return self._create_gradient_background(duration), None
-            
-        except Exception as e:
-            logger.error(f"Background failed: {e}")
-            return self._create_gradient_background(duration), None
+            font_path = Path(__file__).parent.parent / "fonts" / "DejaVuSans.ttf"
+            font = ImageFont.truetype(str(font_path), 20)
+        except:
+            font = ImageFont.load_default()
+        
+        # Position at bottom left with padding
+        bbox = draw.textbbox((0, 0), attribution_text, font=font)
+        text_width = bbox[2] - bbox[0]
+        
+        x = 20  # Left padding
+        y = self.height - 60  # Bottom with padding
+        
+        # Semi-transparent white text
+        text_color = (255, 255, 255, 128)  # 50% opacity
+        
+        # Draw text
+        draw.text((x, y), attribution_text, font=font, fill=text_color)
+        
+        # Save and create clip
+        temp_path = Path("output") / "temp_attribution.png"
+        img.save(temp_path)
+        
+        clip = ImageClip(str(temp_path), duration=duration)
+        temp_path.unlink()
+        
+        logger.info(f"✅ Added attribution: {source}")
+        
+        return clip
 
-    def _create_gradient_background(self, duration: float) -> ImageClip:
+    def _create_background_clip(self, category: str, duration: float) -> Tuple[object, str]:
+        """
+        Create 4K video background OR high-res photo slideshow with variety tracking.
+        
+        Returns: (video_clip, video_path_or_type)
+        """
+        # Try 4K video first
+        try:
+            bg_video_path = self.background_manager.get_background_video(category)
+
+            if bg_video_path and os.path.exists(bg_video_path):
+                # Generate hash for variety tracking
+                bg_hash = hashlib.md5(str(bg_video_path).encode()).hexdigest()[:8]
+                
+                # Check if recently used
+                if self.style_history.should_avoid_background(bg_hash):
+                    logger.info(f"⏭️  Skipping recently used video background")
+                    bg_video_path = None  # Force photo slideshow
+                else:
+                    self.style_history.add_background(bg_hash)
+                    logger.info(f"Using 4K video: {bg_video_path}")
+
+                    try:
+                        video = VideoFileClip(bg_video_path)
+
+                        if video.h != self.height:
+                            video = video.resized(height=self.height)
+
+                        if video.w > self.width:
+                            x_center = video.w / 2
+                            video = video.cropped(
+                                x1=x_center - self.width/2,
+                                x2=x_center + self.width/2
+                            )
+
+                        if video.duration < duration:
+                            n = int(duration / video.duration) + 1
+                            video = concatenate_videoclips([video] * n)
+
+                        video = video.subclipped(0, duration)
+
+                        logger.info("✅ 4K video background")
+                        return (video, bg_video_path)
+
+                    except Exception as e:
+                        logger.error(f"Video processing failed: {e}")
+                        bg_video_path = None  # Force photo slideshow
+        except Exception as e:
+            logger.error(f"Video background failed: {e}")
+            bg_video_path = None
+
+        # No 4K video found - create photo slideshow
+        logger.info("🖼️  No 4K video - creating high-res photo slideshow")
+        
+        try:
+            # Download photos
+            photos = self.background_manager.download_photos_for_slideshow(
+                category=category,
+                count=int(duration * 2) + 5  # ~2 photos per second + buffer
+            )
+            
+            if photos:
+                slideshow_clip = self._create_photo_slideshow(photos, duration)
+                logger.info("✅ High-res photo slideshow background")
+                return (slideshow_clip, "photo_slideshow")
+        except Exception as e:
+            logger.error(f"Photo slideshow failed: {e}")
+        
+        # Final fallback: gradient
+        logger.warning("Using gradient fallback")
+        gradient = self._create_gradient_background(duration)
+        return (ImageClip(np.array(gradient), duration=duration), "gradient")
+    
+    def _create_photo_slideshow(self, photo_paths: List[Path], duration: float) -> object:
+        """
+        Create smooth photo slideshow with Ken Burns effect.
+        
+        Args:
+            photo_paths: List of photo file paths
+            duration: Total duration in seconds
+            
+        Returns:
+            VideoClip of slideshow
+        """
+        if not photo_paths:
+            raise ValueError("No photos provided for slideshow")
+        
+        logger.info(f"\n🎬 CREATING PHOTO SLIDESHOW")
+        logger.info(f"  Duration: {duration:.2f}s")
+        logger.info(f"  Photos: {len(photo_paths)}")
+        
+        photo_duration = 0.5  # seconds per photo
+        transition_duration = 0.2  # crossfade duration
+        
+        clips = []
+        
+        for i, photo_path in enumerate(photo_paths):
+            try:
+                # Load and resize photo
+                img = Image.open(photo_path)
+                
+                # Ensure portrait orientation
+                if img.width > img.height:
+                    img = img.rotate(90, expand=True)
+                
+                # Resize to 1080x1920
+                img = img.resize((self.width, self.height), Image.Resampling.LANCZOS)
+                
+                # Convert to numpy array
+                img_array = np.array(img)
+                
+                # Create clip with Ken Burns effect (slow zoom)
+                clip = ImageClip(img_array, duration=photo_duration)
+                
+                # Apply slow zoom: 1.0x to 1.1x scale
+                clip = clip.resized(lambda t: 1.0 + (t / photo_duration) * 0.1)
+                
+                # Add crossfade
+                if i > 0:
+                    clip = clip.crossfadein(transition_duration)
+                
+                clips.append(clip)
+                
+                # Stop when we have enough for duration
+                total_time = len(clips) * photo_duration
+                if total_time >= duration:
+                    break
+                    
+            except Exception as e:
+                logger.warning(f"Failed to load photo {photo_path}: {e}")
+                continue
+        
+        if not clips:
+            raise ValueError("No valid photos loaded for slideshow")
+        
+        # Concatenate all clips
+        final_clip = concatenate_videoclips(clips, method="compose")
+        
+        # Trim to exact duration
+        final_clip = final_clip.subclipped(0, min(duration, final_clip.duration))
+        
+        logger.info(f"✅ Slideshow created: {len(clips)} photos, {final_clip.duration:.2f}s")
+        
+        return final_clip
+
+    def _create_gradient_background(self, duration: float) -> Image.Image:
         """Create gradient background as fallback."""
         img = Image.new('RGB', (self.width, self.height))
         draw = ImageDraw.Draw(img)
@@ -366,13 +513,7 @@ class VideoGenerator:
             b = int(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * ratio)
             draw.line([(0, y), (self.width, y)], fill=(r, g, b))
         
-        temp_path = Path("output") / "temp_gradient.png"
-        img.save(temp_path)
-        
-        clip = ImageClip(str(temp_path), duration=duration)
-        temp_path.unlink()
-        
-        return clip
+        return img
 
     def generate_reel(self, content: Dict[str, str], category: str = "angel_numbers") -> str:
         """
@@ -488,6 +629,17 @@ class VideoGenerator:
             text_clips.append(clip)
             
             current_time += seg['duration']
+
+        # Add attribution watermark (required by Pexels/Pixabay API terms)
+        attribution_source = "Pexels"  # Default
+        if bg_path and isinstance(bg_path, str):
+            if "pixabay" in bg_path.lower():
+                attribution_source = "Pixabay"
+            elif "photo_slideshow" in bg_path:
+                attribution_source = "Pexels Photos"
+        
+        attribution_clip = self._create_attribution_watermark(attribution_source, final_duration)
+        text_clips.append(attribution_clip)
 
         # STEP 6: COMPOSITE
         logger.info("\nSTEP 5: Compositing...")
