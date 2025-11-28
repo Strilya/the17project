@@ -395,14 +395,21 @@ class VideoGenerator:
         logger.info("\nSTEP 1: Generating audio...")
         
         audio_segments = {}
+        base_speed = 1.15  # Base speed factor for natural pacing
+        
         for scene in ["hook", "meaning", "action", "cta"]:
             text = content[scene]
             audio_path = Path("output/audio") / f"{scene}_{timestamp}.mp3"
             
-            self.audio_generator.generate_speech(text, str(audio_path))
+            self.audio_generator.generate_voiceover(
+                text=text,
+                output_path=str(audio_path),
+                speed_factor=base_speed
+            )
             
             audio = AudioSegment.from_file(str(audio_path))
-            audio_sped = audio.speedup(playback_speed=1.15)
+            # Audio is already sped up by generate_voiceover, no need to speed up again
+            audio_sped = audio
             
             audio_segments[scene] = {
                 'text': text,
