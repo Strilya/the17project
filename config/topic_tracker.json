@@ -41,9 +41,10 @@
       "used": [
         "Evening 17-minute wind-down",
         "17-minute exercise bursts",
-        "17-minute creative sessions"
+        "17-minute creative sessions",
+        "17-minute learning sprints"
       ],
-      "last_used_date": "2025-11-27T20:03:36.452424"
+      "last_used_date": "2025-11-28T13:33:14.515092"
     },
     "manifestation": {
       "practices": [
@@ -151,10 +152,15 @@
       "topic": "222",
       "category": "angel_numbers",
       "date": "2025-11-28T03:01:05.170054"
+    },
+    {
+      "topic": "17-minute learning sprints",
+      "category": "productivity",
+      "date": "2025-11-28T13:33:14.515105"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 1,
+  "current_category_index": 2,
   "category_order": [
     "angel_numbers",
     "productivity",
