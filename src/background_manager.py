@@ -92,16 +92,16 @@ class BackgroundManager:
         Get background video from ANY available source.
         
         Tries sources in order until one works:
-        1. Pexels
-        2. Pixabay  
-        3. Videvo
-        4. Returns None (triggers photo slideshow in video_generator)
+        1. Cached videos
+        2. Pexels API
+        3. Pixabay API
+        4. Returns None (triggers photo slideshow/gradient fallback)
         
         Args:
             category: Content category
             
         Returns:
-            Path to video file, or None for photo slideshow fallback
+            Path to video file, or None for fallback
         """
         if not self.config["enabled"]:
             logger.info("Background videos disabled")
@@ -116,26 +116,41 @@ class BackgroundManager:
 
             # Get search keywords for this category
             keywords = self.config.get("categories", {}).get(category, ["abstract purple"])
-            query = random.choice(keywords)
-            logger.info(f"Searching for: '{query}'")
+            
+            # Try multiple keywords if first one fails
+            max_keyword_attempts = 3
+            keywords_to_try = random.sample(keywords, min(max_keyword_attempts, len(keywords)))
+            
+            for query in keywords_to_try:
+                logger.info(f"Searching for: '{query}'")
 
-            # Try Pexels first (best quality)
-            if self.pexels_key:
-                logger.info("Trying Pexels API...")
-                video_url = self._search_pexels(query)
-                if video_url:
-                    video_path = self._download_video(video_url, category, "pexels")
-                    return video_path
+                # Try Pexels first (best quality)
+                if self.pexels_key:
+                    logger.info("Trying Pexels API...")
+                    try:
+                        video_url = self._search_pexels(query)
+                        if video_url:
+                            video_path = self._download_video(video_url, category, "pexels")
+                            return video_path
+                    except Exception as e:
+                        logger.warning(f"Pexels failed for '{query}': {e}")
 
-            # Try Pixabay second
-            logger.info("Pexels failed, trying Pixabay...")
-            video_url = self._search_pixabay(query)
-            if video_url:
-                video_path = self._download_video(video_url, category, "pixabay")
-                return video_path
+                # Try Pixabay second
+                if self.pixabay_key:
+                    logger.info("Trying Pixabay...")
+                    try:
+                        video_url = self._search_pixabay(query)
+                        if video_url:
+                            video_path = self._download_video(video_url, category, "pixabay")
+                            return video_path
+                    except Exception as e:
+                        logger.warning(f"Pixabay failed for '{query}': {e}")
+                
+                # Wait a bit before trying next keyword
+                time.sleep(0.5)
 
-            # All video sources failed - return None for photo slideshow
-            logger.warning(f"No video found for '{query}' - will use photo slideshow")
+            # All attempts failed - return None for photo slideshow
+            logger.warning(f"No video found after trying {len(keywords_to_try)} keywords")
             return None
 
         except Exception as e:
@@ -286,22 +301,38 @@ class BackgroundManager:
         keywords = self.config.get("categories", {}).get(category, ["abstract purple"])
         all_photos = []
         
+        # Add simple fallback keywords that always work
+        simple_fallbacks = ["nature", "sky", "water", "mountain", "sunset"]
+        
+        # Try category keywords first, then fallbacks if needed
+        keywords_to_try = list(keywords) + simple_fallbacks
+        
         # Try multiple keywords to get variety
-        for query in random.sample(keywords, min(5, len(keywords))):
+        for query in keywords_to_try:
             if len(all_photos) >= count:
                 break
+            
+            # Simplify query if it's too specific (Pexels API sometimes fails on complex queries)
+            # Take just first 2-3 words
+            simple_query = ' '.join(query.split()[:2])
                 
             try:
                 url = "https://api.pexels.com/v1/search"
                 headers = {"Authorization": self.pexels_key}
                 params = {
-                    "query": query,
+                    "query": simple_query,
                     "orientation": "portrait",
                     "size": "large",
                     "per_page": 15
                 }
                 
                 response = requests.get(url, headers=headers, params=params, timeout=30)
+                
+                # If we get 500 error, skip this keyword and try next
+                if response.status_code == 500:
+                    logger.warning(f"Pexels API 500 error for '{simple_query}', trying next keyword...")
+                    continue
+                
                 response.raise_for_status()
                 
                 data = response.json()
@@ -320,13 +351,16 @@ class BackgroundManager:
                         if len(all_photos) >= count:
                             break
                 
+                if len(all_photos) > 0:
+                    logger.info(f"Found {len(all_photos)} photos with '{simple_query}'")
+                
                 time.sleep(0.5)  # Rate limiting
                 
             except Exception as e:
-                logger.warning(f"Photo search failed for '{query}': {e}")
+                logger.warning(f"Photo search failed for '{simple_query}': {e}")
                 continue
         
-        logger.info(f"Collected {len(all_photos)} high-res photos")
+        logger.info(f"Collected {len(all_photos)} high-res photos total")
         return all_photos[:count]
 
     def download_photo(self, url: str, save_path: Path) -> bool:
