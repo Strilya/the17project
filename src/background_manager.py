@@ -131,7 +131,7 @@ class BackgroundManager:
                     except Exception as e:
                         logger.warning(f"Pexels failed for '{query}': {e}")
 
-                # Try Videvo second (free, no API key)
+                # Try Videvo first (free, better variety than Pexels)
                 logger.info("Trying Videvo (free)...")
                 try:
                     video_url = self._search_videvo(query)
@@ -140,6 +140,17 @@ class BackgroundManager:
                         return video_path
                 except Exception as e:
                     logger.warning(f"Videvo failed for '{query}': {e}")
+
+                # Try Pexels as backup only
+                if self.pexels_key:
+                    logger.info("Trying Pexels API as backup...")
+                    try:
+                        video_url = self._search_pexels(query)
+                        if video_url:
+                            video_path = self._download_video(video_url, category, "pexels")
+                            return video_path
+                    except Exception as e:
+                        logger.warning(f"Pexels failed for '{query}': {e}")
                 
                 # Wait a bit before trying next keyword
                 time.sleep(0.5)
@@ -261,14 +272,53 @@ class BackgroundManager:
                     mp4_pattern = r'"(https://[^"]+\.mp4[^"]*)"'
                     mp4_matches = re.findall(mp4_pattern, video_response.text)
                     
-                    # Check if page content suggests people/portraits
+                    # AGGRESSIVE PEOPLE FILTERING - check ENTIRE page content
                     video_page_lower = video_response.text.lower()
-                    people_keywords = ['woman', 'man', 'people', 'person', 'girl', 'boy', 'walking', 'portrait', 'face', 'human', 'model', 'actor', 'business person']
                     
+                    # Expanded people keywords (60+ terms)
+                    people_keywords = [
+                        # Basic people terms
+                        'woman', 'man', 'people', 'person', 'girl', 'boy', 
+                        'lady', 'gentleman', 'male', 'female', 'human', 'humans',
+                        
+                        # Body parts (indicates close-up of person)
+                        'face', 'eyes', 'hands', 'hair', 'skin', 'body', 'head',
+                        'portrait', 'headshot', 'selfie', 'profile',
+                        
+                        # Actions people do
+                        'walking', 'standing', 'sitting', 'smiling', 'looking',
+                        'dancing', 'running', 'jumping', 'exercising', 'working out',
+                        'talking', 'speaking', 'laughing', 'crying', 'thinking',
+                        
+                        # Professional/occupation
+                        'model', 'actor', 'actress', 'businesswoman', 'businessman',
+                        'business person', 'office worker', 'professional', 'worker',
+                        'employee', 'executive', 'manager', 'student', 'teacher',
+                        
+                        # Activity with people
+                        'yoga person', 'meditation person', 'meditating person',
+                        'praying person', 'spiritual person', 'zen person',
+                        
+                        # Descriptive terms
+                        'beautiful person', 'young adult', 'senior', 'elderly',
+                        'child', 'teen', 'teenager', 'adult', 'baby', 'infant',
+                        
+                        # Clothing (indicates person present)
+                        'wearing', 'dressed', 'outfit', 'clothing', 'shirt', 'dress',
+                        
+                        # Multiple people
+                        'crowd', 'group', 'team', 'couple', 'family', 'friends',
+                        
+                        # Video-specific people terms
+                        'person in', 'people in', 'with person', 'with people',
+                        'human in', 'someone', 'individual'
+                    ]
+                    
+                    # Check if ANY people keyword appears
                     has_people = any(keyword in video_page_lower for keyword in people_keywords)
                     
                     if has_people:
-                        logger.info(f"⏭️  Skipping Videvo video (likely has people)")
+                        logger.info(f"⏭️  Skipping Videvo video (detected people: found people-related terms)")
                         continue  # Try next video page
                     
                     for mp4_url in mp4_matches:
