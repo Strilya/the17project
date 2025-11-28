@@ -1,19 +1,99 @@
 {
+  "visual_styles": {
+    "style_1_mystical_purple": {
+      "name": "Mystical Purple (Original)",
+      "font_primary": "DejaVuSans-Bold",
+      "font_secondary": "DejaVuSans",
+      "colors": {
+        "bright_purple": "#9D4EDD",
+        "deep_purple": "#5A189A",
+        "gold": "#FFD700",
+        "white": "#FFFFFF",
+        "magenta": "#D946EF",
+        "light_purple": "#E0AAFF"
+      },
+      "text_position": "center",
+      "text_style": "bold_centered",
+      "background_overlay": "none"
+    },
+    "style_2_modern_minimal": {
+      "name": "Modern Minimal",
+      "font_primary": "DejaVuSans",
+      "font_secondary": "DejaVuSans",
+      "colors": {
+        "white": "#FFFFFF",
+        "cream": "#FFF8E7",
+        "gold": "#FFD700",
+        "dark_gray": "#2C2C2C",
+        "teal": "#14B8A6",
+        "coral": "#FF6B6B"
+      },
+      "text_position": "top_third",
+      "text_style": "clean_minimal",
+      "background_overlay": "dark_vignette"
+    },
+    "style_3_neon_energy": {
+      "name": "Neon Energy",
+      "font_primary": "DejaVuSans-Bold",
+      "font_secondary": "DejaVuSans-Bold",
+      "colors": {
+        "neon_pink": "#FF10F0",
+        "neon_blue": "#00F0FF",
+        "neon_green": "#39FF14",
+        "white": "#FFFFFF",
+        "black": "#000000",
+        "neon_purple": "#BF00FF"
+      },
+      "text_position": "center",
+      "text_style": "bold_neon",
+      "background_overlay": "dark_edges"
+    },
+    "style_4_elegant_serif": {
+      "name": "Elegant Gold",
+      "font_primary": "DejaVuSerif-Bold",
+      "font_secondary": "DejaVuSerif",
+      "colors": {
+        "gold": "#FFD700",
+        "rose_gold": "#F4C2C2",
+        "bronze": "#CD7F32",
+        "white": "#FFFFFF",
+        "cream": "#FFFDD0",
+        "burgundy": "#800020"
+      },
+      "text_position": "center",
+      "text_style": "elegant_serif",
+      "background_overlay": "subtle_glow"
+    },
+    "style_5_bold_contrast": {
+      "name": "Bold Contrast",
+      "font_primary": "DejaVuSans-Bold",
+      "font_secondary": "DejaVuSans",
+      "colors": {
+        "black": "#000000",
+        "white": "#FFFFFF",
+        "yellow": "#FFFF00",
+        "cyan": "#00FFFF",
+        "lime": "#00FF00",
+        "magenta": "#FF00FF"
+      },
+      "text_position": "bottom_third",
+      "text_style": "bold_contrast",
+      "background_overlay": "strong_gradient"
+    }
+  },
   "background_videos": {
     "enabled": true,
     "source": "pexels",
     "fallback_to_gradient": true,
     "cache_enabled": true,
     "cache_dir": "output/background_cache",
-    "max_cache_size": 50,
+    "max_cache_size": 100,
     "categories": {
       "angel_numbers": [
         "nebula space",
         "starry night sky",
         "aurora borealis",
         "milky way galaxy",
-        "milky way galaxy stars",
-        "milky way galaxy comet",
         "cosmic meditation stars",
         "spiritual light rays peaceful",
         "celestial sky stars peaceful",
@@ -52,8 +132,14 @@
         "pendulum swinging spiritual",
         "incense smoke mystical",
         "candle flame meditation",
-        "lotus flower blooming"
-        
+        "lotus flower blooming",
+        "sacred temple ancient",
+        "meditation stones zen",
+        "chakra energy spinning",
+        "sound healing frequencies",
+        "reiki energy healing",
+        "crystal healing grid",
+        "spiritual awakening light"
       ],
       "productivity": [
         "peaceful sunrise meditation",
@@ -61,8 +147,21 @@
         "zen garden stones water",
         "minimal blue sky clouds",
         "focus morning light nature",
-        "tranquil forest sunlight"
-        
+        "tranquil forest sunlight",
+        "desk workspace minimal",
+        "coffee morning routine",
+        "notebook planning journal",
+        "laptop working focused",
+        "clock time management",
+        "calendar planning organized",
+        "office modern workspace",
+        "books library knowledge",
+        "writing pen paper",
+        "typing keyboard work",
+        "planner organizing tasks",
+        "success achievement goals",
+        "focus deep work flow",
+        "productivity tools minimal"
       ],
       "manifestation": [
         "purple sunset clouds peaceful",
@@ -70,7 +169,16 @@
         "golden light rays spiritual",
         "rose gold sunset magic",
         "candles meditation peaceful",
-        "glowing crystals spiritual"
+        "glowing crystals spiritual",
+        "vision board dreams",
+        "journal writing manifesting",
+        "affirmation cards positive",
+        "goals achievement success",
+        "abundance prosperity wealth",
+        "magic sparkles glowing",
+        "wishes stars night sky",
+        "dreams clouds imagination",
+        "intention setting ritual"
       ],
       "spiritual_growth": [
         "meditation purple spiritual",
@@ -78,13 +186,22 @@
         "aurora borealis meditation",
         "cosmic energy stars",
         "zen peaceful nature water",
-        "mystical forest light rays"
+        "mystical forest light rays",
+        "buddhist temple peaceful",
+        "yoga practice spiritual",
+        "mindfulness meditation calm",
+        "prayer hands spiritual",
+        "peace dove flying",
+        "enlightenment light divine",
+        "transformation butterfly",
+        "growth plant nature",
+        "awakening sunrise spiritual"
       ]
     },
     "video_settings": {
       "orientation": "portrait",
       "size": "large",
-      "per_page": 10
+      "per_page": 15
     }
   },
   "video_settings": {
@@ -100,59 +217,41 @@
     "action": 6,
     "cta": 4
   },
-  "color_palettes": {
-    "angel_numbers": {
-      "background": "#8B5CF6",
-      "primary_text": "#FFD700",
-      "secondary_text": "#FFFFFF",
-      "accent": "#DDA0DD",
-      "gradient_start": "#6B21A8",
-      "gradient_end": "#8B5CF6"
-    },
-    "productivity": {
-      "background": "#3B82F6",
-      "primary_text": "#FFFFFF",
-      "secondary_text": "#E0F2FE",
-      "accent": "#60A5FA",
-      "gradient_start": "#1E40AF",
-      "gradient_end": "#3B82F6"
-    },
-    "manifestation": {
-      "background": "#FB7185",
-      "primary_text": "#FFD700",
-      "secondary_text": "#FFFFFF",
-      "accent": "#FDA4AF",
-      "gradient_start": "#BE123C",
-      "gradient_end": "#FB7185"
-    },
-    "spiritual_growth": {
-      "background": "#6366F1",
-      "primary_text": "#FFD700",
-      "secondary_text": "#E0E7FF",
-      "accent": "#A5B4FC",
-      "gradient_start": "#4338CA",
-      "gradient_end": "#6366F1"
-    }
-  },
   "fonts": {
-    "primary": {
-      "family": "DejaVuSans-Bold",
+    "DejaVuSans-Bold": {
       "path": "fonts/DejaVuSans-Bold.ttf",
-      "size": {
-        "hook": 90,
-        "meaning": 70,
-        "action": 70,
-        "cta": 80
+      "sizes": {
+        "hook": 82,
+        "meaning": 64,
+        "action": 64,
+        "cta": 71
       }
     },
-    "secondary": {
-      "family": "DejaVuSans-Bold",
-      "path": "fonts/DejaVuSans-Bold.ttf",
-      "size": {
-        "hook": 60,
-        "meaning": 50,
-        "action": 50,
-        "cta": 60
+    "DejaVuSans": {
+      "path": "fonts/DejaVuSans.ttf",
+      "sizes": {
+        "hook": 78,
+        "meaning": 60,
+        "action": 60,
+        "cta": 67
+      }
+    },
+    "DejaVuSerif-Bold": {
+      "path": "fonts/DejaVuSerif-Bold.ttf",
+      "sizes": {
+        "hook": 75,
+        "meaning": 58,
+        "action": 58,
+        "cta": 65
+      }
+    },
+    "DejaVuSerif": {
+      "path": "fonts/DejaVuSerif.ttf",
+      "sizes": {
+        "hook": 72,
+        "meaning": 56,
+        "action": 56,
+        "cta": 63
       }
     }
   },
@@ -195,5 +294,18 @@
     "watermark_position": "bottom_right",
     "watermark_opacity": 0.7,
     "watermark_size": 40
+  },
+  "variety_system": {
+    "style_rotation": {
+      "enabled": true,
+      "method": "sequential_random",
+      "avoid_last_n_styles": 2,
+      "state_file": "output/.style_history.json"
+    },
+    "background_rotation": {
+      "enabled": true,
+      "avoid_last_n_backgrounds": 5,
+      "state_file": "output/.background_history.json"
+    }
   }
 }
