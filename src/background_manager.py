@@ -261,6 +261,16 @@ class BackgroundManager:
                     mp4_pattern = r'"(https://[^"]+\.mp4[^"]*)"'
                     mp4_matches = re.findall(mp4_pattern, video_response.text)
                     
+                    # Check if page content suggests people/portraits
+                    video_page_lower = video_response.text.lower()
+                    people_keywords = ['woman', 'man', 'people', 'person', 'girl', 'boy', 'walking', 'portrait', 'face', 'human', 'model', 'actor', 'business person']
+                    
+                    has_people = any(keyword in video_page_lower for keyword in people_keywords)
+                    
+                    if has_people:
+                        logger.info(f"⏭️  Skipping Videvo video (likely has people)")
+                        continue  # Try next video page
+                    
                     for mp4_url in mp4_matches:
                         # Skip thumbnails and previews
                         if any(x in mp4_url.lower() for x in ['thumb', 'preview', 'watermark']):
