@@ -91,9 +91,10 @@
         "Divine timing",
         "Soul purpose discovery",
         "Chakra alignment",
-        "Energy awareness"
+        "Energy awareness",
+        "Spiritual awakening signs"
       ],
-      "last_used_date": "2025-11-28T18:33:17.593241"
+      "last_used_date": "2025-11-28T19:07:21.447940"
     }
   },
   "content_history": [
@@ -211,10 +212,15 @@
       "topic": "Energy alignment practices",
       "category": "manifestation",
       "date": "2025-11-28T18:47:55.037608"
+    },
+    {
+      "topic": "Spiritual awakening signs",
+      "category": "spiritual_growth",
+      "date": "2025-11-28T19:07:21.447976"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
