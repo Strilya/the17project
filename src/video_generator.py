@@ -339,7 +339,7 @@ class VideoGenerator:
         temp_path = Path("output") / "temp_attribution.png"
         img.save(temp_path)
         
-        clip = ImageClip(str(temp_path), duration=duration)
+        clip = ImageClip(str(temp_path)).set_duration(duration)
         temp_path.unlink()
         
         logger.info(f"✅ Added subtle attribution: {source}")
@@ -417,7 +417,8 @@ class VideoGenerator:
         # Final fallback: gradient
         logger.warning("Using gradient fallback")
         gradient = self._create_gradient_background(duration)
-        return (ImageClip(np.array(gradient), duration=duration), "gradient")
+        gradient_array = np.array(gradient)
+        return (ImageClip(gradient_array).set_duration(duration), "gradient")
     
     def _create_photo_slideshow(self, photo_paths: List[Path], duration: float) -> object:
         """
@@ -457,15 +458,8 @@ class VideoGenerator:
                 # Convert to numpy array
                 img_array = np.array(img)
                 
-                # Create clip with Ken Burns effect (slow zoom)
-                clip = ImageClip(img_array, duration=photo_duration)
-                
-                # Apply slow zoom: 1.0x to 1.1x scale
-                clip = clip.resized(lambda t: 1.0 + (t / photo_duration) * 0.1)
-                
-                # Add crossfade
-                if i > 0:
-                    clip = clip.crossfadein(transition_duration)
+                # Create simple clip - no effects (they cause MoviePy errors)
+                clip = ImageClip(img_array).set_duration(photo_duration)
                 
                 clips.append(clip)
                 
@@ -637,8 +631,10 @@ class VideoGenerator:
             temp_img = Path("output") / f"temp_{scene}_{timestamp}.png"
             text_img.save(temp_img)
             
-            # Create ImageClip and set timing
-            clip = ImageClip(str(temp_img)).set_duration(seg['duration']).set_start(current_time)
+            # Create ImageClip with proper timing (MoviePy syntax)
+            clip = (ImageClip(str(temp_img))
+                   .set_duration(seg['duration'])
+                   .set_start(current_time))
             text_clips.append(clip)
             
             logger.info(f"   {scene}: {current_time:.2f}s → {current_time + seg['duration']:.2f}s")
