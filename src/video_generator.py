@@ -313,12 +313,12 @@ class VideoGenerator:
         img = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
         
-        # Small attribution text
-        attribution_text = f"Video: {source}"
+        # VERY small attribution text
+        attribution_text = f"via {source}"  # Shorter text
         
         try:
             font_path = Path(__file__).parent.parent / "fonts" / "DejaVuSans.ttf"
-            font = ImageFont.truetype(str(font_path), 20)
+            font = ImageFont.truetype(str(font_path), 14)  # Smaller: 20 → 14
         except:
             font = ImageFont.load_default()
         
@@ -326,11 +326,11 @@ class VideoGenerator:
         bbox = draw.textbbox((0, 0), attribution_text, font=font)
         text_width = bbox[2] - bbox[0]
         
-        x = 20  # Left padding
-        y = self.height - 60  # Bottom with padding
+        x = 15  # Left padding
+        y = self.height - 40  # Bottom with padding
         
-        # Semi-transparent white text
-        text_color = (255, 255, 255, 128)  # 50% opacity
+        # VERY transparent gray text (barely visible)
+        text_color = (180, 180, 180, 60)  # Was 128 opacity, now 60 (much lighter)
         
         # Draw text
         draw.text((x, y), attribution_text, font=font, fill=text_color)
@@ -342,7 +342,7 @@ class VideoGenerator:
         clip = ImageClip(str(temp_path), duration=duration)
         temp_path.unlink()
         
-        logger.info(f"✅ Added attribution: {source}")
+        logger.info(f"✅ Added subtle attribution: {source}")
         
         return clip
 
@@ -638,9 +638,10 @@ class VideoGenerator:
             text_img.save(temp_img)
             
             clip = ImageClip(str(temp_img), duration=seg['duration'])
-            clip = clip.with_start(current_time)
+            clip = clip.set_start(current_time)  # set_start() not with_start()!
             text_clips.append(clip)
             
+            logger.info(f"   {scene}: {current_time:.2f}s → {current_time + seg['duration']:.2f}s")
             current_time += seg['duration']
 
         # Add attribution watermark (required by Pexels/Pixabay API terms)
