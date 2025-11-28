@@ -25,22 +25,130 @@ logger = logging.getLogger(__name__)
 class AudioGenerator:
     """Generate voiceovers with MULTIPLE Neural2 voices for variety."""
 
-    # VOICE VARIETY - Rotate these for engagement
+    # VOICE VARIETY - 20 Most Popular Instagram Voices (10 Female, 10 Male)
     VOICES = {
-        "warm_friendly": {
+        # TOP 10 FEMALE VOICES (Instagram favorites)
+        "warm_friendly_female": {
             "name": "en-US-Neural2-F",
-            "description": "Warm, friendly female - approachable and comforting",
-            "pitch": 0.0
+            "description": "Warm, friendly female - most popular on spiritual/manifestation content",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
         },
-        "calming_mature": {
+        "calm_meditation_female": {
             "name": "en-US-Neural2-C",
-            "description": "Calming, mature female - wise and soothing",
-            "pitch": -2.0  # Slightly lower for gravitas
+            "description": "Calm, soothing female - meditation and mindfulness standard",
+            "pitch": -1.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
         },
-        "energetic_bright": {
+        "energetic_uplifting_female": {
             "name": "en-US-Neural2-H",
-            "description": "Energetic, enthusiastic female - uplifting and inspiring",
-            "pitch": 2.0  # Slightly higher for energy
+            "description": "Energetic, enthusiastic female - manifestation content favorite",
+            "pitch": 1.5,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "conversational_natural_female": {
+            "name": "en-US-Neural2-A",
+            "description": "Natural conversational female - like talking to a friend",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "clear_pleasant_female": {
+            "name": "en-US-Neural2-G",
+            "description": "Clear, pleasant female - professional yet approachable",
+            "pitch": 0.5,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "soft_gentle_female": {
+            "name": "en-US-Neural2-E",
+            "description": "Soft, gentle female - peaceful and comforting",
+            "pitch": -0.5,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "studio_narrator_female": {
+            "name": "en-US-Studio-O",
+            "description": "Professional narrator female - documentary style",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "storyteller_female": {
+            "name": "en-US-Studio-Q",
+            "description": "Soft storyteller female - engaging and warm",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "smooth_wavenet_female": {
+            "name": "en-US-Wavenet-A",
+            "description": "Smooth, polished female - high quality classic",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        "professional_wavenet_female": {
+            "name": "en-US-Wavenet-C",
+            "description": "Professional female - confident and clear",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.FEMALE
+        },
+        
+        # TOP 10 MALE VOICES (Instagram favorites)
+        "professional_confident_male": {
+            "name": "en-US-Neural2-D",
+            "description": "Professional male - productivity and business content favorite",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "young_relatable_male": {
+            "name": "en-US-Neural2-J",
+            "description": "Young, relatable male - Gen Z appeal",
+            "pitch": 0.5,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "deep_authoritative_male": {
+            "name": "en-US-Neural2-I",
+            "description": "Deep, mature male - authority and wisdom",
+            "pitch": -1.0,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "casual_friendly_male": {
+            "name": "en-US-Neural2-A",
+            "description": "Casual, friendly male - conversational and easy",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "documentary_narrator_male": {
+            "name": "en-US-Studio-M",
+            "description": "Documentary narrator male - engaging storytelling",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "deep_wavenet_male": {
+            "name": "en-US-Wavenet-B",
+            "description": "Deep, rich male - commanding presence",
+            "pitch": -0.5,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "clear_professional_male": {
+            "name": "en-US-Wavenet-D",
+            "description": "Clear, professional male - news anchor quality",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "mature_experienced_male": {
+            "name": "en-US-Wavenet-I",
+            "description": "Mature, experienced male - wise and trustworthy",
+            "pitch": -0.5,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "casual_wavenet_male": {
+            "name": "en-US-Wavenet-J",
+            "description": "Casual, approachable male - everyday conversation",
+            "pitch": 0.5,
+            "gender": texttospeech.SsmlVoiceGender.MALE
+        },
+        "versatile_male": {
+            "name": "en-US-Neural2-J",
+            "description": "Versatile male - adapts to any content style",
+            "pitch": 0.0,
+            "gender": texttospeech.SsmlVoiceGender.MALE
         }
     }
 
@@ -49,7 +157,8 @@ class AudioGenerator:
         # Google Cloud credentials from environment
         self.client = texttospeech.TextToSpeechClient()
         
-        logger.info("AudioGenerator initialized with 3 Neural2 voice options")
+        logger.info("AudioGenerator initialized with 20 Neural2 voices (10 female, 10 male)")
+        logger.info("Voices rotate automatically for maximum variety")
         for voice_key, voice_info in self.VOICES.items():
             logger.info(f"  - {voice_key}: {voice_info['description']}")
 
@@ -87,7 +196,7 @@ class AudioGenerator:
             voice = texttospeech.VoiceSelectionParams(
                 language_code="en-US",
                 name=voice_config["name"],
-                ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+                ssml_gender=voice_config["gender"]
             )
             
             # Prepare synthesis input

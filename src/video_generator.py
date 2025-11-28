@@ -293,7 +293,7 @@ class VideoGenerator:
         position = style['text_position']
         
         if position == "top_third":
-            start_y = 300
+            start_y = 450  # Was 300, moved down 15% (150px) to avoid iPhone island
         elif position == "bottom_third":
             start_y = 1300
         elif position == "center_lower":
