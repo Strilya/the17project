@@ -507,10 +507,11 @@
     "watermark_size": 40,
     "attribution": {
       "enabled": true,
-      "text": "Video: Pexels",
+      "text": "via Pexels",
       "position": "bottom_left",
-      "size": 20,
-      "opacity": 0.5
+      "size": 14,
+      "opacity": 0.24,
+      "note": "Very subtle - barely visible but compliant with API terms"
     }
   },
   "api_attribution_note": "IMPORTANT: Per Pexels/Pixabay API terms, we must credit content sources. Attribution watermark added to comply with free API usage terms.",
