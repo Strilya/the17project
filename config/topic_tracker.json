@@ -176,9 +176,10 @@
         "Chakra alignment",
         "Energy awareness",
         "Spiritual awakening signs",
-        "Intuition development"
+        "Intuition development",
+        "Mindfulness practices"
       ],
-      "last_used_date": "2025-11-28T19:50:23.925484"
+      "last_used_date": "2025-11-28T21:58:36.672523"
     }
   },
   "content_history": [
@@ -336,10 +337,15 @@
       "topic": "New moon manifestation",
       "category": "manifestation",
       "date": "2025-11-28T21:41:36.260666"
+    },
+    {
+      "topic": "Mindfulness practices",
+      "category": "spiritual_growth",
+      "date": "2025-11-28T21:58:36.672533"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
