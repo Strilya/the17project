@@ -103,8 +103,10 @@
         "9898",
         "9999"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "666"
+      ],
+      "last_used_date": "2025-11-28T22:04:14.561298"
     },
     "productivity": {
       "techniques": [
@@ -342,10 +344,15 @@
       "topic": "Mindfulness practices",
       "category": "spiritual_growth",
       "date": "2025-11-28T21:58:36.672533"
+    },
+    {
+      "topic": "666",
+      "category": "angel_numbers",
+      "date": "2025-11-28T22:04:14.561309"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 0,
+  "current_category_index": 1,
   "category_order": [
     "angel_numbers",
     "productivity",
