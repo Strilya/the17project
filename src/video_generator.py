@@ -1,5 +1,5 @@
 """
-Video Generator V2 - EXTREME VARIETY EDITION
+Video Generator - EXTREME VARIETY EDITION
 
 Features:
 - 5 COMPLETELY DIFFERENT visual styles that rotate
@@ -105,7 +105,7 @@ class VideoGenerator:
     def __init__(self, config_path: Optional[str] = None):
         """Initialize VideoGenerator with variety system."""
         if config_path is None:
-            config_path = Path(__file__).parent / "video_config_v2.json"
+            config_path = Path(__file__).parent.parent / "config" / "video_config.json"
 
         with open(config_path, 'r') as f:
             self.config = json.load(f)
@@ -127,7 +127,7 @@ class VideoGenerator:
         self.background_manager = BackgroundManager()
         self.audio_generator = AudioGenerator()
 
-        logger.info("VideoGenerator V2 initialized (EXTREME VARIETY MODE)")
+        logger.info("VideoGenerator initialized (EXTREME VARIETY MODE)")
         logger.info(f"Available styles: {len(self.visual_styles)}")
 
     def _select_style(self) -> Tuple[str, Dict]:
@@ -237,7 +237,7 @@ class VideoGenerator:
         try:
             font_name = style['font_primary']
             font_config = self.fonts[font_name]
-            font_path = Path(__file__).parent / font_config['path']
+            font_path = Path(__file__).parent.parent / font_config['path']
             font_size = font_config['sizes'][scene_type]
             font = ImageFont.truetype(str(font_path), font_size)
         except Exception as e:
