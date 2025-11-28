@@ -1,7 +1,7 @@
 {
   "visual_styles": {
     "style_1_mystical_purple": {
-      "name": "Mystical Purple (Original)",
+      "name": "Mystical Purple",
       "font_primary": "DejaVuSans-Bold",
       "font_secondary": "DejaVuSans",
       "colors": {
@@ -13,13 +13,12 @@
         "light_purple": "#E0AAFF"
       },
       "text_position": "center",
-      "text_style": "bold_centered",
-      "background_overlay": "none"
+      "text_style": "bold_centered"
     },
     "style_2_modern_minimal": {
       "name": "Modern Minimal",
-      "font_primary": "DejaVuSans",
-      "font_secondary": "DejaVuSans",
+      "font_primary": "Roboto-Bold",
+      "font_secondary": "Roboto-Regular",
       "colors": {
         "white": "#FFFFFF",
         "cream": "#FFF8E7",
@@ -29,13 +28,12 @@
         "coral": "#FF6B6B"
       },
       "text_position": "top_third",
-      "text_style": "clean_minimal",
-      "background_overlay": "dark_vignette"
+      "text_style": "clean_minimal"
     },
     "style_3_neon_energy": {
       "name": "Neon Energy",
-      "font_primary": "DejaVuSans-Bold",
-      "font_secondary": "DejaVuSans-Bold",
+      "font_primary": "Montserrat-Bold",
+      "font_secondary": "Montserrat-Regular",
       "colors": {
         "neon_pink": "#FF10F0",
         "neon_blue": "#00F0FF",
@@ -45,13 +43,12 @@
         "neon_purple": "#BF00FF"
       },
       "text_position": "center",
-      "text_style": "bold_neon",
-      "background_overlay": "dark_edges"
+      "text_style": "bold_neon"
     },
     "style_4_elegant_serif": {
       "name": "Elegant Gold",
-      "font_primary": "DejaVuSerif-Bold",
-      "font_secondary": "DejaVuSerif",
+      "font_primary": "PlayfairDisplay-Bold",
+      "font_secondary": "PlayfairDisplay-Regular",
       "colors": {
         "gold": "#FFD700",
         "rose_gold": "#F4C2C2",
@@ -61,13 +58,12 @@
         "burgundy": "#800020"
       },
       "text_position": "center",
-      "text_style": "elegant_serif",
-      "background_overlay": "subtle_glow"
+      "text_style": "elegant_serif"
     },
     "style_5_bold_contrast": {
       "name": "Bold Contrast",
-      "font_primary": "DejaVuSans-Bold",
-      "font_secondary": "DejaVuSans",
+      "font_primary": "OpenSans-Bold",
+      "font_secondary": "OpenSans-Regular",
       "colors": {
         "black": "#000000",
         "white": "#FFFFFF",
@@ -77,8 +73,52 @@
         "magenta": "#FF00FF"
       },
       "text_position": "bottom_third",
-      "text_style": "bold_contrast",
-      "background_overlay": "strong_gradient"
+      "text_style": "bold_contrast"
+    },
+    "style_6_urban_pro": {
+      "name": "Urban Professional",
+      "font_primary": "Lato-Bold",
+      "font_secondary": "Lato-Regular",
+      "colors": {
+        "slate": "#334155",
+        "white": "#FFFFFF",
+        "orange": "#FB923C",
+        "sky_blue": "#38BDF8",
+        "emerald": "#10B981",
+        "amber": "#FBBF24"
+      },
+      "text_position": "top_third",
+      "text_style": "professional"
+    },
+    "style_7_cosmic_pop": {
+      "name": "Cosmic Pop",
+      "font_primary": "Poppins-Bold",
+      "font_secondary": "Poppins-Regular",
+      "colors": {
+        "hot_pink": "#FF1493",
+        "electric_blue": "#00D4FF",
+        "lime_green": "#32CD32",
+        "white": "#FFFFFF",
+        "purple": "#9D4EDD",
+        "orange": "#FF8C00"
+      },
+      "text_position": "center",
+      "text_style": "pop_bold"
+    },
+    "style_8_zen_minimal": {
+      "name": "Zen Minimal",
+      "font_primary": "Roboto-Regular",
+      "font_secondary": "Roboto-Regular",
+      "colors": {
+        "charcoal": "#36454F",
+        "off_white": "#FAF9F6",
+        "sage": "#87AE73",
+        "sand": "#C2B280",
+        "slate_blue": "#6A7B8A",
+        "warm_gray": "#8B8680"
+      },
+      "text_position": "center_lower",
+      "text_style": "zen_calm"
     }
   },
   "background_videos": {
@@ -119,7 +159,17 @@
         "lotus flower blooming",
         "zen garden peaceful",
         "prayer spiritual divine",
-        "enlightenment light rays"
+        "enlightenment light rays",
+        "neon lights abstract",
+        "neon city night",
+        "cyberpunk neon purple",
+        "neon signs glowing",
+        "electric neon energy",
+        "neon tunnel motion",
+        "neon geometric patterns",
+        "holographic neon display",
+        "neon grid futuristic",
+        "laser lights neon"
       ],
       "productivity": [
         "modern office workspace",
@@ -151,7 +201,17 @@
         "ocean waves peaceful",
         "river flowing calm",
         "sunrise horizon peaceful",
-        "clock time passing"
+        "clock time passing",
+        "neon city skyline",
+        "neon office modern",
+        "neon tokyo street",
+        "cyberpunk city night",
+        "neon downtown urban",
+        "futuristic neon workspace",
+        "neon lights traffic",
+        "neon subway urban",
+        "neon billboard city",
+        "electric city neon"
       ],
       "manifestation": [
         "purple sunset dreamy",
@@ -183,7 +243,17 @@
         "gemstones precious wealth",
         "luxury elegant lifestyle",
         "success celebration winning",
-        "joy happiness celebration"
+        "joy happiness celebration",
+        "neon pink aesthetic",
+        "neon purple dreams",
+        "neon rainbow colors",
+        "neon glow magical",
+        "electric neon sparkle",
+        "neon butterflies glowing",
+        "luminous neon flowers",
+        "neon crystal glowing",
+        "holographic neon magic",
+        "neon light show"
       ],
       "spiritual_growth": [
         "meditation peaceful zen",
@@ -215,7 +285,17 @@
         "soul journey spiritual",
         "higher self awakening",
         "spiritual practice daily",
-        "sacred ritual ceremony"
+        "sacred ritual ceremony",
+        "neon temple night",
+        "neon meditation space",
+        "cyber zen garden",
+        "neon chakra energy",
+        "electric spiritual energy",
+        "neon sacred geometry",
+        "futuristic meditation room",
+        "neon lotus glowing",
+        "holographic spiritual",
+        "neon healing energy"
       ]
     },
     "video_settings": {
@@ -275,6 +355,114 @@
         "meaning": 56,
         "action": 56,
         "cta": 63
+      }
+    },
+    "Roboto-Bold": {
+      "path": "fonts/Roboto-Bold.ttf",
+      "sizes": {
+        "hook": 85,
+        "meaning": 66,
+        "action": 66,
+        "cta": 74
+      }
+    },
+    "Roboto-Regular": {
+      "path": "fonts/Roboto-Regular.ttf",
+      "sizes": {
+        "hook": 80,
+        "meaning": 62,
+        "action": 62,
+        "cta": 70
+      }
+    },
+    "OpenSans-Bold": {
+      "path": "fonts/OpenSans-Bold.ttf",
+      "sizes": {
+        "hook": 83,
+        "meaning": 65,
+        "action": 65,
+        "cta": 72
+      }
+    },
+    "OpenSans-Regular": {
+      "path": "fonts/OpenSans-Regular.ttf",
+      "sizes": {
+        "hook": 78,
+        "meaning": 60,
+        "action": 60,
+        "cta": 68
+      }
+    },
+    "Montserrat-Bold": {
+      "path": "fonts/Montserrat-Bold.ttf",
+      "sizes": {
+        "hook": 88,
+        "meaning": 68,
+        "action": 68,
+        "cta": 76
+      }
+    },
+    "Montserrat-Regular": {
+      "path": "fonts/Montserrat-Regular.ttf",
+      "sizes": {
+        "hook": 82,
+        "meaning": 64,
+        "action": 64,
+        "cta": 72
+      }
+    },
+    "PlayfairDisplay-Bold": {
+      "path": "fonts/PlayfairDisplay-Bold.ttf",
+      "sizes": {
+        "hook": 76,
+        "meaning": 58,
+        "action": 58,
+        "cta": 66
+      }
+    },
+    "PlayfairDisplay-Regular": {
+      "path": "fonts/PlayfairDisplay-Regular.ttf",
+      "sizes": {
+        "hook": 72,
+        "meaning": 56,
+        "action": 56,
+        "cta": 63
+      }
+    },
+    "Poppins-Bold": {
+      "path": "fonts/Poppins-Bold.ttf",
+      "sizes": {
+        "hook": 84,
+        "meaning": 65,
+        "action": 65,
+        "cta": 73
+      }
+    },
+    "Poppins-Regular": {
+      "path": "fonts/Poppins-Regular.ttf",
+      "sizes": {
+        "hook": 79,
+        "meaning": 61,
+        "action": 61,
+        "cta": 69
+      }
+    },
+    "Lato-Bold": {
+      "path": "fonts/Lato-Bold.ttf",
+      "sizes": {
+        "hook": 86,
+        "meaning": 67,
+        "action": 67,
+        "cta": 75
+      }
+    },
+    "Lato-Regular": {
+      "path": "fonts/Lato-Regular.ttf",
+      "sizes": {
+        "hook": 81,
+        "meaning": 63,
+        "action": 63,
+        "cta": 71
       }
     }
   },
