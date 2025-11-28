@@ -630,9 +630,9 @@ class VideoGenerator:
             temp_img = Path("output") / f"temp_{scene}_{timestamp}.png"
             text_img.save(temp_img)
             
-            # Create ImageClip with duration (old MoviePy syntax that works)
+            # Use OLD working syntax from your original code
             clip = ImageClip(str(temp_img), duration=seg['duration'])
-            clip = clip.set_start(current_time)
+            clip = clip.with_start(current_time)
             text_clips.append(clip)
             
             logger.info(f"   {scene}: {current_time:.2f}s → {current_time + seg['duration']:.2f}s")
