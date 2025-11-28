@@ -45,9 +45,10 @@
         "17-minute exercise bursts",
         "17-minute creative sessions",
         "17-minute learning sprints",
-        "17-minute meditation"
+        "17-minute meditation",
+        "17-minute power naps"
       ],
-      "last_used_date": "2025-11-28T18:19:54.244374"
+      "last_used_date": "2025-11-28T18:42:18.106603"
     },
     "manifestation": {
       "practices": [
@@ -199,10 +200,15 @@
       "topic": "911",
       "category": "angel_numbers",
       "date": "2025-11-28T18:38:04.116032"
+    },
+    {
+      "topic": "17-minute power naps",
+      "category": "productivity",
+      "date": "2025-11-28T18:42:18.106614"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 1,
+  "current_category_index": 2,
   "category_order": [
     "angel_numbers",
     "productivity",
