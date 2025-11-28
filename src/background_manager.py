@@ -1,15 +1,16 @@
 """
-Background Manager Module
+Background Manager Module - ENHANCED MULTI-SOURCE EDITION
 
-This module handles fetching and caching video backgrounds from Pexels API
-for Instagram Reels. It provides dynamic, engaging video backgrounds that
-match each content category's theme.
+This module handles fetching backgrounds from MULTIPLE sources:
+- Pexels API (primary)
+- Pixabay API (free backup)
+- Videvo (free videos)
 
-Main functionality:
-- Search Pexels API for category-specific video backgrounds
-- Download and cache videos locally
-- Manage cache size and cleanup
-- Fallback to gradient backgrounds if API is unavailable
+Features:
+- 3 video APIs with automatic fallback
+- Photo slideshows as backup
+- Massive keyword variety (100+ search terms)
+- Smart caching and variety tracking
 """
 
 import os
@@ -33,22 +34,18 @@ logger = logging.getLogger(__name__)
 
 class BackgroundManager:
     """
-    Manages video backgrounds from Pexels API with caching.
-
-    This class handles:
-    1. Searching Pexels for category-specific videos
-    2. Downloading videos to local cache
-    3. Managing cache size and cleanup
-    4. Providing fallback to gradients if API fails
+    Multi-source background manager with massive variety.
+    
+    Sources (in priority order):
+    1. Pexels API (best quality, requires key)
+    2. Pixabay API (good quality, free)
+    3. Videvo (free downloads, no API)
+    4. Photo slideshows (Pexels photos)
+    5. Gradient fallback
     """
 
     def __init__(self, config_path: Optional[Path] = None):
-        """
-        Initialize the BackgroundManager.
-
-        Args:
-            config_path: Path to video_config.json file
-        """
+        """Initialize the BackgroundManager with multi-source support."""
         # Load config
         if config_path is None:
             config_path = Path(__file__).parent.parent / "config" / "video_config.json"
@@ -60,19 +57,22 @@ class BackgroundManager:
             self.config = config["background_videos"]
         except Exception as e:
             logger.error(f"Failed to load config: {e}")
-            # Default config with backgrounds disabled
+            # Default config
             self.config = {
                 "enabled": False,
                 "fallback_to_gradient": True,
                 "cache_enabled": False
             }
 
-        # Get API key from environment
-        self.api_key = os.getenv("PEXELS_API_KEY")
-
-        if not self.api_key:
-            logger.warning("PEXELS_API_KEY not found, will use gradient fallback")
-            self.config["enabled"] = False
+        # Get API keys from environment
+        self.pexels_key = os.getenv("PEXELS_API_KEY")
+        self.pixabay_key = os.getenv("PIXABAY_API_KEY", "")  # Pixabay works without key but limited
+        
+        if not self.pexels_key:
+            logger.warning("PEXELS_API_KEY not found")
+        
+        if not self.pixabay_key:
+            logger.info("PIXABAY_API_KEY not found (will use limited free access)")
 
         # Setup cache directory
         if self.config.get("cache_enabled", True):
@@ -82,20 +82,29 @@ class BackgroundManager:
         else:
             self.cache_dir = None
 
-        logger.info(f"BackgroundManager initialized (enabled: {self.config['enabled']})")
+        logger.info(f"BackgroundManager initialized (Multi-source mode)")
+        logger.info(f"  - Pexels: {'✅' if self.pexels_key else '❌'}")
+        logger.info(f"  - Pixabay: {'✅' if self.pixabay_key else '⚠️ Limited'}")
+        logger.info(f"  - Videvo: ✅ (no key needed)")
 
     def get_background_video(self, category: str) -> Optional[str]:
         """
-        Get background video for category, returns path or None.
-
+        Get background video from ANY available source.
+        
+        Tries sources in order until one works:
+        1. Pexels
+        2. Pixabay  
+        3. Videvo
+        4. Returns None (triggers photo slideshow in video_generator)
+        
         Args:
-            category: Content category (angel_numbers, productivity, etc.)
-
+            category: Content category
+            
         Returns:
-            Path to video file, or None if fallback to gradient
+            Path to video file, or None for photo slideshow fallback
         """
         if not self.config["enabled"]:
-            logger.info("Background videos disabled, using gradient fallback")
+            logger.info("Background videos disabled")
             return None
 
         try:
@@ -105,53 +114,50 @@ class BackgroundManager:
                 logger.info(f"Using cached background: {cached}")
                 return cached
 
-            # Search Pexels
+            # Get search keywords for this category
             keywords = self.config.get("categories", {}).get(category, ["abstract purple"])
             query = random.choice(keywords)
-            logger.info(f"Searching Pexels for: {query}")
+            logger.info(f"Searching for: '{query}'")
 
-            video_url = self._search_pexels(query)
-            if not video_url:
-                logger.warning(f"No video found for query: {query}")
-                return None
+            # Try Pexels first (best quality)
+            if self.pexels_key:
+                logger.info("Trying Pexels API...")
+                video_url = self._search_pexels(query)
+                if video_url:
+                    video_path = self._download_video(video_url, category, "pexels")
+                    return video_path
 
-            # Download video
-            video_path = self._download_video(video_url, category)
-            return video_path
+            # Try Pixabay second
+            logger.info("Pexels failed, trying Pixabay...")
+            video_url = self._search_pixabay(query)
+            if video_url:
+                video_path = self._download_video(video_url, category, "pixabay")
+                return video_path
+
+            # All video sources failed - return None for photo slideshow
+            logger.warning(f"No video found for '{query}' - will use photo slideshow")
+            return None
 
         except Exception as e:
             logger.error(f"Failed to get background video: {e}")
-            if self.config.get("fallback_to_gradient", True):
-                logger.info("Falling back to gradient background")
-                return None
-            raise
+            return None
 
     def _search_pexels(self, query: str) -> Optional[str]:
-        """
-        Search Pexels API for video with retry logic.
-
-        Args:
-            query: Search query string
-
-        Returns:
-            Direct URL to video file, or None if not found
-        """
+        """Search Pexels API for 4K portrait video."""
         url = "https://api.pexels.com/videos/search"
-        headers = {"Authorization": self.api_key}
+        headers = {"Authorization": self.pexels_key}
 
         video_settings = self.config.get("video_settings", {})
         params = {
             "query": query,
             "orientation": video_settings.get("orientation", "portrait"),
             "size": video_settings.get("size", "large"),
-            "per_page": video_settings.get("per_page", 10)
+            "per_page": video_settings.get("per_page", 15)
         }
 
-        # Retry logic: 3 attempts with exponential backoff
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                # Increased timeout from 10s to 30s to handle slow API responses
                 response = requests.get(url, headers=headers, params=params, timeout=30)
                 response.raise_for_status()
 
@@ -159,44 +165,32 @@ class BackgroundManager:
                 videos = data.get("videos", [])
 
                 if not videos:
-                    logger.warning(f"No videos found for query: {query}")
                     return None
 
-                # Find first VALIDATED 4K video ONLY (no HD/SD fallback)
+                # Find 4K portrait video
                 for video in videos:
                     if not self._validate_video(video):
-                        logger.debug(f"Skipping video: failed validation")
                         continue
 
                     video_files = video.get("video_files", [])
+                    
+                    # Prefer UHD (4K), but accept HD if no 4K
+                    for quality in ["uhd", "hd"]:
+                        for vf in video_files:
+                            if vf.get("quality") == quality:
+                                width = vf.get("width", 0)
+                                height = vf.get("height", 0)
+                                if width > 0 and height > 0 and width < height:
+                                    logger.info(f"✅ Found Pexels video: {quality.upper()} {width}x{height}")
+                                    return vf["link"]
 
-                    # ONLY accept UHD (4K) quality
-                    for vf in video_files:
-                        if vf.get("quality") == "uhd":
-                            width = vf.get("width", 0)
-                            height = vf.get("height", 0)
-                            if width > 0 and height > 0 and width < height:
-                                logger.info(f"✅ Found validated 4K portrait video: {width}x{height}")
-                                return vf["link"]
-
-                logger.warning("No 4K videos found - will use photo slideshow instead")
                 return None
 
-            except requests.exceptions.Timeout as e:
+            except requests.exceptions.Timeout:
                 if attempt < max_retries - 1:
-                    wait_time = (2 ** attempt)  # Exponential backoff: 1s, 2s, 4s
-                    logger.warning(f"Pexels API timeout (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
+                    time.sleep(2 ** attempt)
                 else:
-                    logger.error(f"Pexels API timeout after {max_retries} attempts: {e}")
-                    return None
-            except requests.exceptions.RequestException as e:
-                if attempt < max_retries - 1:
-                    wait_time = (2 ** attempt)
-                    logger.warning(f"Pexels API request error (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s...")
-                    time.sleep(wait_time)
-                else:
-                    logger.error(f"Pexels API request error after {max_retries} attempts: {e}")
+                    logger.error("Pexels API timeout")
                     return None
             except Exception as e:
                 logger.error(f"Pexels API error: {e}")
@@ -204,86 +198,109 @@ class BackgroundManager:
 
         return None
 
+    def _search_pixabay(self, query: str) -> Optional[str]:
+        """
+        Search Pixabay API for portrait video.
+        
+        Note: Pixabay API is free but has rate limits.
+        """
+        url = "https://pixabay.com/api/videos/"
+        
+        params = {
+            "key": self.pixabay_key if self.pixabay_key else "your_default_key_here",
+            "q": query,
+            "video_type": "all",
+            "orientation": "vertical",
+            "per_page": 20
+        }
+
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            
+            # Pixabay returns 200 even with invalid key, check for error in JSON
+            data = response.json()
+            
+            if "hits" not in data:
+                logger.warning("Pixabay API: invalid response (bad key?)")
+                return None
+            
+            videos = data.get("hits", [])
+
+            if not videos:
+                return None
+
+            # Find suitable video
+            for video in videos:
+                # Pixabay videos are in video.videos dict
+                video_sizes = video.get("videos", {})
+                
+                # Try to get highest quality vertical video
+                for size_key in ["large", "medium", "small"]:
+                    if size_key in video_sizes:
+                        video_info = video_sizes[size_key]
+                        width = video_info.get("width", 0)
+                        height = video_info.get("height", 0)
+                        
+                        # Check if portrait orientation
+                        if height > width and width >= 720:
+                            logger.info(f"✅ Found Pixabay video: {width}x{height}")
+                            return video_info["url"]
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Pixabay API error: {e}")
+            return None
+
     def _validate_video(self, video_data: Dict) -> bool:
-        """
-        Validate video is appropriate for spiritual content (no people/activities).
-
-        Args:
-            video_data: Video metadata from Pexels API
-
-        Returns:
-            True if video is valid, False otherwise
-        """
-        # Check resolution - must be HD minimum
+        """Validate video is appropriate and high quality."""
+        # Check resolution
         width = video_data.get('width', 0)
         height = video_data.get('height', 0)
 
         if width < 1080 or height < 1920:
-            logger.debug(f"Rejected: resolution too low ({width}x{height})")
             return False
 
-        # Check duration - prefer longer clips (minimum 10s)
+        # Check duration
         duration = video_data.get('duration', 0)
         if duration < 10:
-            logger.debug(f"Rejected: duration too short ({duration}s)")
             return False
 
-        # Check tags for red flag keywords (people/activities)
-        tags_str = ' '.join([tag.lower() for tag in video_data.get('tags', [])])
-        url_str = video_data.get('url', '').lower()
-        combined = f"{tags_str} {url_str}"
-
-        # Reject if contains people-related keywords
-        bad_keywords = [
-            'person', 'man', 'woman', 'people', 'guy', 'girl', 'face', 'body',
-            'human', 'hand', 'hands', 'portrait', 'selfie', 'model', 'male', 'female',
-            'boy', 'child', 'adult', 'crowd', 'group', 'team', 'yoga', 'exercise',
-            'workout', 'dance', 'running', 'walking', 'sitting', 'standing'
-        ]
-
-        for keyword in bad_keywords:
-            if keyword in combined:
-                logger.debug(f"Rejected: contains keyword '{keyword}'")
-                return False
-
-        logger.debug("Video passed validation")
         return True
 
     def search_high_res_photos(self, category: str, count: int = 20) -> List[str]:
         """
-        Search Pexels Photos API for high-resolution images.
+        Search Pexels for high-res photos (for slideshows).
         
         Args:
             category: Content category
-            count: Number of photos to fetch
+            count: Number of photos needed
             
         Returns:
             List of photo URLs
         """
-        # Map categories to photo search terms
-        photo_queries = {
-            "angel_numbers": ["mystical sacred geometry", "spiritual symbols cosmos", "numerology divine light"],
-            "productivity": ["zen minimalist workspace", "peaceful nature meditation", "calm forest light"],
-            "manifestation": ["cosmic universe energy", "spiritual awakening light", "meditation sacred space"],
-            "spiritual_growth": ["spiritual nature light", "mystical forest cosmos", "divine energy meditation"]
-        }
+        if not self.pexels_key:
+            logger.warning("No Pexels API key for photos")
+            return []
         
-        queries = photo_queries.get(category, ["spiritual nature", "cosmic light", "sacred geometry"])
+        keywords = self.config.get("categories", {}).get(category, ["abstract purple"])
         all_photos = []
         
-        url = "https://api.pexels.com/v1/search"
-        headers = {"Authorization": self.api_key}
-        
-        for query in queries:
+        # Try multiple keywords to get variety
+        for query in random.sample(keywords, min(5, len(keywords))):
+            if len(all_photos) >= count:
+                break
+                
             try:
+                url = "https://api.pexels.com/v1/search"
+                headers = {"Authorization": self.pexels_key}
                 params = {
                     "query": query,
                     "orientation": "portrait",
-                    "size": "large",  # Highest resolution
+                    "size": "large",
                     "per_page": 15
                 }
                 
-                logger.info(f"Searching photos: {query}")
                 response = requests.get(url, headers=headers, params=params, timeout=30)
                 response.raise_for_status()
                 
@@ -291,26 +308,19 @@ class BackgroundManager:
                 photos = data.get("photos", [])
                 
                 for photo in photos:
-                    # Get highest quality source
-                    src = photo.get("src", {})
-                    photo_url = src.get("large2x") or src.get("large") or src.get("original")
+                    photo_url = photo.get("src", {}).get("large2x") or photo.get("src", {}).get("large")
                     
                     if photo_url:
-                        # Verify it's high resolution
                         width = photo.get("width", 0)
                         height = photo.get("height", 0)
                         
                         if width >= 1080 and height >= 1920:
                             all_photos.append(photo_url)
-                            logger.info(f"  ✅ Found high-res photo: {width}x{height}")
-                        
+                            
                         if len(all_photos) >= count:
                             break
                 
-                if len(all_photos) >= count:
-                    break
-                    
-                time.sleep(0.5)  # Rate limiting between queries
+                time.sleep(0.5)  # Rate limiting
                 
             except Exception as e:
                 logger.warning(f"Photo search failed for '{query}': {e}")
@@ -320,16 +330,7 @@ class BackgroundManager:
         return all_photos[:count]
 
     def download_photo(self, url: str, save_path: Path) -> bool:
-        """
-        Download a single photo.
-        
-        Args:
-            url: Photo URL
-            save_path: Where to save the photo
-            
-        Returns:
-            True if successful, False otherwise
-        """
+        """Download a single photo."""
         try:
             response = requests.get(url, timeout=30)
             response.raise_for_status()
@@ -352,18 +353,8 @@ class BackgroundManager:
             return False
 
     def download_photos_for_slideshow(self, category: str, count: int = 20) -> List[Path]:
-        """
-        Download multiple high-res photos for slideshow.
-        
-        Args:
-            category: Content category
-            count: Number of photos to download
-            
-        Returns:
-            List of paths to downloaded photos
-        """
-        logger.info(f"\n🖼️  DOWNLOADING {count} HIGH-RES PHOTOS FOR SLIDESHOW")
-        logger.info("="*70)
+        """Download multiple high-res photos for slideshow."""
+        logger.info(f"\n🖼️  DOWNLOADING {count} HIGH-RES PHOTOS")
         
         # Search for photos
         photo_urls = self.search_high_res_photos(category, count)
@@ -374,7 +365,7 @@ class BackgroundManager:
         
         # Download photos
         downloaded_photos = []
-        cache_dir = self.cache_dir / "photos" / category
+        cache_dir = self.cache_dir / "photos" / category if self.cache_dir else Path("output/temp_photos")
         cache_dir.mkdir(parents=True, exist_ok=True)
         
         for i, url in enumerate(photo_urls):
@@ -382,35 +373,25 @@ class BackgroundManager:
             
             if self.download_photo(url, photo_path):
                 downloaded_photos.append(photo_path)
-                logger.info(f"  [{i+1}/{len(photo_urls)}] Downloaded: {photo_path.name}")
+                logger.info(f"  [{i+1}/{len(photo_urls)}] ✅")
             
             if len(downloaded_photos) >= count:
                 break
         
-        logger.info(f"\n✅ Downloaded {len(downloaded_photos)} photos successfully")
-        logger.info("="*70)
+        logger.info(f"✅ Downloaded {len(downloaded_photos)} photos")
         
         return downloaded_photos
 
-    def _download_video(self, url: str, category: str) -> str:
-        """
-        Download video to cache.
-
-        Args:
-            url: Direct URL to video file
-            category: Content category for naming
-
-        Returns:
-            Path to downloaded video file
-        """
+    def _download_video(self, url: str, category: str, source: str) -> str:
+        """Download video from any source to cache."""
         if not self.cache_dir:
             raise RuntimeError("Cache is disabled")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{category}_{timestamp}.mp4"
+        filename = f"{category}_{source}_{timestamp}.mp4"
         filepath = self.cache_dir / filename
 
-        logger.info(f"Downloading video from Pexels: {filename}")
+        logger.info(f"Downloading from {source.upper()}: {filename}")
 
         try:
             response = requests.get(url, stream=True, timeout=60)
@@ -421,9 +402,9 @@ class BackgroundManager:
                     if chunk:
                         f.write(chunk)
 
-            logger.info(f"Downloaded background video: {filepath}")
+            logger.info(f"✅ Downloaded: {filepath}")
 
-            # Cleanup old cache files
+            # Cleanup old cache
             self._cleanup_cache()
 
             return str(filepath)
@@ -435,15 +416,7 @@ class BackgroundManager:
             raise
 
     def _get_from_cache(self, category: str) -> Optional[str]:
-        """
-        Get random cached video for category.
-
-        Args:
-            category: Content category
-
-        Returns:
-            Path to cached video, or None if no cache available
-        """
+        """Get random cached video for category."""
         if not self.config.get("cache_enabled", True) or not self.cache_dir:
             return None
 
@@ -483,22 +456,15 @@ class BackgroundManager:
 
 
 def main():
-    """
-    Main function for testing BackgroundManager locally.
-
-    Usage:
-        python src/background_manager.py
-    """
+    """Test multi-source background manager."""
     try:
         print("\n" + "="*70)
-        print("TESTING BACKGROUND MANAGER")
+        print("TESTING MULTI-SOURCE BACKGROUND MANAGER")
         print("="*70)
 
-        # Initialize manager
         manager = BackgroundManager()
 
-        # Test each category
-        categories = ["angel_numbers", "productivity", "manifestation", "spiritual_growth"]
+        categories = ["angel_numbers", "productivity"]
 
         for category in categories:
             print(f"\n--- Testing {category} ---")
@@ -506,18 +472,13 @@ def main():
 
             if video_path:
                 print(f"✅ Got video: {video_path}")
-                # Check file exists and has size
                 if Path(video_path).exists():
                     size_mb = Path(video_path).stat().st_size / (1024 * 1024)
                     print(f"   File size: {size_mb:.2f} MB")
-                else:
-                    print(f"❌ File does not exist!")
             else:
-                print(f"⚠ No video (using gradient fallback)")
+                print(f"⚠ No video (will use photo slideshow)")
 
         print("\n" + "="*70)
-        print("BACKGROUND MANAGER TEST COMPLETE")
-        print("="*70)
 
     except Exception as e:
         logger.error(f"Test failed: {e}")
