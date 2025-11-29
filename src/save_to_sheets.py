@@ -177,12 +177,7 @@ class SheetsManager:
             raise
 
     def _create_headers(self, worksheet: gspread.Worksheet) -> None:
-        """
-        Create header row in the worksheet.
-
-        Args:
-            worksheet: gspread Worksheet object
-        """
+        """Create header row in the worksheet."""
         headers = [
             "Date",              # A
             "Caption",           # B
@@ -190,99 +185,62 @@ class SheetsManager:
             "Image_description", # D
             "Status",            # E
             "Posted_Date",       # F
-            "Engagement_notes"   # G
+            "Instagram_URL",     # G - NEW: Link to posted reel
+            "Engagement_notes"   # H
         ]
-
         worksheet.append_row(headers)
-        logger.info("Created header row in worksheet (7 columns)")
+        logger.info("Created header row (8 columns)")
 
-    def save_content(self, content: Dict[str, Any], topic: str = "", category: str = "", video_path: str = "") -> None:
+    def save_content(self, content: Dict[str, Any], topic: str = "", category: str = "", video_path: str = "") -> int:
         """
         Save generated content to Google Sheets.
-
-        This method appends a new row to the worksheet with:
-        - Date (formatted)
-        - Caption text
-        - Hashtags (joined as string)
-        - Image description
-        - Topic (the specific topic used for generation)
-        - Category (topic category: angel_numbers, productivity, etc.)
-        - Status, Posted_Date, Likes, Comments, Saves, Engagement_notes (empty for now)
-        - Video_Path (path to generated video reel)
-
-        Args:
-            content: Dictionary containing generated content
-                Required keys: caption, hashtags, image_description
-                Optional keys: generated_at, model, tokens_used, topic, category
-            topic: The specific topic used (e.g., "717", "17-minute deep work")
-            category: The topic category (e.g., "angel_numbers", "productivity")
-            video_path: Path to generated video reel (if any)
+        
+        Returns:
+            Row number where content was saved
         """
         try:
             logger.info("Saving content to Google Sheets...")
-
-            # DEBUG: Log the exact content structure being saved
-            logger.info(f"Content structure received: {json.dumps(content, indent=2, default=str)}")
-            logger.info(f"Topic: {topic}, Category: {category}")
 
             # Extract and format data
             timestamp = content.get("generated_at", datetime.now().isoformat())
             date_formatted = datetime.fromisoformat(timestamp).strftime("%Y-%m-%d")
 
-            # DEFENSIVE: Handle hashtags whether it's a list OR a string
             hashtags_raw = content.get("hashtags", [])
             if isinstance(hashtags_raw, list):
-                # Expected case: join list items with spaces
                 hashtags_formatted = " ".join(str(tag) for tag in hashtags_raw)
             elif isinstance(hashtags_raw, str):
-                # Fallback: already a string, use as-is
                 hashtags_formatted = hashtags_raw
             else:
-                # Unexpected type: convert to string representation
-                logger.warning(f"Unexpected hashtags type: {type(hashtags_raw)}, converting to string")
                 hashtags_formatted = str(hashtags_raw)
 
-            # DEFENSIVE: Ensure caption and image_description are strings
             caption_formatted = str(content.get("caption", ""))
             image_desc_formatted = str(content.get("image_description", ""))
 
-            # Get topic info from content if not provided as parameters
-            topic_value = topic or content.get("topic", "")
-            category_value = category or content.get("category", "")
-
-            # Prepare row data matching YOUR 7-column structure:
-            # A: Date, B: Caption, C: Hashtags, D: Image_description,
-            # E: Status, F: Posted_Date, G: Engagement_notes
+            # Row data: 8 columns (A-H)
             row = [
                 date_formatted,        # A: Date
                 caption_formatted,     # B: Caption
                 hashtags_formatted,    # C: Hashtags
                 image_desc_formatted,  # D: Image_description
-                "",                    # E: Status (empty)
-                "",                    # F: Posted_Date (empty)
-                ""                     # G: Engagement_notes (empty)
+                "",                    # E: Status (empty - update after posting)
+                "",                    # F: Posted_Date (empty - update after posting)
+                "",                    # G: Instagram_URL (empty - add after posting)
+                ""                     # H: Engagement_notes (empty)
             ]
 
-            # DEBUG: Log the exact row being written
-            logger.info(f"Row being written (7 columns):")
-            logger.info(f"  [0] Date: {row[0]}")
-            logger.info(f"  [1] Caption: {row[1][:50]}..." if len(row[1]) > 50 else f"  [1] Caption: {row[1]}")
-            logger.info(f"  [2] Hashtags: {row[2][:50]}..." if len(row[2]) > 50 else f"  [2] Hashtags: {row[2]}")
-            logger.info(f"  [3] Image_desc: {row[3][:50]}..." if len(row[3]) > 50 else f"  [3] Image_desc: {row[3]}")
-            logger.info(f"  [4-6] Empty columns (Status, Posted_Date, Notes)")
-            logger.info(f"Row length: {len(row)} columns")
-
-            # Append row to worksheet
+            # Append row
             self.worksheet.append_row(row, value_input_option='RAW')
-
-            logger.info(f"Content saved successfully to row {self.worksheet.row_count}")
+            
+            # Get the row number that was just added
+            row_number = self.worksheet.row_count
+            
+            logger.info(f"✅ Content saved to row {row_number}")
             logger.info(f"Sheet URL: https://docs.google.com/spreadsheets/d/{self.sheet_id}")
+            
+            return row_number
 
-        except KeyError as e:
-            logger.error(f"Missing required field in content: {e}")
-            raise ValueError(f"Content missing required field: {e}")
         except Exception as e:
-            logger.error(f"Failed to save content to Google Sheets: {e}")
+            logger.error(f"Failed to save content: {e}")
             raise
 
     def get_recent_content(self, num_rows: int = 10) -> List[List[str]]:
