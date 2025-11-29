@@ -200,8 +200,8 @@ class ContentAutomation:
             logger.info("STEP 4: Saving to Google Sheets")
             logger.info("-"*70)
 
-            # Save the content to Google Sheets with topic tracking and video path
-            self.sheets_manager.save_content(
+            # Save the content and get the row number
+            sheet_row = self.sheets_manager.save_content(
                 content=content,
                 topic=specific_topic["value"],
                 category=specific_topic["type"],
@@ -209,12 +209,13 @@ class ContentAutomation:
             )
             # Mark sheets saving as successful
             workflow_result["saved_to_sheets"] = True
+            workflow_result["sheet_row"] = sheet_row
 
             # Build the Google Sheets URL for reference
             sheet_url = f"https://docs.google.com/spreadsheets/d/{os.getenv('SHEET_ID')}"
             workflow_result["sheet_url"] = sheet_url
 
-            logger.info("✅ Content saved to Google Sheets")
+            logger.info(f"✅ Content saved to Google Sheets (Row {sheet_row})")
 
             # Step 5: Mark topic as used in tracker
             logger.info("\n" + "-"*70)
@@ -235,19 +236,24 @@ class ContentAutomation:
 
             # Check if Slack notifier is available
             if self.slack_notifier and self.slack_enabled:
-                # Slack is configured, send notification
-                slack_response = self.slack_notifier.send_content_notification(
+                # Slack is configured, send mobile-optimized post
+                slack_response = self.slack_notifier.send_mobile_post(
                     content=content,
-                    sheet_url=sheet_url
+                    video_path=video_path if workflow_result["video_generated"] else None,
+                    sheet_url=sheet_url,
+                    sheet_row=sheet_row
                 )
-                # Check if notification was actually sent or skipped
+                # Check if notification was sent or skipped
                 if slack_response.get("skipped"):
                     workflow_result["slack_skipped"] = True
                     logger.info("⚠ Slack notification skipped (not configured)")
                 else:
                     workflow_result["slack_notified"] = True
-                    workflow_result["slack_message_ts"] = slack_response.get("ts")
-                    logger.info("✅ Slack notification sent")
+                    workflow_result["slack_message_ts"] = slack_response.get("message_ts")
+                    workflow_result["video_uploaded"] = slack_response.get("video_uploaded", False)
+                    logger.info("✅ Slack mobile post sent")
+                    if slack_response.get("video_uploaded"):
+                        logger.info("   📹 Video uploaded to Slack")
             else:
                 # Slack is not configured, skip notification
                 workflow_result["slack_skipped"] = True
