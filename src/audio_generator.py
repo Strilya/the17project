@@ -46,12 +46,6 @@ class AudioGenerator:
             "pitch": 1.5,
             "gender": texttospeech.SsmlVoiceGender.FEMALE
         },
-        "conversational_natural_female": {
-            "name": "en-US-Neural2-A",
-            "description": "Natural conversational female - like talking to a friend",
-            "pitch": 0.0,
-            "gender": texttospeech.SsmlVoiceGender.FEMALE
-        },
         "clear_pleasant_female": {
             "name": "en-US-Neural2-G",
             "description": "Clear, pleasant female - professional yet approachable",
@@ -157,7 +151,7 @@ class AudioGenerator:
         # Google Cloud credentials from environment
         self.client = texttospeech.TextToSpeechClient()
         
-        logger.info("AudioGenerator initialized with 20 Neural2 voices (10 female, 10 male)")
+        logger.info("AudioGenerator initialized with 19 Neural2 voices (9 female, 10 male)")
         logger.info("Voices rotate automatically for maximum variety")
         for voice_key, voice_info in self.VOICES.items():
             logger.info(f"  - {voice_key}: {voice_info['description']}")
