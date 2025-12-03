@@ -106,9 +106,10 @@
       "used": [
         "666",
         "7070",
-        "6565"
+        "6565",
+        "1919"
       ],
-      "last_used_date": "2025-12-02T13:40:11.657673"
+      "last_used_date": "2025-12-03T13:38:49.126103"
     },
     "productivity": {
       "techniques": [
@@ -123,19 +124,8 @@
         "17-minute exercise bursts",
         "17-minute creative sessions"
       ],
-      "used": [
-        "Evening 17-minute wind-down",
-        "17-minute exercise bursts",
-        "17-minute creative sessions",
-        "17-minute learning sprints",
-        "17-minute meditation",
-        "17-minute power naps",
-        "17-minute deep work sessions",
-        "Morning 17-minute ritual",
-        "17-minute planning session",
-        "17-17-17 method (3 blocks of 17 mins)"
-      ],
-      "last_used_date": "2025-11-30T13:30:03.465210"
+      "used": [],
+      "last_used_date": null
     },
     "manifestation": {
       "practices": [
@@ -150,19 +140,8 @@
         "Affirmation techniques",
         "Energy alignment practices"
       ],
-      "used": [
-        "Scripting your ideal day",
-        "Vision board creation",
-        "Morning manifestation ritual",
-        "Gratitude manifestation",
-        "369 manifestation method",
-        "Energy alignment practices",
-        "17-second visualization technique",
-        "New moon manifestation",
-        "Affirmation techniques",
-        "Full moon release ritual"
-      ],
-      "last_used_date": "2025-12-01T13:35:48.173110"
+      "used": [],
+      "last_used_date": null
     },
     "spiritual_growth": {
       "topics": [
@@ -177,19 +156,8 @@
         "Mindfulness practices",
         "Spiritual protection"
       ],
-      "used": [
-        "Higher self connection",
-        "Divine timing",
-        "Soul purpose discovery",
-        "Chakra alignment",
-        "Energy awareness",
-        "Spiritual awakening signs",
-        "Intuition development",
-        "Mindfulness practices",
-        "Synchronicity recognition",
-        "Spiritual protection"
-      ],
-      "last_used_date": "2025-12-01T14:41:23.000366"
+      "used": [],
+      "last_used_date": null
     }
   },
   "content_history": [
@@ -397,6 +365,11 @@
       "topic": "6565",
       "category": "angel_numbers",
       "date": "2025-12-02T13:40:11.657684"
+    },
+    {
+      "topic": "1919",
+      "category": "angel_numbers",
+      "date": "2025-12-03T13:38:49.126115"
     }
   ],
   "last_reset_date": null,
