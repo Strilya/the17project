@@ -164,8 +164,12 @@ class ContentGenerator:
         }
         
         hook_instruction = hook_instructions.get(hook_style, "Start with an attention-grabbing hook")
+    # Get current date for context
+        current_date = datetime.now().strftime("%B %d, %Y")
         
         return f"""You are an EXPERT Instagram Reel content creator for The17Project - a spiritual productivity brand.
+
+CRITICAL: Today's date is {current_date}. Keep all content current and timely. DO NOT reference 2024 or any past year.
 
 YOUR MISSION: Create ENGAGING, VARIED content that feels fresh every time.
 
@@ -188,6 +192,7 @@ QUALITY RULES:
 ❌ NO generic spiritual clichÃ©s
 ❌ NO vague platitudes
 ❌ NO repetitive patterns
+❌ NO references to "2024" or any past year
 
 OUTPUT FORMAT:
 HOOK: [10-12 words, {hook_style} style]
