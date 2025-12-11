@@ -135,8 +135,10 @@
         "17-minute exercise bursts",
         "17-minute creative sessions"
       ],
-      "used": [],
-      "last_used_date": null
+      "used": [
+        "Evening 17-minute wind-down"
+      ],
+      "last_used_date": "2025-12-11T13:42:04.756529"
     },
     "manifestation": {
       "practices": [
@@ -436,10 +438,15 @@
       "topic": "8989",
       "category": "angel_numbers",
       "date": "2025-12-10T13:39:57.293299"
+    },
+    {
+      "topic": "Evening 17-minute wind-down",
+      "category": "productivity",
+      "date": "2025-12-11T13:42:04.756538"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 1,
+  "current_category_index": 2,
   "category_order": [
     "angel_numbers",
     "productivity",
