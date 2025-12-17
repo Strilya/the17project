@@ -175,9 +175,10 @@
         "Spiritual protection"
       ],
       "used": [
-        "Divine timing"
+        "Divine timing",
+        "Spiritual awakening signs"
       ],
-      "last_used_date": "2025-12-13T13:29:41.397972"
+      "last_used_date": "2025-12-17T13:36:18.954247"
     }
   },
   "content_history": [
@@ -475,10 +476,15 @@
       "topic": "Vision board creation",
       "category": "manifestation",
       "date": "2025-12-16T13:42:06.791281"
+    },
+    {
+      "topic": "Spiritual awakening signs",
+      "category": "spiritual_growth",
+      "date": "2025-12-17T13:36:18.954258"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
