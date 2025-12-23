@@ -34,7 +34,7 @@ echo "Your code is now back to the stable working version."
 echo "Testing original workflow..."
 echo ""
 
-python src/main.py
+python3 src/main.py
 
 if [ $? -eq 0 ]; then
     echo ""

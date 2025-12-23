@@ -21,7 +21,7 @@ fi
 echo "📦 Test 1: Generating with ORIGINAL content (V1)..."
 echo "---------------------------------------------------"
 export USE_V2_CONTENT=false
-python src/main_v2.py
+python3 src/main_v2.py
 
 if [ $? -ne 0 ]; then
     echo "❌ V1 generation failed"
@@ -37,7 +37,7 @@ sleep 5
 echo "🆕 Test 2: Generating with IMPROVED content (V2)..."
 echo "---------------------------------------------------"
 export USE_V2_CONTENT=true
-python src/main_v2.py
+python3 src/main_v2.py
 
 if [ $? -ne 0 ]; then
     echo "❌ V2 generation failed"
@@ -59,5 +59,5 @@ echo "2. Track performance in Google Sheets:"
 echo "   - Add columns: content_version, hook_style"
 echo "   - After posting, add: views, likes, comments, followers_gained"
 echo "3. After 7 days, compare metrics"
-echo "4. Run: python scripts/compare_performance.py"
+echo "4. Run: python3 scripts/compare_performance.py"
 echo ""

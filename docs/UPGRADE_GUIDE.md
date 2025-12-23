@@ -17,10 +17,10 @@ git checkout feature/improved-content-hooks
 ### 2. Generate Test Content (2 minutes each)
 ```bash
 # Test V1 (original)
-python src/main.py
+python3 src/main.py
 
 # Test V2 (improved)
-USE_V2_CONTENT=true python src/main_v2.py
+USE_V2_CONTENT=true python3 src/main_v2.py
 ```
 
 ### 3. A/B Test Both Versions (10 minutes)
@@ -46,7 +46,7 @@ Add this data to your Google Sheet with columns:
 ### 5. Analyze Results (After 7 days)
 ```bash
 cd /Users/ilyastr/Desktop/the17Project
-python scripts/compare_performance.py
+python3 scripts/compare_performance.py
 ```
 
 ### 6. Rollout or Rollback
@@ -79,7 +79,7 @@ If anything breaks:
 cd /Users/ilyastr/Desktop/the17Project
 git checkout master
 git reset --hard v1.0-stable
-python src/main.py  # Should work exactly as before
+python3 src/main.py  # Should work exactly as before
 ```
 
 ## What Changed
@@ -227,13 +227,13 @@ After implementation, verify:
 ### Generate with V1 (Original):
 ```bash
 cd /Users/ilyastr/Desktop/the17Project
-python src/main.py
+python3 src/main.py
 ```
 
 ### Generate with V2 (Improved):
 ```bash
 cd /Users/ilyastr/Desktop/the17Project
-USE_V2_CONTENT=true python src/main_v2.py
+USE_V2_CONTENT=true python3 src/main_v2.py
 ```
 
 ### Test specific hook style:
@@ -257,12 +257,12 @@ print(f"Hook style used: {content['hook_style_used']}")
 cd /Users/ilyastr/Desktop/the17Project
 
 echo "=== V1 Output ==="
-USE_V2_CONTENT=false python src/main_v2.py | grep -A 4 "HOOK:"
+USE_V2_CONTENT=false python3 src/main_v2.py | grep -A 4 "HOOK:"
 
 sleep 5
 
 echo "=== V2 Output ==="
-USE_V2_CONTENT=true python src/main_v2.py | grep -A 4 "HOOK:"
+USE_V2_CONTENT=true python3 src/main_v2.py | grep -A 4 "HOOK:"
 ```
 
 ## Next Steps
@@ -273,8 +273,8 @@ USE_V2_CONTENT=true python src/main_v2.py | grep -A 4 "HOOK:"
    - Scripts ready to use
 
 2. **Generate Test Videos** (1-2 weeks)
-   - Generate 7 videos with V1: `python src/main.py`
-   - Generate 7 videos with V2: `USE_V2_CONTENT=true python src/main_v2.py`
+   - Generate 7 videos with V1: `python3 src/main.py`
+   - Generate 7 videos with V2: `USE_V2_CONTENT=true python3 src/main_v2.py`
    - OR use automated test: `./scripts/test_ab.sh`
 
 3. **Track Performance** (Ongoing)
@@ -283,7 +283,7 @@ USE_V2_CONTENT=true python src/main_v2.py | grep -A 4 "HOOK:"
    - Required columns: content_version, hook_style, views, likes, comments, followers_gained
 
 4. **Analyze Results** (After 7 days)
-   - Run: `python scripts/compare_performance.py`
+   - Run: `python3 scripts/compare_performance.py`
    - Review metrics comparison
    - Check hook style performance
 
