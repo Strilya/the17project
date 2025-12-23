@@ -143,9 +143,10 @@
         "Evening 17-minute wind-down",
         "17-minute exercise bursts",
         "17-minute creative sessions",
-        "17-17-17 method (3 blocks of 17 mins)"
+        "17-17-17 method (3 blocks of 17 mins)",
+        "17-minute deep work sessions"
       ],
-      "last_used_date": "2025-12-20T15:16:53.922539"
+      "last_used_date": "2025-12-23T13:38:32.137083"
     },
     "manifestation": {
       "practices": [
@@ -535,10 +536,15 @@
       "topic": "2222",
       "category": "angel_numbers",
       "date": "2025-12-22T13:38:00.219139"
+    },
+    {
+      "topic": "17-minute deep work sessions",
+      "category": "productivity",
+      "date": "2025-12-23T13:38:32.137093"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 1,
+  "current_category_index": 2,
   "category_order": [
     "angel_numbers",
     "productivity",
