@@ -41,3 +41,4 @@ Thumbs.db
 !config/hashtag_pools.json
 !config/hashtag_tracker.json
 !package.json.env
+.env
