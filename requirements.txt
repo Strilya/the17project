@@ -1,0 +1,15 @@
+anthropic
+python-dotenv
+requests
+google-cloud-texttospeech
+google-auth
+gspread
+oauth2client
+Pillow
+moviepy
+opencv-python
+slack-sdk
+pydub
+gtts
+python-dateutil
+pytz
