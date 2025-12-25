@@ -40,4 +40,4 @@ Thumbs.db
 !config/video_config.json
 !config/hashtag_pools.json
 !config/hashtag_tracker.json
-!package.json
+!package.json.env
