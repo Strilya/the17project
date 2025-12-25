@@ -187,9 +187,10 @@
         "Divine timing",
         "Spiritual awakening signs",
         "Synchronicity recognition",
-        "Chakra alignment"
+        "Chakra alignment",
+        "Soul purpose discovery"
       ],
-      "last_used_date": "2025-12-21T17:26:18.174485"
+      "last_used_date": "2025-12-25T13:34:36.559628"
     }
   },
   "content_history": [
@@ -547,10 +548,15 @@
       "topic": "Gratitude manifestation",
       "category": "manifestation",
       "date": "2025-12-24T13:34:47.479835"
+    },
+    {
+      "topic": "Soul purpose discovery",
+      "category": "spiritual_growth",
+      "date": "2025-12-25T13:34:36.559637"
     }
   ],
   "last_reset_date": null,
-  "current_category_index": 3,
+  "current_category_index": 0,
   "category_order": [
     "angel_numbers",
     "productivity",
