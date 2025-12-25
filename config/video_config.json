@@ -524,8 +524,13 @@
     },
     "background_rotation": {
       "enabled": true,
-      "avoid_last_n_backgrounds": 5,
-      "state_file": "output/.background_history.json"
+      "avoid_last_n_backgrounds": 10,
+      "state_file": "output/.background_history.json",
+      "note": "Track last 10 backgrounds to avoid repeats"
+    },
+    "no_people_filter": {
+      "enabled": true,
+      "note": "Aggressively filter out any videos with human faces or people"
     }
   }
 }

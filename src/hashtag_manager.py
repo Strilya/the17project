@@ -203,42 +203,44 @@ class HashtagManager:
         ]
 
     def _get_recently_used_hashtags(self) -> Set[str]:
-        """Get set of recently used hashtags."""
+        """Get set of recently used hashtags (lowercase)."""
         self._clean_recent_hashtags()
-        
+
         recent = set()
         for entry in self.tracker["recent_hashtags"]:
-            recent.update(entry["hashtags"])
-        
+            # Convert to lowercase for comparison
+            recent.update([tag.lower() for tag in entry["hashtags"]])
+
         return recent
 
     def generate_hashtags(self, category: str, count: int = 15) -> List[str]:
         """
         Generate dynamic hashtag set.
-        
+
         Args:
             category: Content category (angel_numbers, productivity, etc.)
             count: Number of rotating hashtags to add (default 15)
-            
+
         Returns:
-            List of hashtags (core + rotating)
+            List of hashtags (core + rotating) - all lowercase
         """
         logger.info(f"\n🏷️  GENERATING DYNAMIC HASHTAGS")
         logger.info(f"  Category: {category}")
         logger.info(f"  Target rotating count: {count}")
-        
+
         # Always include ALL core brand hashtags
         core = self.pools.get("core_brand", [])
-        hashtags = core.copy()
+        # Convert to lowercase for Instagram compatibility
+        hashtags = [tag.lower() for tag in core]
         logger.info(f"  Core hashtags: {len(core)}")
-        
+
         # Get recently used hashtags to avoid
         recent = self._get_recently_used_hashtags()
         logger.info(f"  Recently used (avoiding): {len(recent)}")
-        
+
         # Determine relevant pools based on category
         relevant_pools = []
-        
+
         if category == "angel_numbers":
             relevant_pools = [
                 "angel_numbers_broad",
@@ -272,44 +274,45 @@ class HashtagManager:
             relevant_pools = list(self.pools.keys())
             if "core_brand" in relevant_pools:
                 relevant_pools.remove("core_brand")
-        
+
         # Collect available hashtags from relevant pools
         available = []
         for pool_name in relevant_pools:
             pool = self.pools.get(pool_name, [])
             # Filter out recently used and already selected
+            # Convert all to lowercase for Instagram compatibility
             available.extend([
-                tag for tag in pool 
-                if tag not in recent and tag not in hashtags
+                tag.lower() for tag in pool
+                if tag.lower() not in recent and tag.lower() not in hashtags
             ])
-        
+
         # Shuffle for randomness
         random.shuffle(available)
-        
+
         # Select hashtags up to count
         rotating = available[:count]
         hashtags.extend(rotating)
-        
+
         logger.info(f"  Rotating hashtags: {len(rotating)}")
         logger.info(f"  Total hashtags: {len(hashtags)}")
-        
+
         return hashtags
 
     def mark_hashtags_used(self, hashtags: List[str]):
         """
         Mark hashtags as recently used.
-        
+
         Args:
-            hashtags: List of hashtags to mark
+            hashtags: List of hashtags to mark (will be stored as lowercase)
         """
         entry = {
-            "hashtags": hashtags,
+            "hashtags": [tag.lower() for tag in hashtags],
             "date": datetime.now().isoformat()
         }
-        
+
         self.tracker["recent_hashtags"].append(entry)
         self._save_tracker()
-        
+
         logger.info(f"✅ Marked {len(hashtags)} hashtags as used")
 
 

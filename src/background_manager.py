@@ -83,19 +83,20 @@ class BackgroundManager:
         logger.info(f"  - Videvo: ✅ (free, always available)")
         logger.info(f"  - Photo slideshows: ✅")
 
-    def get_background_video(self, category: str) -> Optional[str]:
+    def get_background_video(self, category: str, skip_cache: bool = False) -> Optional[str]:
         """
         Get background video from ANY available source.
-        
+
         Tries sources in order:
-        1. Cached videos
+        1. Cached videos (unless skip_cache=True)
         2. Pexels API (if key available)
         3. Videvo (free scraping, no key needed)
-        4. Returns None (triggers photo slideshow/gradient fallback)
-        
+        4. Returns None (triggers gradient fallback)
+
         Args:
             category: Content category
-            
+            skip_cache: If True, skip cache and fetch fresh video
+
         Returns:
             Path to video file, or None for fallback
         """
@@ -104,23 +105,37 @@ class BackgroundManager:
             return None
 
         try:
-            # Check cache first
-            cached = self._get_from_cache(category)
-            if cached:
-                logger.info(f"Using cached background: {cached}")
-                return cached
+            # Check cache first (unless skipped)
+            if not skip_cache:
+                cached = self._get_from_cache(category)
+                if cached:
+                    logger.info(f"Using cached background: {cached}")
+                    return cached
+
+            # No cache or skip_cache - fetch new video from API
+            logger.info("Fetching NEW video from API...")
 
             # Get search keywords for this category
             keywords = self.config.get("categories", {}).get(category, ["abstract purple"])
-            
+
             # Try multiple keywords if first one fails
-            max_keyword_attempts = 3
+            max_keyword_attempts = 5
             keywords_to_try = random.sample(keywords, min(max_keyword_attempts, len(keywords)))
-            
+
             for query in keywords_to_try:
                 logger.info(f"Searching for: '{query}'")
 
-                # Try Pexels first (best quality)
+                # Try Videvo first (free, better variety)
+                logger.info("Trying Videvo (free)...")
+                try:
+                    video_url = self._search_videvo(query)
+                    if video_url:
+                        video_path = self._download_video(video_url, category, "videvo")
+                        return video_path
+                except Exception as e:
+                    logger.warning(f"Videvo failed for '{query}': {e}")
+
+                # Try Pexels as backup
                 if self.pexels_key:
                     logger.info("Trying Pexels API...")
                     try:
@@ -131,31 +146,10 @@ class BackgroundManager:
                     except Exception as e:
                         logger.warning(f"Pexels failed for '{query}': {e}")
 
-                # Try Videvo first (free, better variety than Pexels)
-                logger.info("Trying Videvo (free)...")
-                try:
-                    video_url = self._search_videvo(query)
-                    if video_url:
-                        video_path = self._download_video(video_url, category, "videvo")
-                        return video_path
-                except Exception as e:
-                    logger.warning(f"Videvo failed for '{query}': {e}")
-
-                # Try Pexels as backup only
-                if self.pexels_key:
-                    logger.info("Trying Pexels API as backup...")
-                    try:
-                        video_url = self._search_pexels(query)
-                        if video_url:
-                            video_path = self._download_video(video_url, category, "pexels")
-                            return video_path
-                    except Exception as e:
-                        logger.warning(f"Pexels failed for '{query}': {e}")
-                
                 # Wait a bit before trying next keyword
                 time.sleep(0.5)
 
-            # All attempts failed - return None for photo slideshow
+            # All attempts failed - return None
             logger.warning(f"No video found after trying {len(keywords_to_try)} keywords")
             return None
 
@@ -164,7 +158,7 @@ class BackgroundManager:
             return None
 
     def _search_pexels(self, query: str) -> Optional[str]:
-        """Search Pexels API for 4K portrait video."""
+        """Search Pexels API for 4K portrait video (NO PEOPLE/FACES)."""
         url = "https://api.pexels.com/videos/search"
         headers = {"Authorization": self.pexels_key}
 
@@ -188,13 +182,18 @@ class BackgroundManager:
                 if not videos:
                     return None
 
-                # Find 4K portrait video
+                # Find 4K portrait video WITHOUT people
                 for video in videos:
                     if not self._validate_video(video):
                         continue
 
+                    # CRITICAL: Filter out videos with people/faces
+                    if self._has_people_keywords(video):
+                        logger.info(f"⏭️  Skipping Pexels video (detected people keywords)")
+                        continue
+
                     video_files = video.get("video_files", [])
-                    
+
                     # Prefer UHD (4K), but accept HD if no 4K
                     for quality in ["uhd", "hd"]:
                         for vf in video_files:
@@ -202,7 +201,7 @@ class BackgroundManager:
                                 width = vf.get("width", 0)
                                 height = vf.get("height", 0)
                                 if width > 0 and height > 0 and width < height:
-                                    logger.info(f"✅ Found Pexels video: {quality.upper()} {width}x{height}")
+                                    logger.info(f"✅ Found Pexels video (no people): {quality.upper()} {width}x{height}")
                                     return vf["link"]
 
                 return None
@@ -218,6 +217,67 @@ class BackgroundManager:
                 return None
 
         return None
+
+    def _has_people_keywords(self, video_data: Dict) -> bool:
+        """
+        Check if video metadata contains people-related keywords.
+        Used for Pexels API filtering.
+
+        Args:
+            video_data: Video metadata from Pexels API
+
+        Returns:
+            True if video likely contains people/faces
+        """
+        # Comprehensive list of people-related keywords
+        people_keywords = [
+            # Basic people terms
+            'woman', 'man', 'people', 'person', 'girl', 'boy',
+            'lady', 'gentleman', 'male', 'female', 'human', 'humans',
+
+            # Body parts
+            'face', 'faces', 'eyes', 'hands', 'hair', 'skin', 'body', 'head',
+            'portrait', 'headshot', 'selfie', 'profile',
+
+            # Actions
+            'walking', 'standing', 'sitting', 'smiling', 'looking',
+            'dancing', 'running', 'jumping', 'exercising', 'workout',
+            'talking', 'speaking', 'laughing', 'crying', 'thinking',
+
+            # Professional
+            'model', 'actor', 'actress', 'business', 'professional',
+            'worker', 'employee', 'student', 'teacher',
+
+            # Descriptive
+            'beautiful person', 'young adult', 'senior', 'child',
+            'teen', 'teenager', 'adult', 'baby', 'infant',
+
+            # Clothing
+            'wearing', 'dressed', 'outfit', 'clothing',
+
+            # Groups
+            'crowd', 'group', 'team', 'couple', 'family', 'friends'
+        ]
+
+        # Check video metadata fields
+        searchable_text = []
+
+        # Add all text fields to search
+        if 'url' in video_data:
+            searchable_text.append(str(video_data['url']))
+        if 'image' in video_data:
+            searchable_text.append(str(video_data['image']))
+        if 'tags' in video_data:
+            searchable_text.extend(video_data['tags'])
+        if 'user' in video_data and 'name' in video_data['user']:
+            searchable_text.append(video_data['user']['name'])
+
+        # Combine all text and check for keywords
+        combined_text = ' '.join(searchable_text).lower()
+
+        has_people = any(keyword in combined_text for keyword in people_keywords)
+
+        return has_people
 
     def _search_videvo(self, query: str) -> Optional[str]:
         """

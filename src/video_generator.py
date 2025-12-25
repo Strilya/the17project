@@ -76,7 +76,7 @@ class StyleHistory:
         self.recent_styles = self.recent_styles[:max_history]
         self.save()
     
-    def add_background(self, bg_hash: str, max_history: int = 5):
+    def add_background(self, bg_hash: str, max_history: int = 10):
         """Add background to history, keeping only last N."""
         if bg_hash in self.recent_backgrounds:
             self.recent_backgrounds.remove(bg_hash)
@@ -375,25 +375,27 @@ class VideoGenerator:
 
     def _create_background_clip(self, category: str, duration: float) -> Tuple[object, str]:
         """
-        Create 4K video background OR high-res photo slideshow with variety tracking.
-        
+        Create 4K video background with variety tracking.
+        ALWAYS uses actual video - NO photo slideshows!
+
         Returns: (video_clip, video_path_or_type)
         """
-        # Try 4K video first
-        try:
-            bg_video_path = self.background_manager.get_background_video(category)
+        # First try: use cache (fast)
+        max_cache_attempts = 3
+        for attempt in range(max_cache_attempts):
+            try:
+                bg_video_path = self.background_manager.get_background_video(category, skip_cache=False)
 
-            if bg_video_path and os.path.exists(bg_video_path):
-                # Generate hash for variety tracking
-                bg_hash = hashlib.md5(str(bg_video_path).encode()).hexdigest()[:8]
-                
-                # Check if recently used
-                if self.style_history.should_avoid_background(bg_hash):
-                    logger.info(f"⏭️  Skipping recently used video background")
-                    bg_video_path = None  # Force photo slideshow
-                else:
+                if bg_video_path and os.path.exists(bg_video_path):
+                    bg_hash = hashlib.md5(str(bg_video_path).encode()).hexdigest()[:8]
+
+                    if self.style_history.should_avoid_background(bg_hash):
+                        logger.info(f"⏭️  Skipping recently used cached video (attempt {attempt+1}/{max_cache_attempts})")
+                        continue
+
+                    # Found unique cached video!
                     self.style_history.add_background(bg_hash)
-                    logger.info(f"Using 4K video: {bg_video_path}")
+                    logger.info(f"✅ Using cached 4K video: {bg_video_path}")
 
                     try:
                         video = VideoFileClip(bg_video_path)
@@ -414,35 +416,65 @@ class VideoGenerator:
 
                         video = video.subclipped(0, duration)
 
-                        logger.info("✅ 4K video background")
+                        logger.info("✅ 4K video background processed successfully")
                         return (video, bg_video_path)
 
                     except Exception as e:
-                        logger.error(f"Video processing failed: {e}")
-                        bg_video_path = None  # Force photo slideshow
-        except Exception as e:
-            logger.error(f"Video background failed: {e}")
-            bg_video_path = None
+                        logger.error(f"Video processing failed: {e}, trying again...")
+                        continue
 
-        # No 4K video found - create photo slideshow
-        logger.info("🖼️  No 4K video - creating high-res photo slideshow")
-        
-        try:
-            # Download photos
-            photos = self.background_manager.download_photos_for_slideshow(
-                category=category,
-                count=int(duration * 2) + 5  # ~2 photos per second + buffer
-            )
-            
-            if photos:
-                slideshow_clip = self._create_photo_slideshow(photos, duration)
-                logger.info("✅ High-res photo slideshow background")
-                return (slideshow_clip, "photo_slideshow")
-        except Exception as e:
-            logger.error(f"Photo slideshow failed: {e}")
-        
-        # Final fallback: gradient
-        logger.warning("Using gradient fallback")
+            except Exception as e:
+                logger.error(f"Cached video failed (attempt {attempt+1}): {e}")
+                continue
+
+        # Cache didn't have variety - fetch NEW video from API
+        logger.info("🔄 Cache exhausted - fetching FRESH video from API...")
+        max_api_attempts = 3
+
+        for attempt in range(max_api_attempts):
+            try:
+                # Skip cache and get fresh video from Pexels/Videvo
+                bg_video_path = self.background_manager.get_background_video(category, skip_cache=True)
+
+                if bg_video_path and os.path.exists(bg_video_path):
+                    bg_hash = hashlib.md5(str(bg_video_path).encode()).hexdigest()[:8]
+
+                    # Record it (it's fresh from API, should be unique)
+                    self.style_history.add_background(bg_hash)
+                    logger.info(f"✅ Using NEW API video: {bg_video_path}")
+
+                    try:
+                        video = VideoFileClip(bg_video_path)
+
+                        if video.h != self.height:
+                            video = video.resized(height=self.height)
+
+                        if video.w > self.width:
+                            x_center = video.w / 2
+                            video = video.cropped(
+                                x1=x_center - self.width/2,
+                                x2=x_center + self.width/2
+                            )
+
+                        if video.duration < duration:
+                            n = int(duration / video.duration) + 1
+                            video = concatenate_videoclips([video] * n)
+
+                        video = video.subclipped(0, duration)
+
+                        logger.info("✅ NEW API video background processed successfully")
+                        return (video, bg_video_path)
+
+                    except Exception as e:
+                        logger.error(f"API video processing failed: {e}, trying again...")
+                        continue
+
+            except Exception as e:
+                logger.error(f"API video failed (attempt {attempt+1}): {e}")
+                continue
+
+        # After all attempts failed - use gradient fallback (NO PHOTO SLIDESHOWS)
+        logger.warning("⚠️  Could not get video after all attempts - using gradient fallback")
         gradient = self._create_gradient_background(duration)
         return (ImageClip(np.array(gradient), duration=duration), "gradient")
     

@@ -122,9 +122,13 @@
         "5656",
         "333",
         "4848",
-        "2222"
+        "2222",
+        "6464",
+        "1818",
+        "2424",
+        "5050"
       ],
-      "last_used_date": "2025-12-22T13:38:00.219129"
+      "last_used_date": "2025-12-25T10:43:46.668468"
     },
     "productivity": {
       "techniques": [
@@ -144,9 +148,13 @@
         "17-minute exercise bursts",
         "17-minute creative sessions",
         "17-17-17 method (3 blocks of 17 mins)",
-        "17-minute deep work sessions"
+        "17-minute deep work sessions",
+        "17-minute meditation",
+        "17-minute learning sprints",
+        "17-minute planning session",
+        "17-minute power naps"
       ],
-      "last_used_date": "2025-12-23T13:38:32.137083"
+      "last_used_date": "2025-12-25T10:45:04.206667"
     },
     "manifestation": {
       "practices": [
@@ -165,9 +173,13 @@
         "Scripting your ideal day",
         "Vision board creation",
         "New moon manifestation",
-        "17-second visualization technique"
+        "17-second visualization technique",
+        "369 manifestation method",
+        "Energy alignment practices",
+        "Morning manifestation ritual",
+        "Affirmation techniques"
       ],
-      "last_used_date": "2025-12-21T13:31:12.593875"
+      "last_used_date": "2025-12-25T10:36:30.578311"
     },
     "spiritual_growth": {
       "topics": [
@@ -186,9 +198,13 @@
         "Divine timing",
         "Spiritual awakening signs",
         "Synchronicity recognition",
-        "Chakra alignment"
+        "Chakra alignment",
+        "Soul purpose discovery",
+        "Mindfulness practices",
+        "Higher self connection",
+        "Intuition development"
       ],
-      "last_used_date": "2025-12-21T17:26:18.174485"
+      "last_used_date": "2025-12-25T10:42:16.149101"
     }
   },
   "content_history": [
@@ -541,6 +557,86 @@
       "topic": "17-minute deep work sessions",
       "category": "productivity",
       "date": "2025-12-23T13:38:32.137093"
+    },
+    {
+      "topic": "369 manifestation method",
+      "category": "manifestation",
+      "date": "2025-12-24T10:53:09.869943"
+    },
+    {
+      "topic": "Soul purpose discovery",
+      "category": "spiritual_growth",
+      "date": "2025-12-24T10:54:10.484079"
+    },
+    {
+      "topic": "6464",
+      "category": "angel_numbers",
+      "date": "2025-12-24T10:56:46.026784"
+    },
+    {
+      "topic": "17-minute meditation",
+      "category": "productivity",
+      "date": "2025-12-24T10:58:57.070040"
+    },
+    {
+      "topic": "Energy alignment practices",
+      "category": "manifestation",
+      "date": "2025-12-24T11:08:37.772508"
+    },
+    {
+      "topic": "Mindfulness practices",
+      "category": "spiritual_growth",
+      "date": "2025-12-24T11:11:51.145347"
+    },
+    {
+      "topic": "1818",
+      "category": "angel_numbers",
+      "date": "2025-12-24T11:33:57.228118"
+    },
+    {
+      "topic": "17-minute learning sprints",
+      "category": "productivity",
+      "date": "2025-12-24T11:36:26.970297"
+    },
+    {
+      "topic": "Morning manifestation ritual",
+      "category": "manifestation",
+      "date": "2025-12-24T11:41:48.496713"
+    },
+    {
+      "topic": "Higher self connection",
+      "category": "spiritual_growth",
+      "date": "2025-12-24T11:45:06.103398"
+    },
+    {
+      "topic": "2424",
+      "category": "angel_numbers",
+      "date": "2025-12-24T12:02:27.367510"
+    },
+    {
+      "topic": "17-minute planning session",
+      "category": "productivity",
+      "date": "2025-12-25T10:34:59.262894"
+    },
+    {
+      "topic": "Affirmation techniques",
+      "category": "manifestation",
+      "date": "2025-12-25T10:36:30.578323"
+    },
+    {
+      "topic": "Intuition development",
+      "category": "spiritual_growth",
+      "date": "2025-12-25T10:42:16.149110"
+    },
+    {
+      "topic": "5050",
+      "category": "angel_numbers",
+      "date": "2025-12-25T10:43:46.668474"
+    },
+    {
+      "topic": "17-minute power naps",
+      "category": "productivity",
+      "date": "2025-12-25T10:45:04.206679"
     }
   ],
   "last_reset_date": null,
