@@ -9,7 +9,6 @@ Pillow
 moviepy
 opencv-python
 slack-sdk
-pydub
 gtts
 python-dateutil
 pytz

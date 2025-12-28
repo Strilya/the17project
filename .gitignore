@@ -4,6 +4,6 @@ config/sheets_credentials.json
 __pycache__/
 *.pyc
 output/
-*.mp4
-*.mp3
+output/*.mp4
+output/*.mp3
 .DS_Store

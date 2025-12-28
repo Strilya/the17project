@@ -1,0 +1,115 @@
+name: Generate Angel Number Reel
+
+on:
+  schedule:
+    # 8 AM EST = 1 PM UTC (13:00) - During DST: 8 AM EDT = 12 PM UTC (12:00)
+    - cron: '0 13 * * *'
+    # 2 PM EST = 7 PM UTC (19:00) - During DST: 2 PM EDT = 6 PM UTC (18:00)
+    - cron: '0 19 * * *'
+    # 7 PM EST = 12 AM UTC next day (00:00) - During DST: 7 PM EDT = 11 PM UTC (23:00)
+    - cron: '0 0 * * *'
+
+  workflow_dispatch:  # Manual trigger button in GitHub Actions UI
+
+jobs:
+  generate-reel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg imagemagick
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download fonts if missing
+        run: |
+          mkdir -p fonts
+          if [ ! -f fonts/BebasNeue-Regular.ttf ]; then
+            wget -O fonts/BebasNeue-Regular.ttf https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf
+          fi
+          if [ ! -f fonts/Montserrat-Bold.ttf ]; then
+            wget -O fonts/Montserrat-Bold.ttf https://github.com/google/fonts/raw/main/apache/montserrat/static/Montserrat-Bold.ttf
+          fi
+
+      - name: Set up credentials
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_CLOUD_TTS_CREDS: ${{ secrets.GOOGLE_CLOUD_TTS_CREDS }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          GOOGLE_SHEETS_CREDS: ${{ secrets.GOOGLE_SHEETS_CREDS }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+        run: |
+          # Create .env file
+          echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" > .env
+          echo "PEXELS_API_KEY=$PEXELS_API_KEY" >> .env
+          echo "PIXABAY_API_KEY=$PIXABAY_API_KEY" >> .env
+          echo "GOOGLE_SHEET_ID=$GOOGLE_SHEET_ID" >> .env
+          echo "SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN" >> .env
+          echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
+
+          # Create config directory
+          mkdir -p config
+
+          # Create Google Cloud TTS credentials
+          echo "$GOOGLE_CLOUD_TTS_CREDS" > config/credentials.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
+
+          # Create Google Sheets credentials
+          echo "$GOOGLE_SHEETS_CREDS" > config/sheets_credentials.json
+          echo "GOOGLE_SHEETS_CREDS=config/sheets_credentials.json" >> .env
+
+      - name: Generate reel
+        id: generate
+        run: |
+          python3 src/main.py
+        continue-on-error: true
+
+      - name: Upload video artifact (7 day backup)
+        if: steps.generate.outcome == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: reel-${{ github.run_number }}
+          path: output/*.mp4
+          retention-days: 7
+
+      - name: Cleanup temp files
+        if: always()
+        run: |
+          rm -rf output/temp_*
+          rm -rf output/*TEMP*
+          rm -f config/credentials.json
+          rm -f config/sheets_credentials.json
+          rm -f .env
+
+      - name: Notify Slack on failure
+        if: steps.generate.outcome == 'failure'
+        uses: slackapi/slack-github-action@v1
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: |
+            ❌ REEL GENERATION FAILED
+
+            Run: ${{ github.run_number }}
+            Time: ${{ github.event.schedule || 'Manual trigger' }}
+            Workflow: ${{ github.workflow }}
+
+            Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
