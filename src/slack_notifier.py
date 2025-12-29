@@ -41,7 +41,16 @@ class SlackNotifier:
             self.enabled = False
 
     def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration):
-        """Send Slack notification with ready-to-copy caption"""
+        """Send Slack notification with ready-to-copy caption
+
+        Args:
+            angel_number: Content identifier (e.g., "1111" or "LP7-identity")
+            style: Content type (e.g., "angel_number" or "life_path")
+            content: Content dict with hook, meaning, action, cta
+            hashtags: Either hashtags string OR full Instagram caption (for Life Path)
+            video_path: Path to video file
+            duration: Video duration in seconds
+        """
 
         if not self.enabled:
             return
@@ -50,14 +59,22 @@ class SlackNotifier:
             # Get current timestamp
             timestamp = datetime.now().strftime("%b %d, %Y %I:%M %p")
 
-            # Prepare FULL caption text (all content)
-            caption_parts = [
-                content.get('hook', ''),
-                content.get('meaning', ''),
-                content.get('action', ''),
-                content.get('cta', '')
-            ]
-            caption_text = ' '.join([part for part in caption_parts if part])
+            # Determine if hashtags is a full caption (has newlines) or just hashtags
+            if '\n' in hashtags and len(hashtags) > 100:
+                # Full caption provided (Life Path content)
+                full_caption = hashtags
+                content_label = "Content ID"
+            else:
+                # Just hashtags (legacy Angel Number format)
+                caption_parts = [
+                    content.get('hook', ''),
+                    content.get('meaning', ''),
+                    content.get('action', ''),
+                    content.get('cta', '')
+                ]
+                caption_text = ' '.join([part for part in caption_parts if part])
+                full_caption = f"{caption_text}\n\n{hashtags}"
+                content_label = "Angel Number"
 
             # Format the Slack message
             message_blocks = [
@@ -74,11 +91,11 @@ class SlackNotifier:
                     "fields": [
                         {
                             "type": "mrkdwn",
-                            "text": f"*Angel Number:*\n{angel_number}"
+                            "text": f"*{content_label}:*\n{angel_number}"
                         },
                         {
                             "type": "mrkdwn",
-                            "text": f"*Style:*\n{style.title()}"
+                            "text": f"*Type:*\n{style.replace('_', ' ').title()}"
                         },
                         {
                             "type": "mrkdwn",
@@ -97,14 +114,14 @@ class SlackNotifier:
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": "*📝 COPY THIS CAPTION:*"
+                        "text": "*📝 COPY THIS CAPTION FOR INSTAGRAM:*"
                     }
                 },
                 {
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": f"```{caption_text}\n\n{hashtags}```"
+                        "text": f"```{full_caption}```"
                     }
                 }
             ]
