@@ -1,11 +1,12 @@
 """
-The17Project - Generate ONE test reel
+The17Project - Generate professional reels with Life Path + Angel Number content
 Includes: Google Sheets logging + Slack notifications
 """
 
 import os
 import sys
 import random
+import argparse
 from dotenv import load_dotenv
 from datetime import datetime
 from content_generator import ContentGenerator
@@ -16,7 +17,17 @@ from slack_notifier import SlackNotifier
 from angel_numbers_db import get_all_angel_numbers, get_angel_number_meaning
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 
+# NEW: Life Path system imports
+from content_flow_manager import get_day_type, get_content_plan_for_day, generate_caption
+from life_path_generator import LifePathGenerator
+
 load_dotenv()
+
+# Configuration: Set to True for full day (3 reels), False for single test reel
+GENERATE_FULL_DAY = True
+
+# TESTING: Force specific day type (set to None for normal operation)
+FORCE_DAY_TYPE = None  # Options: 'life_path', 'angel_number', 'wildcard', or None
 
 def check_number_inventory(sheets_logger, slack_notifier):
     """Check remaining unused numbers and warn if low"""
@@ -77,13 +88,21 @@ def send_slack_warning(slack_notifier, message):
     except Exception as e:
         print(f"   ⚠️  Failed to send Slack warning: {e}")
 
-def main():
+def main(reel_number=None):
+    """
+    Generate reels for The17Project
+
+    Args:
+        reel_number: Optional int (1, 2, or 3) to generate only that specific reel
+                    If None, generates all reels based on GENERATE_FULL_DAY setting
+    """
     print("=" * 70)
     print("THE17PROJECT - PROFESSIONAL REEL GENERATOR")
     print("=" * 70)
 
-    # Initialize
+    # Initialize content generators
     content_gen = ContentGenerator()
+    life_path_gen = LifePathGenerator()  # NEW: Life Path generator
     voice_gen = VoiceGenerator()
     video_gen = VideoGenerator()
 
@@ -102,111 +121,209 @@ def main():
 
     os.makedirs(output_base, exist_ok=True)
 
-    # Check inventory and warn if low
+    # Check inventory and warn if low (still useful for Angel Number days)
     remaining = check_number_inventory(sheets_logger, slack_notifier)
 
     if remaining == 0:
-        print("❌ NO NUMBERS LEFT! Add more to angel_numbers_db.py")
-        sys.exit(1)
+        print("⚠️  NO ANGEL NUMBERS LEFT! Add more to angel_numbers_db.py")
+        print("   (Life Path reels will still work)")
 
-    # Smart angel number selection (avoid repeats)
-    print("🔍 Selecting unique angel number...")
-    all_numbers = get_all_angel_numbers()
-    generated = sheets_logger.get_generated_content()
-    used_numbers = set(generated['angel_numbers'])
+    # NEW: Determine what to generate today
+    if FORCE_DAY_TYPE:
+        day_type = FORCE_DAY_TYPE
+        print(f"\n📅 Day Type: {day_type.upper()} (FORCED FOR TESTING)")
+    else:
+        day_type = get_day_type()
+        print(f"\n📅 Day Type: {day_type.upper()}")
 
-    # Get unused numbers
-    unused = [n for n in all_numbers if n not in used_numbers]
+    # Get content plan
+    if reel_number:
+        # SCHEDULED MODE: Generate only the specified reel
+        reel_count = 3
+        print(f"🎬 Scheduled Generation: Reel {reel_number}/3\n")
+        content_plan = get_content_plan_for_day(day_type, reel_count=reel_count)
+        # Filter to only the requested reel
+        content_plan = [spec for spec in content_plan if spec['reel_number'] == reel_number]
+    else:
+        # MANUAL MODE: Generate based on GENERATE_FULL_DAY setting
+        reel_count = 3 if GENERATE_FULL_DAY else 1
+        print(f"🎬 Generating {reel_count} reel(s)...\n")
+        content_plan = get_content_plan_for_day(day_type, reel_count=reel_count)
 
-    if not unused:
-        # All used - start new cycle with shuffle
-        unused = all_numbers.copy()
-        random.shuffle(unused)
-        print("   ♻️  All numbers used, starting new cycle")
+    # Generate each reel in the plan
+    for reel_spec in content_plan:
+        reel_num = reel_spec['reel_number']
 
-    angel_number = random.choice(unused)
-    meaning = get_angel_number_meaning(angel_number)
+        print(f"\n{'='*70}")
+        print(f"GENERATING REEL {reel_num}/{reel_count}")
+        print(f"{'='*70}")
 
-    print(f"\n📊 Angel Number: {angel_number}")
-    print(f"   Meaning: {meaning}")
-    print(f"🎬 Generating professional storytelling reel...\n")
+        # Route to correct generator based on content type
+        try:
+            if reel_spec['type'] == 'life_path':
+                # LIFE PATH CONTENT
+                life_path_num = reel_spec['life_path_number']
+                angle = reel_spec['angle']
+                variation = reel_spec['variation']
 
-    # Generate content
-    content = content_gen.generate_storytelling(angel_number)
+                print(f"📊 Life Path {life_path_num} - {angle} ({variation})")
+                print(f"🎬 Generating Life Path reel...\n")
 
-    print(f"Hook: {content['hook']}")
-    print(f"CTA: {content['cta']}\n")
+                content = life_path_gen.generate_content(
+                    life_path_number=life_path_num,
+                    angle=angle,
+                    variation=variation
+                )
 
-    # Generate voice with segmented timing for perfect text sync
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    temp_voice_path = f"{output_base}/temp_voice_{timestamp}.mp3"
-    temp_voice_path, voice_timings = voice_gen.generate_segmented_speech(content, temp_voice_path)
+                content_type = 'life_path'
+                content_identifier = f"LP{life_path_num}-{angle}"
+                style_name = f"LP{life_path_num}"
 
-    # Get voice duration for logging
-    voice_audio = AudioFileClip(temp_voice_path)
-    voice_duration = voice_audio.duration
-    total_duration = voice_duration + 2  # Add 2s end card
+            else:
+                # ANGEL NUMBER CONTENT (existing logic)
+                angel_number = reel_spec['angel_number']
+                style = reel_spec['style']
 
-    # Full text for transcript
-    full_text = f"{content['hook']}. {content['meaning']}. {content['action']}. {content['cta']}"
+                print(f"🔢 Angel Number {angel_number} - {style}")
+                print(f"🎬 Generating Angel Number reel...\n")
 
-    # Generate professional video with all features + synced text
-    video_path = f"{output_base}/{angel_number}_reel_{timestamp}.mp4"
-    result = video_gen.generate_video(content, temp_voice_path, video_path, "Storytelling", voice_timings)
+                # Smart selection from unused numbers
+                all_numbers = get_all_angel_numbers()
+                generated = sheets_logger.get_generated_content()
+                used_numbers = set(generated['angel_numbers'])
+                unused = [n for n in all_numbers if n not in used_numbers]
 
-    if result:
-        print(f"\n✅ PROFESSIONAL REEL CREATED: {video_path}")
-        print(f"   Duration: {total_duration:.1f}s (voice + 2s end card)")
-        print(f"   Features: Multiple clips, synced captions, watermarks, music, end card")
+                if not unused:
+                    unused = all_numbers.copy()
+                    random.shuffle(unused)
+                    print("   ♻️  All numbers used, starting new cycle")
 
-        # Log to Google Sheets
-        print(f"\n📊 Logging to integrations...")
-        hashtags = sheets_logger.log_reel(
-            angel_number=angel_number,
-            style="Storytelling",
-            content=content,
-            transcript=full_text,
-            video_path=video_path,
-            duration=total_duration,
-            video_sources=["Pexels", "Pixabay"]  # Update if tracking specific sources
-        )
+                # Use specific number from plan or pick from unused
+                if angel_number in unused:
+                    selected_number = angel_number
+                else:
+                    selected_number = random.choice(unused)
 
-        # Send Slack notification
-        if hashtags:
-            slack_notifier.send_reel_notification(
-                angel_number=angel_number,
-                style="Storytelling",
+                # Generate based on style
+                if style == 'storytelling':
+                    content = content_gen.generate_storytelling(selected_number)
+                elif style == 'practical':
+                    content = content_gen.generate_practical(selected_number)
+                else:
+                    content = content_gen.generate_insights(selected_number)
+
+                content_type = 'angel_number'
+                content_identifier = selected_number
+                style_name = style.capitalize()
+
+        except Exception as e:
+            print(f"❌ Content generation failed: {e}")
+            print(f"Falling back to angel number generation...")
+
+            # Fallback to angel number if Life Path fails
+            all_numbers = get_all_angel_numbers()
+            generated = sheets_logger.get_generated_content()
+            used_numbers = set(generated['angel_numbers'])
+            unused = [n for n in all_numbers if n not in used_numbers]
+
+            if not unused:
+                unused = all_numbers.copy()
+                random.shuffle(unused)
+
+            fallback_number = random.choice(unused)
+            content = content_gen.generate_storytelling(fallback_number)
+            content_type = 'angel_number'
+            content_identifier = fallback_number
+            style_name = "Storytelling"
+
+        print(f"Hook: {content['hook']}")
+        print(f"CTA: {content['cta']}\n")
+
+        # Generate voice with segmented timing (SAME for both types)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        temp_voice_path = f"{output_base}/temp_voice_{timestamp}.mp3"
+        temp_voice_path, voice_timings = voice_gen.generate_segmented_speech(content, temp_voice_path)
+
+        # Get voice duration for logging
+        voice_audio = AudioFileClip(temp_voice_path)
+        voice_duration = voice_audio.duration
+        total_duration = voice_duration + 2  # Add 2s end card
+
+        # Full text for transcript
+        full_text = f"{content['hook']}. {content['meaning']}. {content['action']}. {content['cta']}"
+
+        # Generate professional video (SAME for both types)
+        video_filename = f"{content_identifier}_reel_{timestamp}.mp4"
+        video_path = f"{output_base}/{video_filename}"
+        result = video_gen.generate_video(content, temp_voice_path, video_path, style_name, voice_timings)
+
+        if result:
+            print(f"\n✅ PROFESSIONAL REEL CREATED: {video_path}")
+            print(f"   Duration: {total_duration:.1f}s (voice + 2s end card)")
+            print(f"   Features: Multiple clips, synced captions, watermarks, music, end card")
+
+            # Generate proper caption for Instagram (before logging)
+            caption = generate_caption(reel_spec, content)
+
+            # Log to Google Sheets (updated to handle both types)
+            print(f"\n📊 Logging to integrations...")
+            sheets_logger.log_reel(
+                angel_number=content_identifier,
+                style=content_type,
                 content=content,
-                hashtags=hashtags,
+                transcript=full_text,
                 video_path=video_path,
-                duration=total_duration
+                duration=total_duration,
+                video_sources=["Pexels", "Pixabay"],
+                custom_caption=caption  # Use generated caption for both types
             )
 
-        # Cleanup temp files
-        try:
-            if os.path.exists(temp_voice_path):
-                os.remove(temp_voice_path)
-                print(f"\n🗑️  Cleaned up temp voice file")
-        except Exception as e:
-            pass
+            # Send Slack notification (with full caption)
+            if caption:
+                slack_notifier.send_reel_notification(
+                    angel_number=content_identifier,
+                    style=content_type,
+                    content=content,
+                    hashtags=caption,  # Full caption with hashtags
+                    video_path=video_path,
+                    duration=total_duration
+                )
 
-        print(f"\n{'=' * 70}")
-        print(f"✅ ALL DONE!")
-        print(f"{'=' * 70}")
-        print(f"Video: {video_path}")
-        if hashtags:
-            print(f"\nHashtags:\n{hashtags}")
+            # Cleanup temp files
+            try:
+                if os.path.exists(temp_voice_path):
+                    os.remove(temp_voice_path)
+                    print(f"\n🗑️  Cleaned up temp voice file")
+            except Exception as e:
+                pass
 
-    else:
-        print(f"\n❌ REEL GENERATION FAILED")
+            print(f"\n{'=' * 70}")
+            print(f"✅ REEL {reel_num}/{reel_count} DONE!")
+            print(f"{'=' * 70}")
+            print(f"Video: {video_path}")
+            if caption:
+                print(f"\nInstagram Caption:\n{caption[:200]}..." if len(caption) > 200 else f"\nInstagram Caption:\n{caption}")
 
-        # Cleanup temp files even on failure
-        try:
-            if os.path.exists(temp_voice_path):
-                os.remove(temp_voice_path)
-        except Exception as e:
-            pass
+        else:
+            print(f"\n❌ REEL {reel_num}/{reel_count} GENERATION FAILED")
+
+            # Cleanup temp files even on failure
+            try:
+                if os.path.exists(temp_voice_path):
+                    os.remove(temp_voice_path)
+            except Exception as e:
+                pass
+
+    # Final summary
+    print(f"\n{'=' * 70}")
+    print(f"✅ ALL {reel_count} REEL(S) COMPLETE!")
+    print(f"{'=' * 70}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Generate The17Project reels')
+    parser.add_argument('--reel-number', type=int, choices=[1, 2, 3],
+                        help='Generate only a specific reel (1, 2, or 3) for scheduled runs')
+    args = parser.parse_args()
+
+    main(reel_number=args.reel_number)
 
