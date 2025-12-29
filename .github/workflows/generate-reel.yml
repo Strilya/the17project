@@ -48,10 +48,10 @@ jobs:
       - name: Set up credentials
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GOOGLE_CLOUD_TTS_CREDS: ${{ secrets.GOOGLE_CLOUD_TTS_CREDS }}
+          GOOGLE_CLOUD_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}
+          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          GOOGLE_SHEETS_CREDS: ${{ secrets.GOOGLE_SHEETS_CREDS }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
@@ -67,12 +67,38 @@ jobs:
           # Create config directory
           mkdir -p config
 
-          # Create Google Cloud TTS credentials
-          printf '%s' "$GOOGLE_CLOUD_TTS_CREDS" > config/credentials.json
+          # Create Google Cloud credentials (for TTS)
+          if [ -z "$GOOGLE_CLOUD_CREDENTIALS" ]; then
+            echo "ERROR: GOOGLE_CLOUD_CREDENTIALS secret is empty!"
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > config/credentials.json
+
+          # Validate JSON
+          if ! python3 -m json.tool config/credentials.json > /dev/null 2>&1; then
+            echo "ERROR: Google Cloud credentials.json is not valid JSON!"
+            echo "File size: $(wc -c < config/credentials.json) bytes"
+            head -c 200 config/credentials.json
+            exit 1
+          fi
+
           echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
 
           # Create Google Sheets credentials
-          printf '%s' "$GOOGLE_SHEETS_CREDS" > config/sheets_credentials.json
+          if [ -z "$GOOGLE_SHEETS_CREDENTIALS" ]; then
+            echo "ERROR: GOOGLE_SHEETS_CREDENTIALS secret is empty!"
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_SHEETS_CREDENTIALS" > config/sheets_credentials.json
+
+          # Validate JSON
+          if ! python3 -m json.tool config/sheets_credentials.json > /dev/null 2>&1; then
+            echo "ERROR: Google Sheets credentials.json is not valid JSON!"
+            echo "File size: $(wc -c < config/sheets_credentials.json) bytes"
+            head -c 200 config/sheets_credentials.json
+            exit 1
+          fi
+
           echo "GOOGLE_SHEETS_CREDS=config/sheets_credentials.json" >> .env
 
       - name: Generate reel
