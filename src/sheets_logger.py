@@ -165,11 +165,28 @@ class SheetsLogger:
             print(f"   ⚠️  Failed to fetch generated content: {e}")
             return {'angel_numbers': [], 'styles': []}
 
-    def log_reel(self, angel_number, style, content, transcript, video_path, duration, video_sources=None):
-        """Log generated reel to Google Sheets"""
+    def log_reel(self, angel_number, style, content, transcript, video_path, duration, video_sources=None, custom_caption=None):
+        """Log generated reel to Google Sheets
 
-        # Generate hashtags even if sheets logging is disabled (for Slack)
-        hashtags = self.generate_hashtags(angel_number, content)
+        Args:
+            angel_number: Content identifier (e.g., "1111" or "LP7-identity")
+            style: Content type (e.g., "angel_number" or "life_path")
+            content: Content dict with hook, meaning, action, cta
+            transcript: Full transcript text
+            video_path: Path to video file
+            duration: Video duration in seconds
+            video_sources: List of video sources (default: None)
+            custom_caption: Optional pre-generated caption/hashtags (for Life Path content)
+
+        Returns:
+            str: Hashtags or custom caption
+        """
+
+        # Use custom caption if provided, otherwise generate hashtags
+        if custom_caption:
+            hashtags = custom_caption
+        else:
+            hashtags = self.generate_hashtags(angel_number, content)
 
         if not self.enabled:
             return hashtags

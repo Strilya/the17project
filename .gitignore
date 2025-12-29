@@ -6,4 +6,6 @@ __pycache__/
 output/
 output/*.mp4
 output/*.mp3
+logs/
+logs/*.log
 .DS_Store
