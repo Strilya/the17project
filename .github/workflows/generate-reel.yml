@@ -48,7 +48,7 @@ jobs:
       - name: Set up credentials
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GOOGLE_CLOUD_TTS_CREDS: ${{ secrets.GOOGLE_CLOUD_TTS_CREDS }}
+          GOOGLE_CLOUD_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           GOOGLE_SHEETS_CREDS: ${{ secrets.GOOGLE_SHEETS_CREDS }}
@@ -67,11 +67,19 @@ jobs:
           # Create config directory
           mkdir -p config
 
-          # Create Google Cloud TTS credentials
-          printf '%s' "$GOOGLE_CLOUD_TTS_CREDS" > config/credentials.json
+          # Create Google Cloud credentials (for TTS)
+          if [ -z "$GOOGLE_CLOUD_CREDENTIALS" ]; then
+            echo "ERROR: GOOGLE_CLOUD_CREDENTIALS secret is empty!"
+            exit 1
+          fi
+          printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > config/credentials.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
 
           # Create Google Sheets credentials
+          if [ -z "$GOOGLE_SHEETS_CREDS" ]; then
+            echo "ERROR: GOOGLE_SHEETS_CREDS secret is empty!"
+            exit 1
+          fi
           printf '%s' "$GOOGLE_SHEETS_CREDS" > config/sheets_credentials.json
           echo "GOOGLE_SHEETS_CREDS=config/sheets_credentials.json" >> .env
 
