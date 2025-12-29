@@ -68,11 +68,11 @@ jobs:
           mkdir -p config
 
           # Create Google Cloud TTS credentials
-          echo "$GOOGLE_CLOUD_TTS_CREDS" > config/credentials.json
+          printf '%s' "$GOOGLE_CLOUD_TTS_CREDS" > config/credentials.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
 
           # Create Google Sheets credentials
-          echo "$GOOGLE_SHEETS_CREDS" > config/sheets_credentials.json
+          printf '%s' "$GOOGLE_SHEETS_CREDS" > config/sheets_credentials.json
           echo "GOOGLE_SHEETS_CREDS=config/sheets_credentials.json" >> .env
 
       - name: Generate reel
