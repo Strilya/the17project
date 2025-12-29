@@ -73,6 +73,19 @@ jobs:
             exit 1
           fi
           printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > config/credentials.json
+
+          # Debug: Check if file was created and has content
+          echo "Credentials file size: $(wc -c < config/credentials.json) bytes"
+          echo "First 50 chars: $(head -c 50 config/credentials.json)"
+
+          # Validate JSON
+          if ! python3 -m json.tool config/credentials.json > /dev/null 2>&1; then
+            echo "ERROR: credentials.json is not valid JSON!"
+            echo "File contents preview:"
+            head -c 200 config/credentials.json
+            exit 1
+          fi
+
           echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
 
           # Create Google Sheets credentials
