@@ -51,7 +51,6 @@ jobs:
           GOOGLE_CLOUD_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          GOOGLE_SHEETS_CREDS: ${{ secrets.GOOGLE_SHEETS_CREDS }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
@@ -88,13 +87,8 @@ jobs:
 
           echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
 
-          # Create Google Sheets credentials
-          if [ -z "$GOOGLE_SHEETS_CREDS" ]; then
-            echo "ERROR: GOOGLE_SHEETS_CREDS secret is empty!"
-            exit 1
-          fi
-          printf '%s' "$GOOGLE_SHEETS_CREDS" > config/sheets_credentials.json
-          echo "GOOGLE_SHEETS_CREDS=config/sheets_credentials.json" >> .env
+          # Google Sheets uses the same credentials file
+          echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
       - name: Generate reel
         id: generate
