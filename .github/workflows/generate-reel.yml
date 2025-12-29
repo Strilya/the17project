@@ -49,7 +49,6 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_CLOUD_CREDENTIALS: ${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}
-          GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
@@ -67,7 +66,7 @@ jobs:
           # Create config directory
           mkdir -p config
 
-          # Create Google Cloud credentials (for TTS)
+          # Create Google Cloud credentials (for TTS and Sheets)
           if [ -z "$GOOGLE_CLOUD_CREDENTIALS" ]; then
             echo "ERROR: GOOGLE_CLOUD_CREDENTIALS secret is empty!"
             exit 1
@@ -84,27 +83,35 @@ jobs:
 
           echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
 
-          # Create Google Sheets credentials
-          if [ -z "$GOOGLE_SHEETS_CREDENTIALS" ]; then
-            echo "ERROR: GOOGLE_SHEETS_CREDENTIALS secret is empty!"
-            exit 1
-          fi
-          printf '%s' "$GOOGLE_SHEETS_CREDENTIALS" > config/sheets_credentials.json
-
-          # Validate JSON
-          if ! python3 -m json.tool config/sheets_credentials.json > /dev/null 2>&1; then
-            echo "ERROR: Google Sheets credentials.json is not valid JSON!"
-            echo "File size: $(wc -c < config/sheets_credentials.json) bytes"
-            head -c 200 config/sheets_credentials.json
-            exit 1
-          fi
-
-          echo "GOOGLE_SHEETS_CREDS=config/sheets_credentials.json" >> .env
+          # Use same credentials for Google Sheets (same service account)
+          echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
       - name: Generate reel
         id: generate
         run: |
-          python3 src/main.py
+          # Determine which reel to generate based on schedule
+          # 8 AM EST (13:00 UTC) = Reel 1
+          # 2 PM EST (19:00 UTC) = Reel 2
+          # 7 PM EST (00:00 UTC) = Reel 3
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" -eq 13 ] || [ "$HOUR" -eq 12 ]; then
+            REEL_NUM=1
+          elif [ "$HOUR" -eq 19 ] || [ "$HOUR" -eq 18 ]; then
+            REEL_NUM=2
+          elif [ "$HOUR" -eq 0 ] || [ "$HOUR" -eq 23 ]; then
+            REEL_NUM=3
+          else
+            # Manual trigger - generate all 3 reels
+            REEL_NUM=""
+          fi
+
+          if [ -n "$REEL_NUM" ]; then
+            echo "Scheduled run: Generating reel $REEL_NUM/3"
+            python3 src/main.py --reel-number $REEL_NUM
+          else
+            echo "Manual run: Generating all reels"
+            python3 src/main.py
+          fi
         continue-on-error: true
 
       - name: Upload video artifact (7 day backup)
