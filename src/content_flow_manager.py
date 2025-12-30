@@ -619,14 +619,19 @@ def generate_angel_number_caption(content_spec, content_data):
     all_hashtags = specific_hashtags + ANGEL_NUMBER_HASHTAGS[:10]
     hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
-    caption = f"""Seeing {angel_number}?
+    # Build full transcript caption
+    caption_parts = [
+        f"Seeing {angel_number}?",
+        content_data.get('hook', ''),
+        content_data.get('meaning', ''),
+        content_data.get('action', ''),
+        content_data.get('cta', '')
+    ]
 
-{content_data.get('hook', '')}
+    # Join parts with double line breaks, then add hashtags
+    full_transcript = '\n\n'.join([part for part in caption_parts if part])
+    caption = f"{full_transcript}\n\n{hashtags}"
 
-{content_data.get('cta', '')}
-
-{hashtags}"""
-    
     return caption.strip()
 
 
