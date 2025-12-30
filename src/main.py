@@ -24,7 +24,7 @@ from life_path_generator import LifePathGenerator
 load_dotenv()
 
 # Configuration: Set to True for full day (3 reels), False for single test reel
-GENERATE_FULL_DAY = True
+GENERATE_FULL_DAY = False  # Scheduled runs use --reel-number to generate specific reel
 
 # TESTING: Force specific day type (set to None for normal operation)
 FORCE_DAY_TYPE = None  # Options: 'life_path', 'angel_number', 'wildcard', or None
