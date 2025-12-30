@@ -192,8 +192,14 @@ class SheetsLogger:
             return hashtags
 
         try:
-            # Generate caption text (hook only for Instagram caption)
-            caption_text = content.get('hook', '')
+            # Generate caption text (full transcript for Instagram caption)
+            caption_parts = [
+                content.get('hook', ''),
+                content.get('meaning', ''),
+                content.get('action', ''),
+                content.get('cta', '')
+            ]
+            caption_text = '\n\n'.join([part for part in caption_parts if part])
 
             # Get current timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
