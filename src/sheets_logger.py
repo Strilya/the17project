@@ -20,8 +20,11 @@ class SheetsLogger:
             creds_path = os.getenv('GOOGLE_SHEETS_CREDS')
             sheet_id = os.getenv('GOOGLE_SHEET_ID')
 
-            if not creds_path or not sheet_id:
-                print("   ⚠️  Google Sheets not configured (missing credentials)")
+            if not creds_path:
+                print("   ⚠️  Google Sheets not configured: GOOGLE_SHEETS_CREDS not set")
+                return
+            if not sheet_id:
+                print("   ⚠️  Google Sheets not configured: GOOGLE_SHEET_ID not set")
                 return
 
             # Resolve credentials path (use absolute path)
