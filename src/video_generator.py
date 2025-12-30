@@ -350,9 +350,7 @@ class VideoGenerator:
         return clip
 
     def generate_video(self, content, voice_path, output_path, style_name, voice_timings=None):
-        """Generate EXACT misli_mudretsa style reel with synced text"""
-
-        print(f"\n🎬 Creating EXACT misli_mudretsa style reel...")
+        """Generate video reel with synced text"""
 
         voice_audio = AudioFileClip(voice_path)
         main_duration = voice_audio.duration
