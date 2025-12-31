@@ -395,6 +395,53 @@ ANGEL_NUMBER_HASHTAGS = [
 # CONTENT SCHEDULING LOGIC
 # ============================================================================
 
+def load_used_combinations_from_sheets(sheets_logger):
+    """
+    Load previously generated combinations from Google Sheets for rotation tracking
+
+    Args:
+        sheets_logger: SheetsLogger instance
+
+    Returns:
+        dict with 'life_path' and 'angel_number' sets of used (number, angle/style) tuples
+    """
+    if not sheets_logger or not hasattr(sheets_logger, 'enabled') or not sheets_logger.enabled:
+        return {'life_path': set(), 'angel_number': set()}
+
+    try:
+        # Get all data from sheet
+        all_data = sheets_logger.sheet.get_all_values()
+
+        life_path_combos = set()
+        angel_number_combos = set()
+
+        # Skip header row
+        for row in all_data[1:]:
+            if len(row) >= 3 and row[1] != 'TEST':
+                identifier = row[1]  # Column B: Number or "LP7-identity"
+                style = row[2]       # Column C: Style/Type
+
+                # Check if it's a Life Path entry (format: "LP7-identity")
+                if identifier.startswith('LP') and '-' in identifier:
+                    # Extract number and angle from "LP7-identity"
+                    parts = identifier.split('-', 1)
+                    lp_num = int(parts[0][2:])  # Remove "LP" prefix
+                    angle = parts[1] if len(parts) > 1 else 'identity'
+                    life_path_combos.add((lp_num, angle))
+                else:
+                    # Angel number entry
+                    angel_number_combos.add((identifier, style))
+
+        return {
+            'life_path': life_path_combos,
+            'angel_number': angel_number_combos
+        }
+
+    except Exception as e:
+        print(f"   ⚠️  Failed to load rotation history: {e}")
+        return {'life_path': set(), 'angel_number': set()}
+
+
 def get_day_type(date=None):
     """
     Determine what type of content to generate based on day of week
@@ -422,69 +469,83 @@ def get_day_type(date=None):
         return 'wildcard'
 
 
-def get_content_plan_for_day(day_type=None, reel_count=3):
+def get_content_plan_for_day(day_type=None, reel_count=3, sheets_logger=None):
     """
-    Get the content plan for a given day type
-    
+    Get the content plan for a given day type with rotation tracking
+
     Args:
         day_type: str ('life_path', 'angel_number', 'wildcard')
         reel_count: int (how many reels to generate, default 3)
-        
+        sheets_logger: SheetsLogger instance for loading rotation history
+
     Returns:
         list: Content specifications for each reel
     """
     if day_type is None:
         day_type = get_day_type()
-    
+
+    # Load previously used combinations for rotation
+    used_combos = load_used_combinations_from_sheets(sheets_logger)
+
     if day_type == 'life_path':
-        return get_life_path_plan(reel_count)
+        return get_life_path_plan(reel_count, used_combos['life_path'])
     elif day_type == 'angel_number':
-        return get_angel_number_plan(reel_count)
+        return get_angel_number_plan(reel_count, used_combos['angel_number'])
     else:  # wildcard
-        return get_wildcard_plan(reel_count)
+        return get_wildcard_plan(reel_count, used_combos)
 
 
-def get_life_path_plan(count=3):
+def get_life_path_plan(count=3, previously_used_combos=None):
     """
     Generate plan for Life Path content (Mon/Wed/Fri)
-    
-    Strategy: Rotate through different life paths with different angles
+
+    Strategy: Rotate through (number, angle) combinations - don't repeat until full cycle complete
     Example: LP7-Identity, LP3-Career, LP5-Relationships
-    
+    Next LP7 will have different angle until all LP7 angles are used
+
     Args:
         count: int (number of reels)
-        
+        previously_used_combos: set/list of (number, angle) tuples already generated
+
     Returns:
         list of dicts with content specs
     """
     all_life_paths = get_all_life_paths()
     all_angles = list(LIFE_PATH_CONTENT_ANGLES.keys())
-    
+
+    # Initialize previously used combinations
+    if previously_used_combos is None:
+        previously_used_combos = set()
+    else:
+        # Convert to set of tuples (number, angle)
+        previously_used_combos = set(previously_used_combos)
+
     plan = []
-    
-    # Use different life paths and angles for variety
-    used_life_paths = []
-    used_angles = []
-    
+
+    # Track what we've used in this batch (avoid duplicates in same day)
+    used_today = set()
+
     for i in range(count):
-        # Pick a life path we haven't used yet today
-        available_lps = [lp for lp in all_life_paths if lp not in used_life_paths]
-        if not available_lps:
-            available_lps = all_life_paths  # Reset if we've used all
-            used_life_paths = []
-        
-        life_path = random.choice(available_lps)
-        used_life_paths.append(life_path)
-        
-        # Pick an angle we haven't used yet today
-        available_angles = [a for a in all_angles if a not in used_angles]
-        if not available_angles:
-            available_angles = all_angles  # Reset if we've used all
-            used_angles = []
-        
-        angle = random.choice(available_angles)
-        used_angles.append(angle)
-        
+        # Try to find an unused combination
+        available_combos = []
+        for lp in all_life_paths:
+            for angle in all_angles:
+                combo = (lp, angle)
+                if combo not in previously_used_combos and combo not in used_today:
+                    available_combos.append(combo)
+
+        # If no unused combinations left, start new cycle
+        if not available_combos:
+            print("   ♻️  All Life Path combinations used, starting new rotation cycle")
+            previously_used_combos = set()
+            # Rebuild available combos excluding today's
+            available_combos = [(lp, angle) for lp in all_life_paths for angle in all_angles
+                              if (lp, angle) not in used_today]
+
+        # Pick a random combination
+        life_path, angle = random.choice(available_combos)
+        used_today.add((life_path, angle))
+
         # Pick variation within that angle
         variation = random.choice(LIFE_PATH_CONTENT_ANGLES[angle]['variations'])
         
@@ -499,66 +560,96 @@ def get_life_path_plan(count=3):
     return plan
 
 
-def get_angel_number_plan(count=3):
+def get_angel_number_plan(count=3, previously_used_combos=None):
     """
     Generate plan for Angel Number content (Tue/Thu/Sat)
-    
-    Strategy: Use existing angel number system (unchanged)
-    
+
+    Strategy: Rotate through (number, style) combinations - don't repeat until full cycle complete
+    Next time same angel number is used, it will have different style
+
     Args:
         count: int (number of reels)
-        
+        previously_used_combos: set/list of (number, style) tuples already generated
+
     Returns:
         list of dicts with content specs
     """
     all_numbers = get_all_angel_numbers()
     styles = ['storytelling', 'practical', 'insights']
-    
+
+    # Initialize previously used combinations
+    if previously_used_combos is None:
+        previously_used_combos = set()
+    else:
+        # Convert to set of tuples (number, style)
+        previously_used_combos = set(previously_used_combos)
+
     plan = []
-    
+    used_today = set()
+
     for i in range(count):
-        # Pick random angel number and style
-        angel_number = random.choice(all_numbers)
-        style = random.choice(styles)
-        
+        # Try to find an unused combination
+        available_combos = []
+        for num in all_numbers:
+            for style in styles:
+                combo = (num, style)
+                if combo not in previously_used_combos and combo not in used_today:
+                    available_combos.append(combo)
+
+        # If no unused combinations left, start new cycle
+        if not available_combos:
+            print("   ♻️  All Angel Number combinations used, starting new rotation cycle")
+            previously_used_combos = set()
+            # Rebuild available combos excluding today's
+            available_combos = [(num, style) for num in all_numbers for style in styles
+                              if (num, style) not in used_today]
+
+        # Pick a random combination
+        angel_number, style = random.choice(available_combos)
+        used_today.add((angel_number, style))
+
         plan.append({
             'type': 'angel_number',
             'angel_number': angel_number,
             'style': style,
             'reel_number': i + 1
         })
-    
+
     return plan
 
 
-def get_wildcard_plan(count=3):
+def get_wildcard_plan(count=3, used_combos=None):
     """
-    Generate plan for Sunday wildcard content
-    
+    Generate plan for Sunday wildcard content with rotation tracking
+
     Strategy: Mix of life path, angel numbers, or special content
-    
+
     Args:
         count: int (number of reels)
-        
+        used_combos: dict with 'life_path' and 'angel_number' used combinations
+
     Returns:
         list of dicts with content specs
     """
+    if used_combos is None:
+        used_combos = {'life_path': set(), 'angel_number': set()}
+
     plan = []
-    
+
     # Sunday: Mix it up - 2 life path, 1 angel number (or vice versa)
     content_types = ['life_path', 'life_path', 'angel_number']
     random.shuffle(content_types)
-    
+
     for i, content_type in enumerate(content_types[:count]):
         if content_type == 'life_path':
-            lp_plan = get_life_path_plan(1)[0]
+            lp_plan = get_life_path_plan(1, used_combos['life_path'])[0]
             lp_plan['reel_number'] = i + 1
             plan.append(lp_plan)
         else:
-            an_plan = get_angel_number_plan(1)[0]
+            an_plan = get_angel_number_plan(1, used_combos['angel_number'])[0]
             an_plan['reel_number'] = i + 1
             plan.append(an_plan)
-    
+
     return plan
 
 
