@@ -64,13 +64,21 @@ graph TB
 
     LOG --> SHEETS
 
-    style START fill:#e1f5ff
-    style MAIN fill:#fff3cd
-    style CFM fill:#d4edda
-    style SHEETS fill:#f8d7da
-    style FINAL fill:#d1ecf1
-    style SLACK fill:#d1ecf1
-    style LOG fill:#d1ecf1
+    style START fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
+    style MAIN fill:#F5A623,stroke:#C77700,stroke-width:3px,color:#000
+    style CFM fill:#7ED321,stroke:#5FA119,stroke-width:3px,color:#000
+    style SHEETS fill:#D0021B,stroke:#A00115,stroke-width:3px,color:#fff
+    style FINAL fill:#9013FE,stroke:#6A0DB8,stroke-width:3px,color:#fff
+    style SLACK fill:#50E3C2,stroke:#3AB89E,stroke-width:3px,color:#000
+    style LOG fill:#50E3C2,stroke:#3AB89E,stroke-width:3px,color:#000
+    style PLAN fill:#F8E71C,stroke:#C4B416,stroke-width:3px,color:#000
+    style LPGEN fill:#BD10E0,stroke:#8F0CAA,stroke-width:3px,color:#fff
+    style ANGEN fill:#BD10E0,stroke:#8F0CAA,stroke-width:3px,color:#fff
+    style CONTENT fill:#417505,stroke:#2F5404,stroke-width:3px,color:#fff
+    style VOICE fill:#FF6B6B,stroke:#CC5555,stroke-width:3px,color:#fff
+    style AUDIO fill:#4ECDC4,stroke:#3EA29C,stroke-width:3px,color:#000
+    style VIDEO fill:#FF8C42,stroke:#CC7035,stroke-width:3px,color:#000
+    style CLIPS fill:#95E1D3,stroke:#77B4A9,stroke-width:3px,color:#000
 ```
 
 ---
@@ -78,7 +86,7 @@ graph TB
 ## ✨ Key Features
 
 ### Content Generation
-- **AI-Powered Scripts**: OpenAI GPT-4 generates unique, engaging content
+- **AI-Powered Scripts**: Anthropic Claude generates unique, engaging content
 - **Natural Voice**: ElevenLabs text-to-speech with professional voice quality
 - **Smart Rotation**: No repeats until all (number, topic/style) combinations are used
 
@@ -125,7 +133,7 @@ sequenceDiagram
 
     loop For each reel
         Main->>Generator: Generate content for LP7-identity
-        Generator->>Generator: Call OpenAI GPT-4
+        Generator->>Generator: Call Anthropic Claude API
         Generator-->>Main: {hook, meaning, action, cta}
 
         Main->>Voice: Synthesize speech
@@ -167,7 +175,7 @@ apt-get install ffmpeg  # Linux
 Create `.env` file:
 ```bash
 # AI Services
-OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
 ELEVENLABS_API_KEY=...
 ELEVENLABS_VOICE_ID=...
 
@@ -230,8 +238,8 @@ python src/main.py --test --reel-number 1
 |--------|---------|
 | `main.py` | Entry point, orchestrates entire pipeline |
 | `content_flow_manager.py` | Scheduling, rotation logic, caption generation |
-| `life_path_generator.py` | Generate Life Path content via OpenAI |
-| `content_generator.py` | Generate Angel Number content via OpenAI |
+| `life_path_generator.py` | Generate Life Path content via Anthropic Claude |
+| `content_generator.py` | Generate Angel Number content via Anthropic Claude |
 | `voice_generator.py` | Text-to-speech via ElevenLabs |
 | `video_generator.py` | Video compilation, captions, music, transitions |
 | `sheets_logger.py` | Google Sheets integration for tracking |
@@ -494,7 +502,7 @@ The17Project/
 | Metric | Value |
 |--------|-------|
 | Generation Time | ~60-90 seconds/reel |
-| Content Quality | GPT-4 powered |
+| Content Quality | Claude Sonnet 4.5 powered |
 | Voice Quality | ElevenLabs professional |
 | Video Resolution | 1080x1920 (Full HD) |
 | Automation Level | 100% hands-free |
