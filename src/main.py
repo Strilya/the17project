@@ -18,7 +18,7 @@ from angel_numbers_db import get_all_angel_numbers, get_angel_number_meaning
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 
 # NEW: Life Path system imports
-from content_flow_manager import get_day_type, get_content_plan_for_day, generate_caption
+from content_flow_manager import get_day_type, get_content_plan_for_day, generate_caption, select_text_color
 from life_path_generator import LifePathGenerator
 
 load_dotenv()
@@ -252,10 +252,14 @@ def main(reel_number=None):
         # Full text for transcript
         full_text = f"{content['hook']}. {content['meaning']}. {content['action']}. {content['cta']}"
 
+        # Select text color with rotation (TODO: track used colors in sheets)
+        color_name, text_color = select_text_color()
+        print(f"   🎨 Text color: {color_name.upper()} {text_color}")
+
         # Generate professional video (SAME for both types)
         video_filename = f"{content_identifier}_reel_{timestamp}.mp4"
         video_path = f"{output_base}/{video_filename}"
-        result = video_gen.generate_video(content, temp_voice_path, video_path, style_name, voice_timings)
+        result = video_gen.generate_video(content, temp_voice_path, video_path, style_name, voice_timings, text_color)
 
         if result:
             print(f"\n✅ PROFESSIONAL REEL CREATED: {video_path}")

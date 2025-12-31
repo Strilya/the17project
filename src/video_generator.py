@@ -204,9 +204,12 @@ class VideoGenerator:
 
         return chunks
 
-    def create_text_clips(self, content, voice_duration, voice_timings=None):
+    def create_text_clips(self, content, voice_duration, voice_timings=None, text_color=(255, 200, 0)):
         """
         Create text clips synced with voice timing
+
+        Args:
+            text_color: RGB tuple for accent text color
         Breaks text into smaller chunks that change rapidly with speaker tempo
         """
         segments = [
@@ -241,7 +244,8 @@ class VideoGenerator:
                         lines=lines,
                         duration=chunk_duration,
                         start_time=chunk_start,
-                        font_size=font_size
+                        font_size=font_size,
+                        text_color=text_color
                     )
 
                     text_clips.append(text_clip)
@@ -273,7 +277,8 @@ class VideoGenerator:
                         lines=lines,
                         duration=chunk_duration,
                         start_time=chunk_start,
-                        font_size=font_size
+                        font_size=font_size,
+                        text_color=text_color
                     )
 
                     text_clips.append(text_clip)
@@ -282,11 +287,14 @@ class VideoGenerator:
 
         return text_clips
 
-    def _create_text_clip(self, lines, duration, start_time, font_size=52):
+    def _create_text_clip(self, lines, duration, start_time, font_size=52, text_color=(255, 200, 0)):
         """
         Create text overlay that fits on screen
-        Supports exactly 2 lines with alternating white/yellow colors
+        Supports exactly 2 lines with alternating white/accent colors
         Uses FIXED font size for consistency across all text
+
+        Args:
+            text_color: RGB tuple for accent color (alternates with white)
         """
         def make_frame(t):
             # Create image
@@ -326,11 +334,11 @@ class VideoGenerator:
                 x = (1080 - text_width) // 2
                 y = y_start + (i * line_height)
 
-                # Alternate colors: odd lines = white, even lines = yellow
+                # Alternate colors: odd lines = white, even lines = accent color
                 if i % 2 == 0:
                     fill_color = (255, 255, 255, alpha)  # WHITE
                 else:
-                    fill_color = (255, 200, 0, alpha)    # DARK YELLOW/ORANGE
+                    fill_color = (*text_color, alpha)    # ACCENT COLOR (from parameter)
 
                 draw.text(
                     (x, y),
@@ -349,8 +357,13 @@ class VideoGenerator:
 
         return clip
 
-    def generate_video(self, content, voice_path, output_path, style_name, voice_timings=None):
-        """Generate video reel with synced text"""
+    def generate_video(self, content, voice_path, output_path, style_name, voice_timings=None, text_color=(255, 200, 0)):
+        """
+        Generate video reel with synced text
+
+        Args:
+            text_color: RGB tuple for the accent text color (default: yellow/orange)
+        """
 
         voice_audio = AudioFileClip(voice_path)
         main_duration = voice_audio.duration
@@ -402,7 +415,7 @@ class VideoGenerator:
             background = self._create_proper_montage(video_clips, main_duration)
 
             # Create text clips synced with voice timing (or equal distribution if no timings)
-            text_clips = self.create_text_clips(content, main_duration, voice_timings)
+            text_clips = self.create_text_clips(content, main_duration, voice_timings, text_color)
 
             # Create static THE17PROJECT watermark (always visible)
             brand_watermark = self._create_static_brand_watermark(main_duration)
@@ -421,7 +434,7 @@ class VideoGenerator:
 
             # Create 2-second end card
             print(f"   ✅ Creating 2-second end card...")
-            end_card = self._create_end_card()
+            end_card = self._create_end_card(text_color)
             end_card = end_card.with_start(main_duration)
 
             # Combine main video + end card
@@ -605,8 +618,13 @@ class VideoGenerator:
 
         return VideoClip(make_frame, duration=duration)
 
-    def _create_end_card(self):
-        """Create 2-second end card - clean purple logo"""
+    def _create_end_card(self, text_color=(255, 200, 0)):
+        """
+        Create 2-second end card - clean purple logo
+
+        Args:
+            text_color: RGB tuple for slogan text color
+        """
 
         def make_frame(t):
             # Dark background
@@ -646,12 +664,12 @@ class VideoGenerator:
             slogan_x = (self.size[0] - slogan_width) // 2
             slogan_y = 940
 
-            # Yellow slogan text (matches reel text color)
+            # Accent color slogan text (matches reel text color)
             draw.text(
                 (slogan_x, slogan_y),
                 slogan,
                 font=slogan_font,
-                fill=(255, 200, 0, 255)  # DARK YELLOW/ORANGE - matches reel text
+                fill=(*text_color, 255)  # Matches reel text accent color
             )
 
             return np.array(img)
