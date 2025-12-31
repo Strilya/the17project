@@ -321,6 +321,23 @@ Once you own this, you're unstoppable.
 
 
 # ============================================================================
+# COLOR PALETTE - For text rotation in videos
+# ============================================================================
+
+TEXT_COLORS = {
+    'yellow': (255, 200, 0),      # Dark Yellow/Orange (original)
+    'pink': (255, 100, 150),      # Hot Pink
+    'purple': (150, 100, 255),    # Purple
+    'coral': (255, 80, 80),       # Red/Coral
+    'skyblue': (100, 200, 255),   # Sky Blue
+    'orange': (255, 150, 50),     # Orange
+}
+
+# Color names in rotation order
+COLOR_ROTATION_ORDER = ['yellow', 'pink', 'purple', 'coral', 'orange', 'skyblue']
+
+
+# ============================================================================
 # HASHTAG SETS - Relevant to content type
 # ============================================================================
 
@@ -440,6 +457,37 @@ def load_used_combinations_from_sheets(sheets_logger):
     except Exception as e:
         print(f"   ⚠️  Failed to load rotation history: {e}")
         return {'life_path': set(), 'angel_number': set()}
+
+
+def select_text_color(used_colors=None):
+    """
+    Select a text color with rotation tracking - don't repeat until all colors used
+
+    Args:
+        used_colors: set/list of color names already used
+
+    Returns:
+        tuple: (color_name, color_rgb_tuple)
+        Example: ('pink', (255, 100, 150))
+    """
+    if used_colors is None:
+        used_colors = set()
+    else:
+        used_colors = set(used_colors)
+
+    # Find unused colors
+    available_colors = [c for c in COLOR_ROTATION_ORDER if c not in used_colors]
+
+    # If all colors used, reset cycle
+    if not available_colors:
+        print("   ♻️  All text colors used, starting new color rotation cycle")
+        available_colors = COLOR_ROTATION_ORDER.copy()
+
+    # Pick random color from available
+    color_name = random.choice(available_colors)
+    color_rgb = TEXT_COLORS[color_name]
+
+    return color_name, color_rgb
 
 
 def get_day_type(date=None):
