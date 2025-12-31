@@ -40,7 +40,7 @@ class SlackNotifier:
             print(f"   ⚠️  Slack setup failed: {e}")
             self.enabled = False
 
-    def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration):
+    def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration, test_mode=False):
         """Send Slack notification with ready-to-copy caption
 
         Args:
@@ -50,6 +50,7 @@ class SlackNotifier:
             hashtags: Either hashtags string OR full Instagram caption (for Life Path)
             video_path: Path to video file
             duration: Video duration in seconds
+            test_mode: If True, marks notification as TEST
         """
 
         if not self.enabled:
@@ -77,12 +78,13 @@ class SlackNotifier:
                 content_label = "Angel Number"
 
             # Format the Slack message
+            header_text = "🧪 TEST REEL GENERATED!" if test_mode else "🎬 NEW REEL GENERATED!"
             message_blocks = [
                 {
                     "type": "header",
                     "text": {
                         "type": "plain_text",
-                        "text": "🎬 NEW REEL GENERATED!",
+                        "text": header_text,
                         "emoji": True
                     }
                 },

@@ -295,7 +295,8 @@ def main(reel_number=None, test_mode=False):
                     content=content,
                     hashtags=caption,  # Full caption with hashtags
                     video_path=video_path,
-                    duration=total_duration
+                    duration=total_duration,
+                    test_mode=test_mode
                 )
 
             # Cleanup temp files
