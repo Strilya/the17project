@@ -141,14 +141,14 @@ def main(reel_number=None):
         # SCHEDULED MODE: Generate only the specified reel
         reel_count = 3
         print(f"🎬 Scheduled Generation: Reel {reel_number}/3\n")
-        content_plan = get_content_plan_for_day(day_type, reel_count=reel_count)
+        content_plan = get_content_plan_for_day(day_type, reel_count=reel_count, sheets_logger=sheets_logger)
         # Filter to only the requested reel
         content_plan = [spec for spec in content_plan if spec['reel_number'] == reel_number]
     else:
         # MANUAL MODE: Generate based on GENERATE_FULL_DAY setting
         reel_count = 3 if GENERATE_FULL_DAY else 1
         print(f"🎬 Generating {reel_count} reel(s)...\n")
-        content_plan = get_content_plan_for_day(day_type, reel_count=reel_count)
+        content_plan = get_content_plan_for_day(day_type, reel_count=reel_count, sheets_logger=sheets_logger)
 
     # Generate each reel in the plan
     for reel_spec in content_plan:
