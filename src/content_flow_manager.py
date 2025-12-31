@@ -324,7 +324,7 @@ Once you own this, you're unstoppable.
 # HASHTAG SETS - Relevant to content type
 # ============================================================================
 
-BASE_HASHTAGS = [
+LIFE_PATH_HASHTAGS = [
     'numerology',
     'lifepath',
     'lifepathumber',
@@ -332,10 +332,7 @@ BASE_HASHTAGS = [
     'selfdiscovery',
     'manifestation',
     'lawofattraction',
-    'spiritualawakening'
-]
-
-LIFE_PATH_HASHTAGS = BASE_HASHTAGS + [
+    'spiritualawakening',
     'numerologyreading',
     'birthdatenumerology',
     'knowyourself',
@@ -343,10 +340,25 @@ LIFE_PATH_HASHTAGS = BASE_HASHTAGS + [
     'selfawareness',
     'astrology',
     'zodiac',
-    'birthchart'
+    'birthchart',
+    'soulgrowth',
+    'spiritualjourney',
+    'consciousness',
+    'awakening',
+    'innerwork',
+    'selfmastery',
+    'lifepurpose',
+    'destinynumber',
+    'soulpurpose',
+    'spiritualgrowth',
+    'mindfulness',
+    'transformation',
+    'healing',
+    'enlightenment'
 ]
 
-ANGEL_NUMBER_HASHTAGS = BASE_HASHTAGS + [
+ANGEL_NUMBER_HASHTAGS = [
+    'numerology',
     'angelnumbers',
     'angelmessages',
     'divineguidance',
@@ -354,7 +366,28 @@ ANGEL_NUMBER_HASHTAGS = BASE_HASHTAGS + [
     'signs',
     'universe',
     'spiritualguidance',
-    'divinity'
+    'divinity',
+    'spirituality',
+    'manifestation',
+    'lawofattraction',
+    'spiritualawakening',
+    'universesigns',
+    'divinesigns',
+    'angelicguidance',
+    'spiritualsigns',
+    'awakening',
+    'consciousness',
+    'highervibration',
+    'energyhealing',
+    'lightworker',
+    'starseed',
+    'raiseyourvibration',
+    'spiritualpath',
+    'divinetiming',
+    'trusttheuniverse',
+    'innerwisdom',
+    'intuition',
+    'spiritualjourney'
 ]
 
 
@@ -571,8 +604,18 @@ def generate_life_path_caption(content_spec, content_data):
     templates = CAPTION_TEMPLATES.get(angle, CAPTION_TEMPLATES['identity'])
     template = random.choice(templates)
     
-    # Build hashtags
-    hashtags = ' '.join([f'#{tag}' for tag in LIFE_PATH_HASHTAGS[:15]])
+    # Build hashtags - add specific Life Path tag + shuffle for variety
+    specific_hashtags = [
+        f'lifepath{life_path_num}',
+        'numerology',
+        'lifepath'
+    ]
+
+    # Shuffle and select random hashtags from life path pool (exclude already used ones)
+    available_tags = [tag for tag in LIFE_PATH_HASHTAGS if tag not in specific_hashtags]
+    random_tags = random.sample(available_tags, min(12, len(available_tags)))
+    all_hashtags = specific_hashtags + random_tags
+    hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
     # Simple caption that doesn't rely on complex template variables
     # We'll use the actual generated content
@@ -607,7 +650,7 @@ def generate_angel_number_caption(content_spec, content_data):
     """
     angel_number = content_spec['angel_number']
     
-    # Build hashtags
+    # Build hashtags - shuffle for variety across posts
     specific_hashtags = [
         f'angelnumber{angel_number}',
         f'{angel_number}',
@@ -615,8 +658,11 @@ def generate_angel_number_caption(content_spec, content_data):
         'synchronicity',
         'signs'
     ]
-    
-    all_hashtags = specific_hashtags + ANGEL_NUMBER_HASHTAGS[:10]
+
+    # Shuffle and select random hashtags from angel number pool
+    available_tags = [tag for tag in ANGEL_NUMBER_HASHTAGS if tag not in specific_hashtags]
+    random_tags = random.sample(available_tags, min(10, len(available_tags)))
+    all_hashtags = specific_hashtags + random_tags
     hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
     # Build full transcript caption
