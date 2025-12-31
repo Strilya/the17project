@@ -88,16 +88,19 @@ def send_slack_warning(slack_notifier, message):
     except Exception as e:
         print(f"   ⚠️  Failed to send Slack warning: {e}")
 
-def main(reel_number=None):
+def main(reel_number=None, test_mode=False):
     """
     Generate reels for The17Project
 
     Args:
         reel_number: Optional int (1, 2, or 3) to generate only that specific reel
                     If None, generates all reels based on GENERATE_FULL_DAY setting
+        test_mode: If True, marks reels as TEST to avoid affecting rotation tracking
     """
     print("=" * 70)
     print("THE17PROJECT - PROFESSIONAL REEL GENERATOR")
+    if test_mode:
+        print("🧪 TEST MODE - Will not affect rotation tracking")
     print("=" * 70)
 
     # Initialize content generators
@@ -271,8 +274,10 @@ def main(reel_number=None):
 
             # Log to Google Sheets (updated to handle both types)
             print(f"\n📊 Logging to integrations...")
+            # Use "TEST" identifier in test mode to avoid affecting rotation tracking
+            log_identifier = "TEST" if test_mode else content_identifier
             sheets_logger.log_reel(
-                angel_number=content_identifier,
+                angel_number=log_identifier,
                 style=content_type,
                 content=content,
                 transcript=full_text,
@@ -303,6 +308,8 @@ def main(reel_number=None):
 
             print(f"\n{'=' * 70}")
             print(f"✅ REEL {reel_num}/{reel_count} DONE!")
+            if test_mode:
+                print(f"🧪 TEST MODE - Not tracked in rotation")
             print(f"{'=' * 70}")
             print(f"Video: {video_path}")
             if caption:
@@ -327,7 +334,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Generate The17Project reels')
     parser.add_argument('--reel-number', type=int, choices=[1, 2, 3],
                         help='Generate only a specific reel (1, 2, or 3) for scheduled runs')
+    parser.add_argument('--test', action='store_true',
+                        help='Test mode: generates reels without affecting rotation tracking')
     args = parser.parse_args()
 
-    main(reel_number=args.reel_number)
+    main(reel_number=args.reel_number, test_mode=args.test)
 
