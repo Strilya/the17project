@@ -766,12 +766,14 @@ def generate_life_path_caption(content_spec, content_data):
 
 {content_data.get('action', '')}
 
-Calculate yours (link in bio) 👇
+👇 What's YOUR Life Path Number?
 
-{hashtags}
+Calculate: seventhlifepath.com
+Comment your number below!
 
----
-New here? Watch my intro 📍 (pinned to profile)"""
+New here? Watch my intro (pinned post) 📍
+
+{hashtags}"""
 
     return caption.strip()
 
@@ -813,9 +815,18 @@ def generate_angel_number_caption(content_spec, content_data):
         content_data.get('cta', '')
     ]
 
-    # Join parts with double line breaks, then add hashtags
+    # Join parts with double line breaks, then add CTA and hashtags
     full_transcript = '\n\n'.join([part for part in caption_parts if part])
-    caption = f"{full_transcript}\n\n{hashtags}"
+    caption = f"""{full_transcript}
+
+👇 What's YOUR Life Path Number?
+
+Calculate: seventhlifepath.com
+Comment your number below!
+
+New here? Watch my intro (pinned post) 📍
+
+{hashtags}"""
 
     return caption.strip()
 
