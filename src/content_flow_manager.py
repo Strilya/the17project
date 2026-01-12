@@ -756,26 +756,23 @@ def generate_life_path_caption(content_spec, content_data):
     all_hashtags = specific_hashtags + random_tags
     hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
-    # Build caption with explicit double line breaks (\n\n)
+    # Build caption with explicit \n\n (double line breaks)
     # This prevents Slack from adding hidden characters that break Instagram formatting
-    caption = f"""Life Path {life_path_num}: {lp_data['name']}
+    caption_parts = [
+        f"Life Path {life_path_num}: {lp_data['name']}",
+        content_data.get('hook', ''),
+        content_data.get('meaning', ''),
+        content_data.get('action', ''),
+        "👇 What's YOUR Life Path Number?",
+        "📍 Calculate yours: seventhlifepath.com\n👇 Comment your number below!",
+        "New here? Watch my intro (pinned post) 📍",
+        hashtags
+    ]
 
-{content_data.get('hook', '')}
+    # Join with \n\n (double line breaks) for proper Instagram formatting
+    caption = '\n\n'.join([part for part in caption_parts if part])
 
-{content_data.get('meaning', '')}
-
-{content_data.get('action', '')}
-
-👇 What's YOUR Life Path Number?
-
-📍 Calculate yours: seventhlifepath.com
-👇 Comment your number below!
-
-New here? Watch my intro (pinned post) 📍
-
-{hashtags}"""
-
-    return caption.strip()
+    return caption
 
 
 def generate_angel_number_caption(content_spec, content_data):
@@ -806,30 +803,24 @@ def generate_angel_number_caption(content_spec, content_data):
     all_hashtags = specific_hashtags + random_tags
     hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
-    # Build caption parts
+    # Build caption with explicit \n\n (double line breaks)
+    # This prevents Slack from adding hidden characters that break Instagram formatting
     caption_parts = [
         f"Seeing {angel_number}?",
         content_data.get('hook', ''),
         content_data.get('meaning', ''),
         content_data.get('action', ''),
-        content_data.get('cta', '')
+        content_data.get('cta', ''),
+        "👇 What's YOUR Life Path Number?",
+        "📍 Calculate yours: seventhlifepath.com\n👇 Comment your number below!",
+        "New here? Watch my intro (pinned post) 📍",
+        hashtags
     ]
 
-    # Join parts with explicit double line breaks (\n\n)
-    # This prevents Slack from adding hidden characters that break Instagram formatting
-    full_transcript = '\n\n'.join([part for part in caption_parts if part])
-    caption = f"""{full_transcript}
+    # Join with \n\n (double line breaks) for proper Instagram formatting
+    caption = '\n\n'.join([part for part in caption_parts if part])
 
-👇 What's YOUR Life Path Number?
-
-📍 Calculate yours: seventhlifepath.com
-👇 Comment your number below!
-
-New here? Watch my intro (pinned post) 📍
-
-{hashtags}"""
-
-    return caption.strip()
+    return caption
 
 
 # ============================================================================
