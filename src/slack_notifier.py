@@ -77,7 +77,7 @@ class SlackNotifier:
                 full_caption = f"{caption_text}\n\n{hashtags}"
                 content_label = "Angel Number"
 
-            # Format the Slack message
+            # Format the Slack message header with info
             header_text = "🧪 TEST REEL GENERATED!" if test_mode else "🎬 NEW REEL GENERATED!"
             message_blocks = [
                 {
@@ -111,28 +111,21 @@ class SlackNotifier:
                 },
                 {
                     "type": "divider"
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*📝 COPY THIS CAPTION FOR INSTAGRAM:*"
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "plain_text",
-                        "text": full_caption
-                    }
                 }
             ]
 
-            # Send message with blocks
+            # Send header message with blocks
             response = self.client.chat_postMessage(
                 channel=self.channel_id,
                 blocks=message_blocks,
                 text=f"New reel generated: {angel_number} ({style})"  # Fallback text
+            )
+
+            # Send caption as a SEPARATE plain text message (no blocks = no formatting issues)
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=f"*📝 COPY THIS CAPTION FOR INSTAGRAM:*\n\n{full_caption}",
+                thread_ts=response['ts']  # Post in thread
             )
 
             # Upload video file - compress if over 10MB
