@@ -122,8 +122,8 @@ class SlackNotifier:
                 {
                     "type": "section",
                     "text": {
-                        "type": "mrkdwn",
-                        "text": f"```{full_caption}```"
+                        "type": "plain_text",
+                        "text": full_caption
                     }
                 }
             ]
