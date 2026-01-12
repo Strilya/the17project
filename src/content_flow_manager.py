@@ -756,8 +756,8 @@ def generate_life_path_caption(content_spec, content_data):
     all_hashtags = specific_hashtags + random_tags
     hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
-    # Simple caption that doesn't rely on complex template variables
-    # We'll use the actual generated content
+    # Build caption with explicit double line breaks (\n\n)
+    # This prevents Slack from adding hidden characters that break Instagram formatting
     caption = f"""Life Path {life_path_num}: {lp_data['name']}
 
 {content_data.get('hook', '')}
@@ -768,8 +768,8 @@ def generate_life_path_caption(content_spec, content_data):
 
 👇 What's YOUR Life Path Number?
 
-Calculate: seventhlifepath.com
-Comment your number below!
+📍 Calculate yours: seventhlifepath.com
+👇 Comment your number below!
 
 New here? Watch my intro (pinned post) 📍
 
@@ -806,7 +806,7 @@ def generate_angel_number_caption(content_spec, content_data):
     all_hashtags = specific_hashtags + random_tags
     hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
     
-    # Build full transcript caption
+    # Build caption parts
     caption_parts = [
         f"Seeing {angel_number}?",
         content_data.get('hook', ''),
@@ -815,14 +815,15 @@ def generate_angel_number_caption(content_spec, content_data):
         content_data.get('cta', '')
     ]
 
-    # Join parts with double line breaks, then add CTA and hashtags
+    # Join parts with explicit double line breaks (\n\n)
+    # This prevents Slack from adding hidden characters that break Instagram formatting
     full_transcript = '\n\n'.join([part for part in caption_parts if part])
     caption = f"""{full_transcript}
 
 👇 What's YOUR Life Path Number?
 
-Calculate: seventhlifepath.com
-Comment your number below!
+📍 Calculate yours: seventhlifepath.com
+👇 Comment your number below!
 
 New here? Watch my intro (pinned post) 📍
 
