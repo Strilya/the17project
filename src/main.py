@@ -127,7 +127,7 @@ def main(reel_number=None, test_mode=False):
             print("   ✅ Instagram poster ready")
         except ValueError as e:
             print(f"   ⚠️  Instagram disabled: {e}")
-            INSTAGRAM_AUTO_POST = False
+            instagram_poster = None  # Disable by setting to None
         except Exception as e:
             print(f"   ⚠️  Instagram login failed: {e}")
             print("   ⚠️  Continuing without Instagram posting")
