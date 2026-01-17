@@ -168,7 +168,7 @@ class SheetsLogger:
             print(f"   ⚠️  Failed to fetch generated content: {e}")
             return {'angel_numbers': [], 'styles': []}
 
-    def log_reel(self, angel_number, style, content, transcript, video_path, duration, video_sources=None, custom_caption=None):
+    def log_reel(self, angel_number, style, content, transcript, video_path, duration, video_sources=None, custom_caption=None, instagram_url=None):
         """Log generated reel to Google Sheets
 
         Args:
@@ -180,6 +180,7 @@ class SheetsLogger:
             duration: Video duration in seconds
             video_sources: List of video sources (default: None)
             custom_caption: Optional pre-generated caption/hashtags (for Life Path content)
+            instagram_url: URL of posted Instagram reel (default: None)
 
         Returns:
             str: Hashtags or custom caption
@@ -224,6 +225,7 @@ class SheetsLogger:
                 video_filename,
                 f"{duration:.1f}",
                 sources_str,
+                instagram_url or "",  # Instagram URL (empty if not posted)
                 "Generated"
             ]
 
