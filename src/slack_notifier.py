@@ -203,3 +203,77 @@ class SlackNotifier:
             print(f"   ⚠️  Slack notification failed: {e.response['error']}")
         except Exception as e:
             print(f"   ⚠️  Slack notification failed: {e}")
+
+    def send_success_notification(self, content_type, content_identifier, instagram_url, caption, duration):
+        """
+        Send success notification after Instagram posting
+        NO video attachment - just confirmation and link
+
+        Args:
+            content_type: 'life_path' or 'angel_number'
+            content_identifier: Life Path number or Angel Number
+            instagram_url: URL of posted Instagram reel
+            caption: The caption that was posted
+            duration: Video duration in seconds
+        """
+        if not self.enabled:
+            return
+
+        # Format content type for display
+        if content_type == 'life_path':
+            content_label = f"Life Path {content_identifier}"
+        else:
+            content_label = f"Angel Number {content_identifier}"
+
+        # Build message with actual line breaks
+        message = f"""✅ REEL POSTED TO INSTAGRAM
+
+📱 Content: {content_label}
+🔗 View: {instagram_url}
+⏱️ Duration: {duration}s
+
+📝 Caption:
+{caption}
+
+---
+Posted via automation 🤖
+"""
+
+        try:
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=message,
+                mrkdwn=False  # Disable markdown to preserve caption formatting
+            )
+            print("   ✅ Slack success notification sent")
+        except Exception as e:
+            print(f"   ⚠️  Slack notification failed: {e}")
+
+    def send_error_notification(self, content_type, content_identifier, error):
+        """
+        Send error notification if Instagram posting fails
+
+        Args:
+            content_type: 'life_path' or 'angel_number'
+            content_identifier: Life Path number or Angel Number
+            error: Error message
+        """
+        if not self.enabled:
+            return
+
+        message = f"""❌ INSTAGRAM POSTING FAILED
+
+📱 Content: {content_type} - {content_identifier}
+🚨 Error: {error}
+
+Please check logs and post manually if needed.
+"""
+
+        try:
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=message
+            )
+            print("   ✅ Slack error notification sent")
+        except Exception as e:
+            print(f"   ⚠️  Slack notification failed: {e}")
