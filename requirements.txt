@@ -12,3 +12,4 @@ slack-sdk
 gtts
 python-dateutil
 pytz
+instagrapi==2.1.2
