@@ -121,15 +121,20 @@ class SlackNotifier:
                 text=f"New reel generated: {angel_number} ({style})"  # Fallback text
             )
 
-            # Post caption with instructions to copy via web/desktop (mobile doesn't work well)
-            # Use zero-width space trick: replace \n\n with \n​\n (zero-width space between)
-            # This forces Slack to preserve blank lines
-            caption_with_spacing = full_caption.replace('\n\n', '\n​\n')
+            # Send caption as pure plain text without markdown formatting
+            # This preserves exact line breaks when copying to Instagram
+            caption_header = "📝 INSTAGRAM CAPTION - Copy this text below:"
+
+            # Build the complete message with actual line breaks (not escape sequences)
+            caption_message = f"""{caption_header}
+
+{full_caption}"""
 
             self.client.chat_postMessage(
                 channel=self.channel_id,
-                text=f"📝 *INSTAGRAM CAPTION (copy from desktop/web, not mobile):*\n\n{caption_with_spacing}",
-                thread_ts=response['ts']
+                text=caption_message,
+                thread_ts=response['ts'],
+                mrkdwn=False  # Disable markdown processing to preserve formatting
             )
 
             # Upload video file - compress if over 10MB
