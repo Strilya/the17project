@@ -353,7 +353,7 @@ class VideoGenerator:
 
         # Create clip with proper duration and timing
         clip = VideoClip(make_frame, duration=duration)
-        clip = clip.with_start(start_time)
+        clip = clip.set_start(start_time)
 
         return clip
 
@@ -430,24 +430,24 @@ class VideoGenerator:
                 [background] + text_clips + [brand_watermark, source_watermark],
                 size=self.size
             )
-            main_composite = main_composite.with_duration(main_duration)
+            main_composite = main_composite.set_duration(main_duration)
 
             # Create 2-second end card
             print(f"   ✅ Creating 2-second end card...")
             end_card = self._create_end_card(text_color)
-            end_card = end_card.with_start(main_duration)
+            end_card = end_card.set_start(main_duration)
 
             # Combine main video + end card
             total_duration = main_duration + 2  # Add 2 seconds for end card
             final_video = CompositeVideoClip(
                 [main_composite, end_card],
                 size=self.size
-            ).with_duration(total_duration)
+            ).set_duration(total_duration)
 
             # Add audio with music that covers full duration (including end card)
             print(f"   🎵 Mixing audio for {total_duration:.1f}s (voice + music)...")
             final_audio = self._mix_audio(voice_audio, total_duration)
-            final_video = final_video.with_audio(final_audio)
+            final_video = final_video.set_audio(final_audio)
 
             # Render HIGH QUALITY for Instagram (Slack will compress on upload)
             print(f"   ⏳ Rendering HIGH QUALITY video for Instagram...")
@@ -499,29 +499,29 @@ class VideoGenerator:
                     # Too wide - crop sides
                     new_width = int(clip.h * target_aspect)
                     x_center = clip.w / 2
-                    clip = clip.cropped(x1=(x_center - new_width/2), x2=(x_center + new_width/2))
+                    clip = clip.crop(x1=(x_center - new_width/2), x2=(x_center + new_width/2))
                 else:
                     # Too tall - crop top/bottom
                     new_height = int(clip.w / target_aspect)
                     y_center = clip.h / 2
-                    clip = clip.cropped(y1=(y_center - new_height/2), y2=(y_center + new_height/2))
+                    clip = clip.crop(y1=(y_center - new_height/2), y2=(y_center + new_height/2))
 
             # Resize to exact dimensions
-            clip = clip.resized(self.size)
+            clip = clip.resize(self.size)
 
             # Extract segment
             if clip.duration >= clip_duration:
                 start_time = max(0, (clip.duration - clip_duration) / 2)
-                clip = clip.subclipped(start_time, start_time + clip_duration)
+                clip = clip.subclip(start_time, start_time + clip_duration)
             else:
-                clip = clip.with_duration(clip_duration)
+                clip = clip.set_duration(clip_duration)
 
             # Set start time
-            clip = clip.with_start(i * clip_duration)
+            clip = clip.set_start(i * clip_duration)
             processed_clips.append(clip)
 
         final_montage = CompositeVideoClip(processed_clips, size=self.size)
-        return final_montage.with_duration(target_duration)
+        return final_montage.set_duration(target_duration)
 
     def _create_brand_watermark(self, duration):
         """Create THE17PROJECT watermark (below captions, one third from top)"""
@@ -761,7 +761,7 @@ class VideoGenerator:
 
         if end_card_duration > 0:
             silence = AudioClip(lambda t: [0, 0], duration=end_card_duration)
-            extended_voice = CompositeAudioClip([voice_audio, silence.with_start(voice_duration)])
+            extended_voice = CompositeAudioClip([voice_audio, silence.set_start(voice_duration)])
         else:
             extended_voice = voice_audio
 
@@ -794,7 +794,7 @@ class VideoGenerator:
                 music_audio = concatenate_audioclips(music_clips)
 
             # Trim to exact duration
-            music_audio = music_audio.subclipped(0, total_duration)
+            music_audio = music_audio.subclip(0, total_duration)
 
             # Set music volume to 15% by wrapping get_frame
             original_get_frame = music_audio.get_frame
