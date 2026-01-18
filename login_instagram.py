@@ -1,7 +1,26 @@
 """
-One-time script to create Instagram session file
-Run this locally once: python login_instagram.py
-Session file saved to: config/instagram_session.json
+Instagram Session Login Script
+===============================
+
+PURPOSE:
+- Initial setup: Create Instagram session for first-time authentication
+- Session refresh: Regenerate session when it expires (~90 days)
+
+USAGE:
+    python login_instagram.py
+
+OUTPUT:
+- Saves session to: config/instagram_session.json
+- Prints base64-encoded string for GitHub Secret INSTAGRAM_SESSION
+
+WHEN TO RUN:
+- First time setting up Instagram automation
+- When GitHub Actions fails with LoginRequired or authentication errors
+- After changing Instagram password
+- Every ~90 days as sessions expire
+
+DOCUMENTATION:
+See INSTAGRAM_SETUP.md for full setup and refresh instructions
 """
 
 import os
