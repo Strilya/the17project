@@ -17,6 +17,7 @@ from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.VideoClip import VideoClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.audio.AudioClip import CompositeAudioClip
+from moviepy.video import fx as vfx
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
@@ -499,12 +500,12 @@ class VideoGenerator:
                     # Too wide - crop sides
                     new_width = int(clip.h * target_aspect)
                     x_center = clip.w / 2
-                    clip = clip.crop(x1=(x_center - new_width/2), x2=(x_center + new_width/2))
+                    clip = clip.fx(vfx.crop, x1=(x_center - new_width/2), x2=(x_center + new_width/2))
                 else:
                     # Too tall - crop top/bottom
                     new_height = int(clip.w / target_aspect)
                     y_center = clip.h / 2
-                    clip = clip.crop(y1=(y_center - new_height/2), y2=(y_center + new_height/2))
+                    clip = clip.fx(vfx.crop, y1=(y_center - new_height/2), y2=(y_center + new_height/2))
 
             # Resize to exact dimensions
             clip = clip.resize(self.size)
