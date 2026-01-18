@@ -21,14 +21,13 @@ python login_instagram.py
 This will:
 - Login to Instagram using your credentials
 - Save session to `config/instagram_session.json`
+- Output a **base64-encoded** string for GitHub Secrets
 - Display next steps
 
-### 3. Copy session file content:
-```bash
-cat config/instagram_session.json
-```
+### 3. Copy the base64 string:
+The script will output a base64-encoded string. Copy the **entire string** (it will be a long single line of random characters).
 
-Copy the ENTIRE JSON output.
+**DO NOT** copy the JSON file content directly - use the base64 string from the script output.
 
 ## GitHub Secrets Setup
 
@@ -43,9 +42,10 @@ Go to: GitHub repo → Settings → Secrets and variables → Actions → New re
 - Value: `your_instagram_password`
 
 **INSTAGRAM_SESSION** ⭐ CRITICAL
-- Value: Paste the ENTIRE content of `config/instagram_session.json`
-- This is a JSON object containing cookies and device info
+- Value: Paste the **base64-encoded string** from the login script output
+- This is a long single-line string (base64 encoded JSON)
 - DO NOT modify or format it - paste exactly as-is
+- DO NOT paste the JSON file content directly - use the base64 string
 
 ## How It Works
 
@@ -63,8 +63,8 @@ Go to: GitHub repo → Settings → Secrets and variables → Actions → New re
 Instagram sessions expire eventually. If posting fails in GitHub Actions:
 
 1. Run locally: `python login_instagram.py`
-2. Copy new `config/instagram_session.json` content
-3. Update GitHub Secret `INSTAGRAM_SESSION` with new content
+2. Copy the new **base64 string** from the script output
+3. Update GitHub Secret `INSTAGRAM_SESSION` with the new base64 string
 
 ## Security Notes
 
