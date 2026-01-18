@@ -6,10 +6,11 @@ google-auth
 gspread
 oauth2client
 Pillow
-moviepy>=2.1.2
+moviepy==1.0.3
+imageio-ffmpeg==0.4.9
 opencv-python
 slack-sdk
 gtts
 python-dateutil
 pytz
-instagrapi>=2.2.1
+instagrapi==2.1.0
