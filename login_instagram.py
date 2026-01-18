@@ -1,7 +1,26 @@
 """
-One-time script to create Instagram session file
-Run this locally once: python login_instagram.py
-Session file saved to: config/instagram_session.json
+Instagram Session Login Script
+===============================
+
+PURPOSE:
+- Initial setup: Create Instagram session for first-time authentication
+- Session refresh: Regenerate session when it expires (~90 days)
+
+USAGE:
+    python login_instagram.py
+
+OUTPUT:
+- Saves session to: config/instagram_session.json
+- Prints base64-encoded string for GitHub Secret INSTAGRAM_SESSION
+
+WHEN TO RUN:
+- First time setting up Instagram automation
+- When GitHub Actions fails with LoginRequired or authentication errors
+- After changing Instagram password
+- Every ~90 days as sessions expire
+
+DOCUMENTATION:
+See INSTAGRAM_SETUP.md for full setup and refresh instructions
 """
 
 import os
@@ -32,12 +51,24 @@ def create_session():
 
         print(f"✅ Instagram login successful!")
         print(f"✅ Session saved to: {session_file}")
+
+        # Read and base64 encode the session file
+        import base64
+        with open(session_file, 'rb') as f:
+            session_data = f.read()
+            session_b64 = base64.b64encode(session_data).decode('utf-8')
+
+        print("\n" + "="*70)
+        print("COPY THIS BASE64 STRING TO GITHUB SECRET:")
+        print("="*70)
+        print(session_b64)
+        print("="*70)
         print("\nNEXT STEPS:")
-        print("1. Copy the content of config/instagram_session.json")
+        print("1. Copy the base64 string above")
         print("2. Go to GitHub repo → Settings → Secrets and variables → Actions")
         print("3. Create new secret: INSTAGRAM_SESSION")
-        print("4. Paste the entire JSON content as the value")
-        print("5. The session file will be restored automatically in GitHub Actions")
+        print("4. Paste the base64 string as the value")
+        print("5. The workflow will decode and restore the session automatically")
 
         return True
 
