@@ -17,7 +17,7 @@ from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.VideoClip import VideoClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.audio.AudioClip import CompositeAudioClip
-from moviepy.video import fx as vfx
+import moviepy.video.fx.all as vfx
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
@@ -508,7 +508,7 @@ class VideoGenerator:
                     clip = clip.fx(vfx.crop, y1=(y_center - new_height/2), y2=(y_center + new_height/2))
 
             # Resize to exact dimensions
-            clip = clip.resize(self.size)
+            clip = clip.fx(vfx.resize, newsize=self.size)
 
             # Extract segment
             if clip.duration >= clip_duration:
