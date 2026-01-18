@@ -350,10 +350,56 @@ class VideoGenerator:
                     stroke_fill=(0, 0, 0, alpha)
                 )
 
-            return np.array(img)
+            # Convert RGBA to RGB and extract alpha as separate mask
+            # moviepy 1.0.3 requires explicit RGB + mask, not RGBA
+            img_array = np.array(img)
+            return img_array[:, :, :3]  # Return RGB only
+
+        def make_mask(t):
+            # Create same image to extract alpha channel
+            img = Image.new('RGBA', (1080, 1920), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+            if not os.path.exists(font_path):
+                font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+            font = ImageFont.truetype(font_path, font_size)
+
+            alpha = 255
+            fade_duration = min(0.2, duration * 0.15)
+            if t < fade_duration:
+                alpha = int(255 * (t / fade_duration))
+            elif t > duration - fade_duration:
+                alpha = int(255 * ((duration - t) / fade_duration))
+
+            y_offset = 0
+            for line in lines:
+                bbox = draw.textbbox((0, 0), line, font=font)
+                text_width = bbox[2] - bbox[0]
+                x = (1080 - text_width) // 2
+                y = y_base + y_offset
+
+                fill_color = (255, 255, 255, alpha) if line in lines[::2] else text_color + (alpha,)
+
+                draw.text(
+                    (x, y),
+                    line,
+                    font=font,
+                    fill=fill_color,
+                    stroke_width=3,
+                    stroke_fill=(0, 0, 0, alpha)
+                )
+                y_offset += line_height
+
+            # Extract and normalize alpha channel for mask (0-1 range)
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0  # Return alpha channel normalized
 
         # Create clip with proper duration and timing
         clip = VideoClip(make_frame, duration=duration)
+        mask = VideoClip(make_mask, duration=duration, ismask=True)
+        clip = clip.set_mask(mask)
         clip = clip.set_start(start_time)
 
         return clip
@@ -492,6 +538,15 @@ class VideoGenerator:
 
         for i, clip_path in enumerate(video_clips):
             clip = VideoFileClip(clip_path)
+
+            # CRITICAL: Convert to RGB (remove alpha channel if present)
+            # moviepy 1.0.3 has issues compositing RGBA video clips
+            def rgb_converter(frame):
+                if len(frame.shape) == 3 and frame.shape[2] == 4:
+                    return frame[:, :, :3]  # Strip alpha channel
+                return frame
+
+            clip = clip.fl_image(rgb_converter)
             clip_aspect = clip.w / clip.h
 
             # Fix aspect ratio - CROP, don't squish
@@ -556,9 +611,43 @@ class VideoGenerator:
                 stroke_fill=(0, 0, 0, 255)  # BLACK stroke
             )
 
-            return np.array(img)
+            # Convert RGBA to RGB (moviepy 1.0.3 compatibility)
+            img_array = np.array(img)
+            return img_array[:, :, :3]
 
-        return VideoClip(make_frame, duration=duration)
+        def make_mask(t):
+            img = Image.new('RGBA', self.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+            if not os.path.exists(font_path):
+                font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+            font = ImageFont.truetype(font_path, 28)
+
+            text = "The17Project"
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+
+            x = (self.size[0] - text_width) // 2
+            y = int(self.size[1] / 3) + 120
+
+            draw.text(
+                (x, y),
+                text,
+                font=font,
+                fill=(255, 255, 255, 255),
+                stroke_width=2,
+                stroke_fill=(0, 0, 0, 255)
+            )
+
+            # Extract alpha channel for mask
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0
+
+        clip = VideoClip(make_frame, duration=duration)
+        mask = VideoClip(make_mask, duration=duration, ismask=True)
+        return clip.set_mask(mask)
 
     def _create_static_brand_watermark(self, duration):
         """Create static THE17PROJECT watermark (always visible, no fade)"""
@@ -591,9 +680,42 @@ class VideoGenerator:
                 stroke_fill=(0, 0, 0, 255)  # Full opacity black outline
             )
 
-            return np.array(img)
+            # Convert RGBA to RGB (moviepy 1.0.3 compatibility)
+            img_array = np.array(img)
+            return img_array[:, :, :3]
 
-        return VideoClip(make_frame, duration=duration)
+        def make_mask(t):
+            img = Image.new('RGBA', self.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+            if not os.path.exists(font_path):
+                font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+            watermark_font = ImageFont.truetype(font_path, 28)
+            watermark = "The17Project"
+
+            bbox = draw.textbbox((0, 0), watermark, font=watermark_font)
+            w_width = bbox[2] - bbox[0]
+            w_x = (1080 - w_width) // 2
+            w_y = 1500
+
+            draw.text(
+                (w_x, w_y),
+                watermark,
+                font=watermark_font,
+                fill=(255, 255, 255, 255),
+                stroke_width=2,
+                stroke_fill=(0, 0, 0, 255)
+            )
+
+            # Extract alpha channel for mask
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0
+
+        clip = VideoClip(make_frame, duration=duration)
+        mask = VideoClip(make_mask, duration=duration, ismask=True)
+        return clip.set_mask(mask)
 
     def _create_source_watermark(self, source_name, duration):
         """Create barely visible source watermark (BOTTOM LEFT)"""
@@ -615,9 +737,31 @@ class VideoGenerator:
             # Semi-transparent white (barely visible)
             draw.text((x, y), text, font=font, fill=(255, 255, 255, 100))
 
-            return np.array(img)
+            # Convert RGBA to RGB (moviepy 1.0.3 compatibility)
+            img_array = np.array(img)
+            return img_array[:, :, :3]
 
-        return VideoClip(make_frame, duration=duration)
+        def make_mask(t):
+            img = Image.new('RGBA', self.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+            font = ImageFont.truetype(font_path, 16)
+
+            text = f"Source: {source_name}"
+
+            x = 15
+            y = 1880
+
+            draw.text((x, y), text, font=font, fill=(255, 255, 255, 100))
+
+            # Extract alpha channel for mask
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0
+
+        clip = VideoClip(make_frame, duration=duration)
+        mask = VideoClip(make_mask, duration=duration, ismask=True)
+        return clip.set_mask(mask)
 
     def _create_end_card(self, text_color=(255, 200, 0)):
         """
