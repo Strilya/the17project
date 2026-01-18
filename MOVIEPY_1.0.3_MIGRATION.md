@@ -123,12 +123,19 @@ clip = clip.set_mask(mask)
 ```
 
 ### Fixed Functions
-- `_create_text_clip_chunk()` - Returns RGB + mask
+- `_create_text_clip()` - Returns RGB + mask (also fixed undefined y_base variable bug)
 - `_create_brand_watermark()` - Returns RGB + mask
 - `_create_static_brand_watermark()` - Returns RGB + mask
 - `_create_source_watermark()` - Returns RGB + mask
 - `_create_background_montage()` - Strips alpha from video clips
 - `_create_end_card()` - Already RGB (no transparency needed)
+
+### Additional Bugs Fixed
+**Undefined variable `y_base` in make_mask function:**
+- Problem: make_mask() used `y_base` and `line_height` which were not defined
+- Solution: Copied correct positioning logic from make_frame() function
+- Lines affected: 376-379 (added line_height, total_text_height, y_start definitions)
+- Lines affected: 382-404 (fixed loop to match make_frame logic with proper indexing)
 
 ## Summary
 ✅ **All moviepy 1.0.3 compatibility issues FIXED**

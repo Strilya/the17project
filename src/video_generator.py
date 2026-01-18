@@ -373,14 +373,26 @@ class VideoGenerator:
             elif t > duration - fade_duration:
                 alpha = int(255 * ((duration - t) / fade_duration))
 
-            y_offset = 0
-            for line in lines:
+            # Same positioning logic as make_frame
+            line_height = 60
+            total_text_height = len(lines) * line_height
+            y_start = 1400 - (total_text_height // 2)
+
+            # Draw all lines with alternating colors (same as make_frame)
+            for i, line in enumerate(lines):
+                if not line:
+                    continue
+
                 bbox = draw.textbbox((0, 0), line, font=font)
                 text_width = bbox[2] - bbox[0]
                 x = (1080 - text_width) // 2
-                y = y_base + y_offset
+                y = y_start + (i * line_height)
 
-                fill_color = (255, 255, 255, alpha) if line in lines[::2] else text_color + (alpha,)
+                # Alternate colors: odd lines = white, even lines = accent color
+                if i % 2 == 0:
+                    fill_color = (255, 255, 255, alpha)
+                else:
+                    fill_color = (*text_color, alpha)
 
                 draw.text(
                     (x, y),
@@ -390,7 +402,6 @@ class VideoGenerator:
                     stroke_width=3,
                     stroke_fill=(0, 0, 0, alpha)
                 )
-                y_offset += line_height
 
             # Extract and normalize alpha channel for mask (0-1 range)
             img_array = np.array(img)
