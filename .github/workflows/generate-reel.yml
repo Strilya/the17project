@@ -143,7 +143,6 @@ jobs:
           rm -rf output/*TEMP*
           rm -f config/credentials.json
           rm -f config/sheets_credentials.json
-          rm -f config/instagram_session.json
           rm -f .env
 
       - name: Notify Slack on failure
