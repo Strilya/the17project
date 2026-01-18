@@ -68,6 +68,8 @@ jobs:
           echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
           echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
           echo "INSTAGRAM_AUTO_POST=true" >> .env
+          # Decode and restore Instagram session file
+          echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
 
           # Create config directory
           mkdir -p config
