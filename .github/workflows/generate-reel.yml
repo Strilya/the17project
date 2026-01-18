@@ -58,6 +58,9 @@ jobs:
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
           INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: |
+          # Create config directory first
+          mkdir -p config
+
           # Create .env file
           echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" > .env
           echo "PEXELS_API_KEY=$PEXELS_API_KEY" >> .env
@@ -70,9 +73,6 @@ jobs:
           echo "INSTAGRAM_AUTO_POST=true" >> .env
           # Decode and restore Instagram session file
           echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
-
-          # Create config directory
-          mkdir -p config
 
           # Create Google Cloud credentials (for TTS and Sheets)
           if [ -z "$GOOGLE_CLOUD_CREDENTIALS" ]; then
