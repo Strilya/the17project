@@ -21,14 +21,13 @@ python login_instagram.py
 This will:
 - Login to Instagram using your credentials
 - Save session to `config/instagram_session.json`
+- Output a **base64-encoded** string for GitHub Secrets
 - Display next steps
 
-### 3. Copy session file content:
-```bash
-cat config/instagram_session.json
-```
+### 3. Copy the base64 string:
+The script will output a base64-encoded string. Copy the **entire string** (it will be a long single line of random characters).
 
-Copy the ENTIRE JSON output.
+**DO NOT** copy the JSON file content directly - use the base64 string from the script output.
 
 ## GitHub Secrets Setup
 
@@ -43,9 +42,10 @@ Go to: GitHub repo → Settings → Secrets and variables → Actions → New re
 - Value: `your_instagram_password`
 
 **INSTAGRAM_SESSION** ⭐ CRITICAL
-- Value: Paste the ENTIRE content of `config/instagram_session.json`
-- This is a JSON object containing cookies and device info
+- Value: Paste the **base64-encoded string** from the login script output
+- This is a long single-line string (base64 encoded JSON)
 - DO NOT modify or format it - paste exactly as-is
+- DO NOT paste the JSON file content directly - use the base64 string
 
 ## How It Works
 
@@ -58,13 +58,62 @@ Go to: GitHub repo → Settings → Secrets and variables → Actions → New re
 2. Instagram poster uses existing session (no IP-blocking login attempt)
 3. Posts video successfully
 
-## Session Maintenance
+## Session Refresh (When Sessions Expire)
 
-Instagram sessions expire eventually. If posting fails in GitHub Actions:
+### How to Recognize Session Expiration
 
-1. Run locally: `python login_instagram.py`
-2. Copy new `config/instagram_session.json` content
-3. Update GitHub Secret `INSTAGRAM_SESSION` with new content
+GitHub Actions workflow fails with one of these errors:
+- `LoginRequired` - Session expired
+- `ChallengeRequired` - Instagram security check triggered
+- `401 Unauthorized` - Authentication failed
+- Workflow logs show: "Instagram login failed"
+
+### Session Lifetime
+
+- **Typical duration:** ~90 days
+- **Expiration triggers:**
+  - Time (sessions auto-expire after ~90 days)
+  - Password change on Instagram account
+  - Instagram security checks (suspicious activity detection)
+  - Device verification requirements
+  - IP address changes (rare, but possible)
+
+### Step-by-Step Refresh Commands
+
+**1. Run the login script locally:**
+```bash
+python login_instagram.py
+```
+
+**2. Copy the base64 string from output:**
+The script will print a long base64 string between `===` lines. Copy the entire string.
+
+**3. Update GitHub Secret:**
+- Go to: **GitHub repo → Settings → Secrets and variables → Actions**
+- Find `INSTAGRAM_SESSION` in the list
+- Click **Update**
+- Paste the new base64 string
+- Click **Update secret**
+
+**4. Verify the fix:**
+- Go to **Actions** tab in GitHub
+- Click **Re-run failed jobs** on the latest failed workflow
+- OR wait for the next scheduled run (8 AM, 2 PM, or 7 PM EST)
+
+### Quick Reference Commands
+
+```bash
+# Refresh session locally
+python login_instagram.py
+
+# Test the new session works locally
+python src/main.py --test
+
+# Check session file exists
+ls -lh config/instagram_session.json
+```
+
+That's it. The workflow will use the new session on next run.
 
 ## Security Notes
 

@@ -48,17 +48,18 @@ Go to: **Your Repo → Settings → Secrets and variables → Actions → New re
 - **Used for**: Instagram posting
 
 ### 10. INSTAGRAM_SESSION ⭐ CRITICAL
-- **Value**: Entire JSON content of `config/instagram_session.json`
-- **Format**: JSON object with cookies and device info
+- **Value**: Base64-encoded session string from login script
+- **Format**: Long single-line base64 string
 - **How to get**:
   1. Run locally: `python login_instagram.py`
-  2. Copy output of: `cat config/instagram_session.json`
-  3. Paste ENTIRE content as secret value
+  2. Copy the base64 string from the script output (between the === lines)
+  3. Paste ENTIRE base64 string as secret value
+  4. DO NOT copy the JSON file directly - use the base64 output
 - **Used for**: Session-based auth to bypass GitHub Actions IP blocking
 
 ## Important Notes
 
 - All secrets are encrypted by GitHub
 - Never commit these values to your repository
-- Instagram session expires eventually - refresh by re-running `login_instagram.py` and updating the secret
-- The workflow is already configured to use these secrets
+- Instagram session expires eventually - refresh by re-running `login_instagram.py` and updating the `INSTAGRAM_SESSION` secret with the new base64 string
+- The workflow is already configured to use these secrets and decode the base64 session automatically

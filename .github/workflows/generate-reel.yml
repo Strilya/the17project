@@ -94,9 +94,9 @@ jobs:
           # Use same credentials for Google Sheets (same service account)
           echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
-          # Restore Instagram session file from GitHub Secret
+          # Restore Instagram session file from GitHub Secret (base64 decode)
           if [ -n "$INSTAGRAM_SESSION" ]; then
-            printf '%s' "$INSTAGRAM_SESSION" > config/instagram_session.json
+            echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
             echo "✅ Instagram session restored"
           else
             echo "⚠️ No Instagram session found - will attempt fresh login (may fail on GitHub Actions)"
