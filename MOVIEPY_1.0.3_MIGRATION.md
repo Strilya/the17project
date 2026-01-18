@@ -81,9 +81,60 @@ clip = clip.fx(vfx.crop, x1=0, x2=100)  # Must use .fx()
 The `resize` function requires at least one of: Scipy, PIL, Pillow, or OpenCV.
 ✅ Pillow is installed (requirements.txt line 8)
 
+## CRITICAL: RGBA/RGB Channel Mismatch Fix
+
+### Problem
+Error: `"could not broadcast input array from shape (1920,1080,4) into shape (1920,1080,3)"`
+
+moviepy 1.0.3 has issues when compositing clips with different channel counts:
+- Video clips may have alpha channel (RGBA = 4 channels)
+- Text overlay clips created from PIL with RGBA mode
+- CompositeVideoClip fails when mixing RGB and RGBA
+
+### Solution
+**1. Background video clips: Strip alpha channel**
+```python
+def rgb_converter(frame):
+    if len(frame.shape) == 3 and frame.shape[2] == 4:
+        return frame[:, :, :3]  # Strip alpha channel
+    return frame
+
+clip = VideoFileClip(path)
+clip = clip.fl_image(rgb_converter)
+```
+
+**2. Text overlays and watermarks: Use explicit RGB + mask**
+```python
+def make_frame(t):
+    img = Image.new('RGBA', size, (0, 0, 0, 0))
+    # ... draw text ...
+    img_array = np.array(img)
+    return img_array[:, :, :3]  # Return RGB only
+
+def make_mask(t):
+    img = Image.new('RGBA', size, (0, 0, 0, 0))
+    # ... draw same text ...
+    img_array = np.array(img)
+    return img_array[:, :, 3] / 255.0  # Return normalized alpha
+
+clip = VideoClip(make_frame, duration=duration)
+mask = VideoClip(make_mask, duration=duration, ismask=True)
+clip = clip.set_mask(mask)
+```
+
+### Fixed Functions
+- `_create_text_clip_chunk()` - Returns RGB + mask
+- `_create_brand_watermark()` - Returns RGB + mask
+- `_create_static_brand_watermark()` - Returns RGB + mask
+- `_create_source_watermark()` - Returns RGB + mask
+- `_create_background_montage()` - Strips alpha from video clips
+- `_create_end_card()` - Already RGB (no transparency needed)
+
 ## Summary
 ✅ **All moviepy 1.0.3 compatibility issues FIXED**
 - Correct import: `import moviepy.video.fx.all as vfx`
 - All transformations use `.fx()` method
 - No method chaining
+- All video clips converted to RGB (no alpha channel)
+- All overlay clips use explicit RGB + mask pattern
 - All built-in methods verified as compatible
