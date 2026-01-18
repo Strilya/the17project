@@ -54,8 +54,9 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
-          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}  # ADD THIS
+          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+          INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: |
           # Create .env file
           echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" > .env
@@ -66,6 +67,7 @@ jobs:
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
           echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
           echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
+          echo "INSTAGRAM_AUTO_POST=true" >> .env
 
           # Create config directory
           mkdir -p config
@@ -89,6 +91,14 @@ jobs:
 
           # Use same credentials for Google Sheets (same service account)
           echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
+
+          # Restore Instagram session file from GitHub Secret
+          if [ -n "$INSTAGRAM_SESSION" ]; then
+            printf '%s' "$INSTAGRAM_SESSION" > config/instagram_session.json
+            echo "✅ Instagram session restored"
+          else
+            echo "⚠️ No Instagram session found - will attempt fresh login (may fail on GitHub Actions)"
+          fi
 
       - name: Generate reel
         id: generate
@@ -133,6 +143,7 @@ jobs:
           rm -rf output/*TEMP*
           rm -f config/credentials.json
           rm -f config/sheets_credentials.json
+          rm -f config/instagram_session.json
           rm -f .env
 
       - name: Notify Slack on failure
