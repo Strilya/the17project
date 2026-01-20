@@ -100,12 +100,12 @@ Return ONLY valid JSON:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
-            temperature=0.95,
+            temperature=0.7,
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        return self._parse_json(response.content[0].text)
-    
+
+        return self._fix_angel_number(self._parse_json(response.content[0].text), angel_number)
+
     def generate_practical(self, angel_number):
         """Practical tips - myth-busting, what to actually do"""
 
@@ -187,12 +187,12 @@ Return ONLY valid JSON:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
-            temperature=0.95,
+            temperature=0.7,
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        return self._parse_json(response.content[0].text)
-    
+
+        return self._fix_angel_number(self._parse_json(response.content[0].text), angel_number)
+
     def generate_insights(self, angel_number):
         """Client stories - transformation, real examples, emotional weight"""
 
@@ -274,12 +274,12 @@ Return ONLY valid JSON:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
-            temperature=0.95,
+            temperature=0.7,
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        return self._parse_json(response.content[0].text)
-    
+
+        return self._fix_angel_number(self._parse_json(response.content[0].text), angel_number)
+
     def _parse_json(self, text):
         """Extract JSON from Claude's response"""
         try:
@@ -290,4 +290,23 @@ Return ONLY valid JSON:
             if start != -1 and end > start:
                 return json.loads(text[start:end])
             raise ValueError(f"Could not parse JSON from response: {text}")
+
+    def _fix_angel_number(self, content, correct_number):
+        """Replace any wrong angel numbers in content with the correct one"""
+        import re
+        # Pattern to find 3-4 digit numbers that look like angel numbers
+        angel_pattern = r'\b(\d{3,4})\b'
+
+        for key in ['hook', 'meaning', 'action', 'cta']:
+            if key in content and content[key]:
+                text = content[key]
+                # Find all number matches
+                matches = re.findall(angel_pattern, text)
+                for match in matches:
+                    # If it's a different angel number (not time like 11, 17, etc.)
+                    if match != correct_number and len(match) >= 3:
+                        text = text.replace(match, correct_number)
+                        print(f"   ⚠️  Fixed wrong number {match} → {correct_number} in {key}")
+                content[key] = text
+        return content
 
