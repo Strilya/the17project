@@ -293,13 +293,18 @@ def main(reel_number=None, test_mode=False):
             # Generate proper caption for Instagram (before logging)
             caption = generate_caption(reel_spec, content)
 
+            # Generate thumbnail with angel number prominently displayed
+            thumbnail_path = f"{output_base}/{content_identifier}_thumb_{timestamp}.jpg"
+            video_gen.generate_thumbnail(content_identifier, thumbnail_path, text_color)
+
             # Post to Instagram (if enabled and not in test mode)
             instagram_url = None
             if instagram_poster and not test_mode:
                 print(f"\n📱 Posting to Instagram...")
                 instagram_result = instagram_poster.post_reel(
                     video_path=video_path,
-                    caption=caption
+                    caption=caption,
+                    thumbnail_path=thumbnail_path
                 )
 
                 if instagram_result:
@@ -358,7 +363,9 @@ def main(reel_number=None, test_mode=False):
             try:
                 if os.path.exists(temp_voice_path):
                     os.remove(temp_voice_path)
-                    print(f"\n🗑️  Cleaned up temp voice file")
+                if os.path.exists(thumbnail_path):
+                    os.remove(thumbnail_path)
+                print(f"\n🗑️  Cleaned up temp files")
             except Exception as e:
                 pass
 
