@@ -987,3 +987,126 @@ class VideoGenerator:
         except Exception as e:
             print(f"   ⚠️  Download failed: {e}")
             return False
+
+    def generate_thumbnail(self, content_identifier, output_path, text_color=(255, 200, 0)):
+        """
+        Generate a thumbnail image with the angel number prominently displayed.
+        This ensures Instagram uses a good thumbnail instead of a random frame.
+
+        Args:
+            content_identifier: The angel number (e.g., "1111") or life path (e.g., "LP7")
+            output_path: Where to save the thumbnail image
+            text_color: RGB tuple for accent color
+        """
+        from PIL import Image, ImageDraw, ImageFont
+
+        # Create dark gradient background
+        img = Image.new('RGB', self.size, (15, 15, 30))
+        draw = ImageDraw.Draw(img)
+
+        # Add subtle gradient effect
+        for y in range(self.size[1]):
+            # Gradient from dark purple to darker
+            ratio = y / self.size[1]
+            r = int(15 + (25 * ratio))
+            g = int(15 + (10 * ratio))
+            b = int(30 + (20 * ratio))
+            draw.line([(0, y), (self.size[0], y)], fill=(r, g, b))
+
+        # Load font
+        font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+        if not os.path.exists(font_path):
+            font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+        # Determine if this is angel number or life path
+        is_life_path = content_identifier.startswith("LP")
+
+        if is_life_path:
+            # Life Path thumbnail
+            lp_num = content_identifier.replace("LP", "")
+            top_text = "LIFE PATH"
+            main_text = lp_num
+            main_font_size = 400
+            top_font_size = 60
+        else:
+            # Angel Number thumbnail
+            top_text = "ANGEL NUMBER"
+            main_text = content_identifier
+            # Adjust font size based on number length
+            if len(content_identifier) <= 3:
+                main_font_size = 350
+            elif len(content_identifier) == 4:
+                main_font_size = 280
+            else:
+                main_font_size = 220
+            top_font_size = 50
+
+        # Draw "ANGEL NUMBER" or "LIFE PATH" text at top
+        top_font = ImageFont.truetype(font_path, top_font_size)
+        bbox = draw.textbbox((0, 0), top_text, font=top_font)
+        top_width = bbox[2] - bbox[0]
+        top_x = (self.size[0] - top_width) // 2
+        top_y = 600
+
+        draw.text(
+            (top_x, top_y),
+            top_text,
+            font=top_font,
+            fill=(255, 255, 255, 255),
+            stroke_width=2,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Draw the main number (BIG and centered)
+        main_font = ImageFont.truetype(font_path, main_font_size)
+        bbox = draw.textbbox((0, 0), main_text, font=main_font)
+        main_width = bbox[2] - bbox[0]
+        main_height = bbox[3] - bbox[1]
+        main_x = (self.size[0] - main_width) // 2
+        main_y = 750
+
+        # Draw number with glow effect (multiple layers)
+        # Outer glow
+        for offset in range(8, 0, -2):
+            glow_alpha = int(50 * (1 - offset/8))
+            draw.text(
+                (main_x, main_y),
+                main_text,
+                font=main_font,
+                fill=(*text_color, glow_alpha),
+                stroke_width=offset + 4,
+                stroke_fill=(0, 0, 0, glow_alpha)
+            )
+
+        # Main number with accent color
+        draw.text(
+            (main_x, main_y),
+            main_text,
+            font=main_font,
+            fill=text_color,
+            stroke_width=4,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Draw "THE17PROJECT" watermark at bottom
+        watermark_font = ImageFont.truetype(font_path, 35)
+        watermark = "The17Project"
+        bbox = draw.textbbox((0, 0), watermark, font=watermark_font)
+        w_width = bbox[2] - bbox[0]
+        w_x = (self.size[0] - w_width) // 2
+        w_y = 1350
+
+        draw.text(
+            (w_x, w_y),
+            watermark,
+            font=watermark_font,
+            fill=(147, 112, 219, 255),  # Purple
+            stroke_width=2,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Save thumbnail
+        img.save(output_path, "JPEG", quality=95)
+        print(f"   🖼️  Thumbnail generated: {output_path}")
+
+        return output_path
