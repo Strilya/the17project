@@ -2,12 +2,12 @@ name: Generate Angel Number Reel
 
 on:
   schedule:
-    # 8 AM EST = 1 PM UTC (13:00) - During DST: 8 AM EDT = 12 PM UTC (12:00)
-    - cron: '0 13 * * *'
-    # 2 PM EST = 7 PM UTC (19:00) - During DST: 2 PM EDT = 6 PM UTC (18:00)
-    - cron: '0 19 * * *'
-    # 7 PM EST = 12 AM UTC next day (00:00) - During DST: 7 PM EDT = 11 PM UTC (23:00)
-    - cron: '0 0 * * *'
+    # 6 AM EST = 11 AM UTC (11:00) - During DST: 6 AM EDT = 10 AM UTC (10:00)
+    - cron: '0 11 * * *'
+    # 1 PM EST = 6 PM UTC (18:00) - During DST: 1 PM EDT = 5 PM UTC (17:00)
+    - cron: '0 18 * * *'
+    # 6 PM EST = 11 PM UTC (23:00) - During DST: 6 PM EDT = 10 PM UTC (22:00)
+    - cron: '0 23 * * *'
 
   workflow_dispatch:  # Manual trigger button in GitHub Actions UI
 
@@ -106,15 +106,15 @@ jobs:
         id: generate
         run: |
           # Determine which reel to generate based on schedule
-          # 8 AM EST (13:00 UTC) = Reel 1
-          # 2 PM EST (19:00 UTC) = Reel 2
-          # 7 PM EST (00:00 UTC) = Reel 3
+          # 6 AM EST (11:00 UTC) = Reel 1
+          # 1 PM EST (18:00 UTC) = Reel 2
+          # 6 PM EST (23:00 UTC) = Reel 3
           HOUR=$(date -u +%H)
-          if [ "$HOUR" -eq 13 ] || [ "$HOUR" -eq 12 ]; then
+          if [ "$HOUR" -eq 11 ] || [ "$HOUR" -eq 10 ]; then
             REEL_NUM=1
-          elif [ "$HOUR" -eq 19 ] || [ "$HOUR" -eq 18 ]; then
+          elif [ "$HOUR" -eq 18 ] || [ "$HOUR" -eq 17 ]; then
             REEL_NUM=2
-          elif [ "$HOUR" -eq 0 ] || [ "$HOUR" -eq 23 ]; then
+          elif [ "$HOUR" -eq 23 ] || [ "$HOUR" -eq 22 ]; then
             REEL_NUM=3
           else
             # Manual trigger - generate all 3 reels
