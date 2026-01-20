@@ -363,8 +363,11 @@ def main(reel_number=None, test_mode=False):
             try:
                 if os.path.exists(temp_voice_path):
                     os.remove(temp_voice_path)
-                if os.path.exists(thumbnail_path):
+                # Keep thumbnail in test mode so user can verify it
+                if os.path.exists(thumbnail_path) and not test_mode:
                     os.remove(thumbnail_path)
+                elif test_mode and os.path.exists(thumbnail_path):
+                    print(f"\n🖼️  Thumbnail saved: {thumbnail_path}")
                 print(f"\n🗑️  Cleaned up temp files")
             except Exception as e:
                 pass
@@ -373,6 +376,7 @@ def main(reel_number=None, test_mode=False):
             print(f"✅ REEL {reel_num}/{reel_count} DONE!")
             if test_mode:
                 print(f"🧪 TEST MODE - Not tracked in rotation")
+                print(f"🖼️  Thumbnail: {thumbnail_path}")
             print(f"{'=' * 70}")
             print(f"Video: {video_path}")
             if caption:
