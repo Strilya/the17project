@@ -17,8 +17,11 @@ from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.VideoClip import VideoClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.audio.AudioClip import CompositeAudioClip
-import moviepy.video.fx.all as vfx
 from PIL import Image, ImageDraw, ImageFont
+
+# Detect moviepy version for compatibility
+import moviepy
+MOVIEPY_V2 = int(moviepy.__version__.split('.')[0]) >= 2
 import numpy as np
 
 from video_sources import VideoSourceManager
@@ -97,6 +100,47 @@ class VideoGenerator:
 
         # Download Bebas Neue font if not exists
         self._ensure_font()
+
+    # ===== MoviePy 2.x Compatibility Helpers =====
+    def _clip_subclip(self, clip, t1, t2):
+        """Get subclip - moviepy 2.x uses subclipped()"""
+        if MOVIEPY_V2:
+            return clip.subclipped(t1, t2)
+        return clip.subclip(t1, t2)
+
+    def _clip_set_duration(self, clip, duration):
+        """Set duration - moviepy 2.x uses with_duration()"""
+        if MOVIEPY_V2:
+            return clip.with_duration(duration)
+        return clip.set_duration(duration)
+
+    def _clip_set_start(self, clip, start_time):
+        """Set start time - moviepy 2.x uses with_start()"""
+        if MOVIEPY_V2:
+            return clip.with_start(start_time)
+        return clip.set_start(start_time)
+
+    def _clip_set_mask(self, clip, mask):
+        """Set mask - moviepy 2.x uses with_mask()"""
+        if MOVIEPY_V2:
+            return clip.with_mask(mask)
+        return clip.set_mask(mask)
+
+    def _clip_set_audio(self, clip, audio):
+        """Set audio - moviepy 2.x uses with_audio()"""
+        if MOVIEPY_V2:
+            return clip.with_audio(audio)
+        return clip.set_audio(audio)
+
+    def _create_mask_clip(self, make_mask_func, duration):
+        """Create a mask clip - moviepy 2.x doesn't use ismask parameter"""
+        if MOVIEPY_V2:
+            from moviepy.video.VideoClip import ImageClip
+            # In moviepy 2.x, create mask as regular clip
+            return VideoClip(make_mask_func, duration=duration)
+        else:
+            return VideoClip(make_mask_func, duration=duration, ismask=True)
+    # =============================================
 
     def _ensure_font(self):
         """Download Bebas Neue Bold font if missing"""
@@ -409,9 +453,9 @@ class VideoGenerator:
 
         # Create clip with proper duration and timing
         clip = VideoClip(make_frame, duration=duration)
-        mask = VideoClip(make_mask, duration=duration, ismask=True)
-        clip = clip.set_mask(mask)
-        clip = clip.set_start(start_time)
+        mask = self._create_mask_clip(make_mask, duration)
+        clip = self._clip_set_mask(clip, mask)
+        clip = self._clip_set_start(clip, start_time)
 
         return clip
 
@@ -488,24 +532,25 @@ class VideoGenerator:
                 [background] + text_clips + [brand_watermark, source_watermark],
                 size=self.size
             )
-            main_composite = main_composite.set_duration(main_duration)
+            main_composite = self._clip_set_duration(main_composite, main_duration)
 
             # Create 2-second end card
             print(f"   ✅ Creating 2-second end card...")
             end_card = self._create_end_card(text_color)
-            end_card = end_card.set_start(main_duration)
+            end_card = self._clip_set_start(end_card, main_duration)
 
             # Combine main video + end card
             total_duration = main_duration + 2  # Add 2 seconds for end card
             final_video = CompositeVideoClip(
                 [main_composite, end_card],
                 size=self.size
-            ).set_duration(total_duration)
+            )
+            final_video = self._clip_set_duration(final_video, total_duration)
 
             # Add audio with music that covers full duration (including end card)
             print(f"   🎵 Mixing audio for {total_duration:.1f}s (voice + music)...")
             final_audio = self._mix_audio(voice_audio, total_duration)
-            final_video = final_video.set_audio(final_audio)
+            final_video = self._clip_set_audio(final_video, final_audio)
 
             # Render HIGH QUALITY for Instagram (Slack will compress on upload)
             print(f"   ⏳ Rendering HIGH QUALITY video for Instagram...")
@@ -557,7 +602,11 @@ class VideoGenerator:
                     return frame[:, :, :3]  # Strip alpha channel
                 return frame
 
-            clip = clip.fl_image(rgb_converter)
+            # Apply RGB conversion (moviepy 2.x uses image_transform, 1.x uses fl_image)
+            if MOVIEPY_V2:
+                clip = clip.image_transform(rgb_converter)
+            else:
+                clip = clip.fl_image(rgb_converter)
             clip_aspect = clip.w / clip.h
 
             # Fix aspect ratio - CROP, don't squish
@@ -566,29 +615,41 @@ class VideoGenerator:
                     # Too wide - crop sides
                     new_width = int(clip.h * target_aspect)
                     x_center = clip.w / 2
-                    clip = clip.fx(vfx.crop, x1=(x_center - new_width/2), x2=(x_center + new_width/2))
+                    if MOVIEPY_V2:
+                        clip = clip.cropped(x1=(x_center - new_width/2), x2=(x_center + new_width/2))
+                    else:
+                        import moviepy.video.fx.all as vfx
+                        clip = clip.fx(vfx.crop, x1=(x_center - new_width/2), x2=(x_center + new_width/2))
                 else:
                     # Too tall - crop top/bottom
                     new_height = int(clip.w / target_aspect)
                     y_center = clip.h / 2
-                    clip = clip.fx(vfx.crop, y1=(y_center - new_height/2), y2=(y_center + new_height/2))
+                    if MOVIEPY_V2:
+                        clip = clip.cropped(y1=(y_center - new_height/2), y2=(y_center + new_height/2))
+                    else:
+                        import moviepy.video.fx.all as vfx
+                        clip = clip.fx(vfx.crop, y1=(y_center - new_height/2), y2=(y_center + new_height/2))
 
             # Resize to exact dimensions
-            clip = clip.fx(vfx.resize, newsize=self.size)
+            if MOVIEPY_V2:
+                clip = clip.resized(new_size=self.size)
+            else:
+                import moviepy.video.fx.all as vfx
+                clip = clip.fx(vfx.resize, newsize=self.size)
 
             # Extract segment
             if clip.duration >= clip_duration:
                 start_time = max(0, (clip.duration - clip_duration) / 2)
-                clip = clip.subclip(start_time, start_time + clip_duration)
+                clip = self._clip_subclip(clip, start_time, start_time + clip_duration)
             else:
-                clip = clip.set_duration(clip_duration)
+                clip = self._clip_set_duration(clip, clip_duration)
 
             # Set start time
-            clip = clip.set_start(i * clip_duration)
+            clip = self._clip_set_start(clip, i * clip_duration)
             processed_clips.append(clip)
 
         final_montage = CompositeVideoClip(processed_clips, size=self.size)
-        return final_montage.set_duration(target_duration)
+        return self._clip_set_duration(final_montage, target_duration)
 
     def _create_brand_watermark(self, duration):
         """Create THE17PROJECT watermark (below captions, one third from top)"""
@@ -657,8 +718,8 @@ class VideoGenerator:
             return img_array[:, :, 3] / 255.0
 
         clip = VideoClip(make_frame, duration=duration)
-        mask = VideoClip(make_mask, duration=duration, ismask=True)
-        return clip.set_mask(mask)
+        mask = self._create_mask_clip(make_mask, duration)
+        return self._clip_set_mask(clip, mask)
 
     def _create_static_brand_watermark(self, duration):
         """Create static THE17PROJECT watermark (always visible, no fade)"""
@@ -725,8 +786,8 @@ class VideoGenerator:
             return img_array[:, :, 3] / 255.0
 
         clip = VideoClip(make_frame, duration=duration)
-        mask = VideoClip(make_mask, duration=duration, ismask=True)
-        return clip.set_mask(mask)
+        mask = self._create_mask_clip(make_mask, duration)
+        return self._clip_set_mask(clip, mask)
 
     def _create_source_watermark(self, source_name, duration):
         """Create barely visible source watermark (BOTTOM LEFT)"""
@@ -771,8 +832,8 @@ class VideoGenerator:
             return img_array[:, :, 3] / 255.0
 
         clip = VideoClip(make_frame, duration=duration)
-        mask = VideoClip(make_mask, duration=duration, ismask=True)
-        return clip.set_mask(mask)
+        mask = self._create_mask_clip(make_mask, duration)
+        return self._clip_set_mask(clip, mask)
 
     def _create_end_card(self, text_color=(255, 200, 0)):
         """
@@ -917,7 +978,8 @@ class VideoGenerator:
 
         if end_card_duration > 0:
             silence = AudioClip(lambda t: [0, 0], duration=end_card_duration)
-            extended_voice = CompositeAudioClip([voice_audio, silence.set_start(voice_duration)])
+            silence = self._clip_set_start(silence, voice_duration)
+            extended_voice = CompositeAudioClip([voice_audio, silence])
         else:
             extended_voice = voice_audio
 
@@ -950,7 +1012,7 @@ class VideoGenerator:
                 music_audio = concatenate_audioclips(music_clips)
 
             # Trim to exact duration
-            music_audio = music_audio.subclip(0, total_duration)
+            music_audio = self._clip_subclip(music_audio, 0, total_duration)
 
             # Set music volume to 15% by wrapping get_frame
             original_get_frame = music_audio.get_frame
@@ -987,3 +1049,126 @@ class VideoGenerator:
         except Exception as e:
             print(f"   ⚠️  Download failed: {e}")
             return False
+
+    def generate_thumbnail(self, content_identifier, output_path, text_color=(255, 200, 0)):
+        """
+        Generate a thumbnail image with the angel number prominently displayed.
+        This ensures Instagram uses a good thumbnail instead of a random frame.
+
+        Args:
+            content_identifier: The angel number (e.g., "1111") or life path (e.g., "LP7")
+            output_path: Where to save the thumbnail image
+            text_color: RGB tuple for accent color
+        """
+        from PIL import Image, ImageDraw, ImageFont
+
+        # Create dark gradient background
+        img = Image.new('RGB', self.size, (15, 15, 30))
+        draw = ImageDraw.Draw(img)
+
+        # Add subtle gradient effect
+        for y in range(self.size[1]):
+            # Gradient from dark purple to darker
+            ratio = y / self.size[1]
+            r = int(15 + (25 * ratio))
+            g = int(15 + (10 * ratio))
+            b = int(30 + (20 * ratio))
+            draw.line([(0, y), (self.size[0], y)], fill=(r, g, b))
+
+        # Load font
+        font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+        if not os.path.exists(font_path):
+            font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+        # Determine if this is angel number or life path
+        is_life_path = content_identifier.startswith("LP")
+
+        if is_life_path:
+            # Life Path thumbnail
+            lp_num = content_identifier.replace("LP", "")
+            top_text = "LIFE PATH"
+            main_text = lp_num
+            main_font_size = 400
+            top_font_size = 60
+        else:
+            # Angel Number thumbnail
+            top_text = "ANGEL NUMBER"
+            main_text = content_identifier
+            # Adjust font size based on number length
+            if len(content_identifier) <= 3:
+                main_font_size = 350
+            elif len(content_identifier) == 4:
+                main_font_size = 280
+            else:
+                main_font_size = 220
+            top_font_size = 50
+
+        # Draw "ANGEL NUMBER" or "LIFE PATH" text at top
+        top_font = ImageFont.truetype(font_path, top_font_size)
+        bbox = draw.textbbox((0, 0), top_text, font=top_font)
+        top_width = bbox[2] - bbox[0]
+        top_x = (self.size[0] - top_width) // 2
+        top_y = 600
+
+        draw.text(
+            (top_x, top_y),
+            top_text,
+            font=top_font,
+            fill=(255, 255, 255, 255),
+            stroke_width=2,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Draw the main number (BIG and centered)
+        main_font = ImageFont.truetype(font_path, main_font_size)
+        bbox = draw.textbbox((0, 0), main_text, font=main_font)
+        main_width = bbox[2] - bbox[0]
+        main_height = bbox[3] - bbox[1]
+        main_x = (self.size[0] - main_width) // 2
+        main_y = 750
+
+        # Draw number with glow effect (multiple layers)
+        # Outer glow
+        for offset in range(8, 0, -2):
+            glow_alpha = int(50 * (1 - offset/8))
+            draw.text(
+                (main_x, main_y),
+                main_text,
+                font=main_font,
+                fill=(*text_color, glow_alpha),
+                stroke_width=offset + 4,
+                stroke_fill=(0, 0, 0, glow_alpha)
+            )
+
+        # Main number with accent color
+        draw.text(
+            (main_x, main_y),
+            main_text,
+            font=main_font,
+            fill=text_color,
+            stroke_width=4,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Draw "THE17PROJECT" watermark at bottom
+        watermark_font = ImageFont.truetype(font_path, 35)
+        watermark = "The17Project"
+        bbox = draw.textbbox((0, 0), watermark, font=watermark_font)
+        w_width = bbox[2] - bbox[0]
+        w_x = (self.size[0] - w_width) // 2
+        w_y = 1350
+
+        draw.text(
+            (w_x, w_y),
+            watermark,
+            font=watermark_font,
+            fill=(147, 112, 219, 255),  # Purple
+            stroke_width=2,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Save thumbnail
+        img.save(output_path, "JPEG", quality=95)
+        print(f"   🖼️  Thumbnail generated: {output_path}")
+
+        return output_path
