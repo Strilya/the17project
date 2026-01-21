@@ -1105,26 +1105,19 @@ class VideoGenerator:
             main_text = str(content_identifier)
             topic_text = ""
 
-        # ===== CONSISTENT FONT SIZES (scaled to fit worst case) =====
-        # Worst case: "ANGEL NUMBER" (12 chars), "1111" or "33", "SHADOW WORK & HEALING"
-        label_font_size = 70
-        number_font_size = 280  # Same for both LP and Angel numbers
-        topic_font_size = 80
+        # ===== FIXED FONT SIZES (same for ALL content types) =====
+        # Sized to fit worst case: "ANGEL NUMBER", "1111", "SHADOW WORK & HEALING"
+        # These are FIXED - no scaling - ensures identical layout for LP and Angel Number
+        LABEL_FONT_SIZE = 70    # Fits "ANGEL NUMBER" (longest label)
+        NUMBER_FONT_SIZE = 200  # Fits "1111" or "2255" (4-digit numbers)
+        TOPIC_FONT_SIZE = 65    # Fits "SHADOW WORK & HEALING" (longest topic)
 
-        # Helper function to scale font to fit max width
-        def get_scaled_font(text, start_size, min_size=40):
-            size = start_size
-            while size > min_size:
-                font = ImageFont.truetype(font_path, size)
-                bbox = draw.textbbox((0, 0), text, font=font)
-                width = bbox[2] - bbox[0]
-                if width <= max_text_width:
-                    return font, size
-                size -= 5
-            return ImageFont.truetype(font_path, min_size), min_size
+        # Create fonts with fixed sizes
+        label_font = ImageFont.truetype(font_path, LABEL_FONT_SIZE)
+        number_font = ImageFont.truetype(font_path, NUMBER_FONT_SIZE)
+        topic_font = ImageFont.truetype(font_path, TOPIC_FONT_SIZE)
 
         # ===== DRAW LABEL ("LIFE PATH" or "ANGEL NUMBER") =====
-        label_font, _ = get_scaled_font(label_text, label_font_size)
         bbox = draw.textbbox((0, 0), label_text, font=label_font)
         label_width = bbox[2] - bbox[0]
         label_x = (self.size[0] - label_width) // 2
@@ -1139,7 +1132,6 @@ class VideoGenerator:
         )
 
         # ===== DRAW MAIN NUMBER =====
-        number_font, _ = get_scaled_font(main_text, number_font_size)
         bbox = draw.textbbox((0, 0), main_text, font=number_font)
         number_width = bbox[2] - bbox[0]
         number_x = (self.size[0] - number_width) // 2
@@ -1168,7 +1160,6 @@ class VideoGenerator:
 
         # ===== DRAW TOPIC TEXT (if present) =====
         if topic_text:
-            topic_font, _ = get_scaled_font(topic_text, topic_font_size)
             bbox = draw.textbbox((0, 0), topic_text, font=topic_font)
             topic_width = bbox[2] - bbox[0]
             topic_x = (self.size[0] - topic_width) // 2
