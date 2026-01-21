@@ -1052,11 +1052,11 @@ class VideoGenerator:
 
     def generate_thumbnail(self, content_identifier, output_path, text_color=(255, 200, 0)):
         """
-        Generate a thumbnail image with the angel number prominently displayed.
-        This ensures Instagram uses a good thumbnail instead of a random frame.
+        Generate a thumbnail image with consistent sizing for all content types.
+        Sized to fit worst-case: "LIFE PATH 33" + "SHADOW WORK & HEALING" or "ANGEL NUMBER 1111"
 
         Args:
-            content_identifier: The angel number (e.g., "1111") or life path (e.g., "LP7")
+            content_identifier: The angel number (e.g., "1111") or life path (e.g., "LP7-career")
             output_path: Where to save the thumbnail image
             text_color: RGB tuple for accent color
         """
@@ -1068,7 +1068,6 @@ class VideoGenerator:
 
         # Add subtle gradient effect
         for y in range(self.size[1]):
-            # Gradient from dark purple to darker
             ratio = y / self.size[1]
             r = int(15 + (25 * ratio))
             g = int(15 + (10 * ratio))
@@ -1080,109 +1079,107 @@ class VideoGenerator:
         if not os.path.exists(font_path):
             font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
 
-        # Determine if this is angel number or life path
+        # Safe zone: 10% margin from edges = 80% usable width
+        safe_margin_x = int(self.size[0] * 0.10)
+        max_text_width = self.size[0] - (2 * safe_margin_x)
+
+        # Fixed Y positions (percentage of screen height)
+        label_y = int(self.size[1] * 0.25)   # 25% from top - label
+        number_y = int(self.size[1] * 0.40)  # 40% from top - number
+        topic_y = int(self.size[1] * 0.60)   # 60% from top - topic
+
+        # Parse content identifier
         is_life_path = str(content_identifier).startswith("LP")
 
-        # Safe zone margins (10% from edges)
-        safe_margin_x = int(self.size[0] * 0.10)
-        max_text_width = self.size[0] - (2 * safe_margin_x)  # 80% of frame width
-
         if is_life_path:
-            # Life Path thumbnail - parse "LP8-career" -> number "8", angle "career"
             lp_part = str(content_identifier).replace("LP", "")
             if "-" in lp_part:
-                lp_num = lp_part.split("-")[0]
-                angle = lp_part.split("-")[1].upper()
+                main_text = lp_part.split("-")[0]
+                topic_text = lp_part.split("-")[1].upper().replace("_", " ")
             else:
-                lp_num = lp_part
-                angle = ""
-            top_text = "LIFE PATH"
-            main_text = lp_num
-            subtitle_text = angle if angle else ""
-            # Adjust font size for master numbers (11, 22, 33) which are wider
-            if len(lp_num) == 2:
-                main_font_size = 350
-            else:
-                main_font_size = 400
-            top_font_size = 60
-            subtitle_font_size = 55
+                main_text = lp_part
+                topic_text = ""
+            label_text = "LIFE PATH"
         else:
-            # Angel Number thumbnail
-            top_text = "ANGEL NUMBER"
+            label_text = "ANGEL NUMBER"
             main_text = str(content_identifier)
-            subtitle_text = ""
-            # Adjust font size based on number length
-            if len(main_text) <= 3:
-                main_font_size = 350
-            elif len(main_text) == 4:
-                main_font_size = 280
-            else:
-                main_font_size = 220
-            top_font_size = 50
-            subtitle_font_size = 45
+            topic_text = ""
 
-        # Draw "ANGEL NUMBER" or "LIFE PATH" text at top
-        top_font = ImageFont.truetype(font_path, top_font_size)
-        bbox = draw.textbbox((0, 0), top_text, font=top_font)
-        top_width = bbox[2] - bbox[0]
-        top_x = (self.size[0] - top_width) // 2
-        top_y = 600
+        # ===== CONSISTENT FONT SIZES (scaled to fit worst case) =====
+        # Worst case: "ANGEL NUMBER" (12 chars), "1111" or "33", "SHADOW WORK & HEALING"
+        label_font_size = 70
+        number_font_size = 280  # Same for both LP and Angel numbers
+        topic_font_size = 80
+
+        # Helper function to scale font to fit max width
+        def get_scaled_font(text, start_size, min_size=40):
+            size = start_size
+            while size > min_size:
+                font = ImageFont.truetype(font_path, size)
+                bbox = draw.textbbox((0, 0), text, font=font)
+                width = bbox[2] - bbox[0]
+                if width <= max_text_width:
+                    return font, size
+                size -= 5
+            return ImageFont.truetype(font_path, min_size), min_size
+
+        # ===== DRAW LABEL ("LIFE PATH" or "ANGEL NUMBER") =====
+        label_font, _ = get_scaled_font(label_text, label_font_size)
+        bbox = draw.textbbox((0, 0), label_text, font=label_font)
+        label_width = bbox[2] - bbox[0]
+        label_x = (self.size[0] - label_width) // 2
 
         draw.text(
-            (top_x, top_y),
-            top_text,
-            font=top_font,
-            fill=(255, 255, 255, 255),
+            (label_x, label_y),
+            label_text,
+            font=label_font,
+            fill=(255, 255, 255),
             stroke_width=2,
-            stroke_fill=(0, 0, 0, 255)
+            stroke_fill=(0, 0, 0)
         )
 
-        # Draw the main number (BIG and centered)
-        main_font = ImageFont.truetype(font_path, main_font_size)
-        bbox = draw.textbbox((0, 0), main_text, font=main_font)
-        main_width = bbox[2] - bbox[0]
-        main_height = bbox[3] - bbox[1]
-        main_x = (self.size[0] - main_width) // 2
-        main_y = 750
+        # ===== DRAW MAIN NUMBER =====
+        number_font, _ = get_scaled_font(main_text, number_font_size)
+        bbox = draw.textbbox((0, 0), main_text, font=number_font)
+        number_width = bbox[2] - bbox[0]
+        number_x = (self.size[0] - number_width) // 2
 
-        # Draw number with glow effect (multiple layers)
-        # Outer glow
+        # Glow effect
         for offset in range(8, 0, -2):
-            glow_alpha = int(50 * (1 - offset/8))
+            glow_alpha = int(50 * (1 - offset / 8))
             draw.text(
-                (main_x, main_y),
+                (number_x, number_y),
                 main_text,
-                font=main_font,
+                font=number_font,
                 fill=(*text_color, glow_alpha),
                 stroke_width=offset + 4,
                 stroke_fill=(0, 0, 0, glow_alpha)
             )
 
-        # Main number with accent color
+        # Main number
         draw.text(
-            (main_x, main_y),
+            (number_x, number_y),
             main_text,
-            font=main_font,
+            font=number_font,
             fill=text_color,
             stroke_width=4,
-            stroke_fill=(0, 0, 0, 255)
+            stroke_fill=(0, 0, 0)
         )
 
-        # Draw subtitle text (angle for Life Path) if present
-        if subtitle_text:
-            subtitle_font = ImageFont.truetype(font_path, subtitle_font_size)
-            bbox = draw.textbbox((0, 0), subtitle_text, font=subtitle_font)
-            subtitle_width = bbox[2] - bbox[0]
-            subtitle_x = (self.size[0] - subtitle_width) // 2
-            subtitle_y = main_y + main_height + 30  # Below main number with spacing
+        # ===== DRAW TOPIC TEXT (if present) =====
+        if topic_text:
+            topic_font, _ = get_scaled_font(topic_text, topic_font_size)
+            bbox = draw.textbbox((0, 0), topic_text, font=topic_font)
+            topic_width = bbox[2] - bbox[0]
+            topic_x = (self.size[0] - topic_width) // 2
 
             draw.text(
-                (subtitle_x, subtitle_y),
-                subtitle_text,
-                font=subtitle_font,
-                fill=(200, 200, 200, 255),  # Slightly dimmer white
+                (topic_x, topic_y),
+                topic_text,
+                font=topic_font,
+                fill=(200, 200, 200),
                 stroke_width=2,
-                stroke_fill=(0, 0, 0, 255)
+                stroke_fill=(0, 0, 0)
             )
 
         # Draw "THE17PROJECT" watermark at bottom
