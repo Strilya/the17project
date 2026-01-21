@@ -1081,27 +1081,45 @@ class VideoGenerator:
             font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
 
         # Determine if this is angel number or life path
-        is_life_path = content_identifier.startswith("LP")
+        is_life_path = str(content_identifier).startswith("LP")
+
+        # Safe zone margins (10% from edges)
+        safe_margin_x = int(self.size[0] * 0.10)
+        max_text_width = self.size[0] - (2 * safe_margin_x)  # 80% of frame width
 
         if is_life_path:
-            # Life Path thumbnail
-            lp_num = content_identifier.replace("LP", "")
+            # Life Path thumbnail - parse "LP8-career" -> number "8", angle "career"
+            lp_part = str(content_identifier).replace("LP", "")
+            if "-" in lp_part:
+                lp_num = lp_part.split("-")[0]
+                angle = lp_part.split("-")[1].upper()
+            else:
+                lp_num = lp_part
+                angle = ""
             top_text = "LIFE PATH"
             main_text = lp_num
-            main_font_size = 400
+            subtitle_text = angle if angle else ""
+            # Adjust font size for master numbers (11, 22, 33) which are wider
+            if len(lp_num) == 2:
+                main_font_size = 350
+            else:
+                main_font_size = 400
             top_font_size = 60
+            subtitle_font_size = 55
         else:
             # Angel Number thumbnail
             top_text = "ANGEL NUMBER"
-            main_text = content_identifier
+            main_text = str(content_identifier)
+            subtitle_text = ""
             # Adjust font size based on number length
-            if len(content_identifier) <= 3:
+            if len(main_text) <= 3:
                 main_font_size = 350
-            elif len(content_identifier) == 4:
+            elif len(main_text) == 4:
                 main_font_size = 280
             else:
                 main_font_size = 220
             top_font_size = 50
+            subtitle_font_size = 45
 
         # Draw "ANGEL NUMBER" or "LIFE PATH" text at top
         top_font = ImageFont.truetype(font_path, top_font_size)
@@ -1149,6 +1167,23 @@ class VideoGenerator:
             stroke_width=4,
             stroke_fill=(0, 0, 0, 255)
         )
+
+        # Draw subtitle text (angle for Life Path) if present
+        if subtitle_text:
+            subtitle_font = ImageFont.truetype(font_path, subtitle_font_size)
+            bbox = draw.textbbox((0, 0), subtitle_text, font=subtitle_font)
+            subtitle_width = bbox[2] - bbox[0]
+            subtitle_x = (self.size[0] - subtitle_width) // 2
+            subtitle_y = main_y + main_height + 30  # Below main number with spacing
+
+            draw.text(
+                (subtitle_x, subtitle_y),
+                subtitle_text,
+                font=subtitle_font,
+                fill=(200, 200, 200, 255),  # Slightly dimmer white
+                stroke_width=2,
+                stroke_fill=(0, 0, 0, 255)
+            )
 
         # Draw "THE17PROJECT" watermark at bottom
         watermark_font = ImageFont.truetype(font_path, 35)
