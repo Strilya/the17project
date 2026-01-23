@@ -33,8 +33,8 @@ class VoiceGenerator:
         
         self.audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3,
-            speaking_rate=1.1,  # Slightly faster (10%) to keep duration under 30s
-            pitch=-5.5,  # Deep Morgan Freeman-style
+            speaking_rate=0.90,  # 20% slower for better caption readability
+            pitch=-8.5,  # Deep Morgan Freeman-style
             volume_gain_db=3.0,  # Strong presence
             effects_profile_id=["large-home-entertainment-class-device"]  # Bass/richness
         )
@@ -97,8 +97,8 @@ class VoiceGenerator:
         current_time = 0.0
         timings = []
 
-        # Small pause between segments (0.3 seconds)
-        PAUSE_DURATION = 0.3
+        # Pause between segments for better caption readability
+        PAUSE_DURATION = 0.5
 
         for i, segment_file in enumerate(segment_files):
             clip = AudioFileClip(segment_file)
