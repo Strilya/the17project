@@ -1,30 +1,63 @@
 """
 Multi-source video fetcher - Pexels + Pixabay
-Grabs 2-3 clips from each source for montage
+Grabs 2 clips from each source for montage (4 total)
+With fallback queries if primary query fails
 """
 
 import os
 import requests
 import random
 
+# Fallback queries if primary query returns no results
+FALLBACK_QUERIES = [
+    "meditation nature",
+    "peaceful ocean waves",
+    "sunrise clouds",
+    "flowing water",
+    "night sky stars",
+    "forest light rays",
+    "calm lake reflection",
+    "golden hour nature",
+    "mystical fog",
+    "cosmic galaxy"
+]
+
 class VideoSourceManager:
     def __init__(self):
         self.pexels_key = os.getenv('PEXELS_API_KEY')
         self.pixabay_key = os.getenv('PIXABAY_API_KEY')
-        
+
     def fetch_multiple_videos(self, query, count=4):
-        """Fetch multiple video URLs from different sources"""
-        
+        """Fetch multiple video URLs from different sources (2 from each)"""
+
         videos = []
-        
-        # Try Pexels (get 2)
+
+        # Try Pexels (get 2) - with fallback
         pexels_videos = self._fetch_pexels_multiple(query, 2)
-        videos.extend(pexels_videos)
-        
-        # Try Pixabay (get 2)
+        if len(pexels_videos) < 2:
+            # Try fallback queries until we get 2
+            for fallback in random.sample(FALLBACK_QUERIES, min(3, len(FALLBACK_QUERIES))):
+                needed = 2 - len(pexels_videos)
+                if needed <= 0:
+                    break
+                print(f"   🔄 Pexels fallback: '{fallback}'")
+                extra = self._fetch_pexels_multiple(fallback, needed)
+                pexels_videos.extend(extra)
+        videos.extend(pexels_videos[:2])
+
+        # Try Pixabay (get 2) - with fallback
         pixabay_videos = self._fetch_pixabay_multiple(query, 2)
-        videos.extend(pixabay_videos)
-        
+        if len(pixabay_videos) < 2:
+            # Try fallback queries until we get 2
+            for fallback in random.sample(FALLBACK_QUERIES, min(3, len(FALLBACK_QUERIES))):
+                needed = 2 - len(pixabay_videos)
+                if needed <= 0:
+                    break
+                print(f"   🔄 Pixabay fallback: '{fallback}'")
+                extra = self._fetch_pixabay_multiple(fallback, needed)
+                pixabay_videos.extend(extra)
+        videos.extend(pixabay_videos[:2])
+
         # Shuffle and return up to count
         random.shuffle(videos)
         return videos[:count]
