@@ -9,17 +9,18 @@ import requests
 import random
 
 # Fallback queries if primary query returns no results
+# IMPORTANT: Use SIMPLE single/double word queries - Pexels returns 0 for complex phrases
 FALLBACK_QUERIES = [
-    "meditation nature",
-    "peaceful ocean waves",
-    "sunrise clouds",
-    "flowing water",
-    "night sky stars",
-    "forest light rays",
-    "calm lake reflection",
-    "golden hour nature",
-    "mystical fog",
-    "cosmic galaxy"
+    "meditation",
+    "ocean waves",
+    "sunrise",
+    "waterfall",
+    "stars",
+    "forest",
+    "clouds",
+    "nature",
+    "fog",
+    "galaxy"
 ]
 
 class VideoSourceManager:
@@ -69,12 +70,11 @@ class VideoSourceManager:
         try:
             url = "https://api.pexels.com/videos/search"
             headers = {"Authorization": self.pexels_key}
-            # Add safe content filtering
             params = {
                 "query": query,
                 "orientation": "portrait",
-                "per_page": 20,
-                "size": "large"  # Get high quality videos
+                "per_page": 20
+                # NOTE: Do NOT add "size": "large" - it returns 0 results with portrait orientation
             }
 
             response = requests.get(url, headers=headers, params=params, timeout=10)
