@@ -358,6 +358,36 @@ THEME_HASHTAGS = {
     'clarity': ['clarity', 'clearpath', 'vision', 'insight', 'understanding'],
 }
 
+# ============================================================================
+# ENGAGEMENT CTA SYSTEM
+# Dynamic calls-to-action that rotate randomly to boost engagement
+# Use {number} placeholder - will be replaced with actual Life Path/Angel number
+# ============================================================================
+
+LIFE_PATH_CTAS = [
+    "Drop a {emoji} if you're Life Path {number}!",
+    "Tag a Life Path {number} who needs to hear this",
+    "Life Path {number}s: Does this resonate? Comment below 👇",
+    "What's YOUR Life Path number? Calculate: seventhlifepath.com",
+    "Double tap if this describes you perfectly 🎯",
+    "Life Path {number} checking in? 🙋‍♂️ Share your experience!",
+    "Which trait resonates most? Comment 1, 2, or 3",
+    "Save this if you're on your Life Path {number} journey 🔖",
+]
+
+ANGEL_NUMBER_CTAS = [
+    "Seen {number} lately? Comment where! 👇",
+    "Save this for when you see {number} again 🔖",
+    "Share with someone who needs this message today ✨",
+    "Drop a ✨ if you keep seeing {number}",
+    "Tag someone whose Angel Number is {number}",
+    "What does {number} mean to YOU? Share below 💭",
+    "Screenshot this and share your {number} story!",
+]
+
+# Emoji rotation for Life Path CTAs (adds variety)
+CTA_EMOJIS = ['🔥', '✨', '💫', '⭐', '🙌', '💪', '🎯', '💯']
+
 # Angel number to primary theme mapping
 ANGEL_NUMBER_THEMES = {
     # 1s - New beginnings, manifestation, leadership
@@ -530,6 +560,32 @@ def format_hashtags_for_caption(hashtags):
         str: Space-separated hashtags with # prefix
     """
     return ' '.join([f'#{tag}' for tag in hashtags])
+
+
+def get_engagement_cta(content_type, number):
+    """
+    Select a random engagement CTA based on content type.
+
+    Args:
+        content_type: 'life_path' or 'angel_number'
+        number: The Life Path number (1-9, 11, 22, 33) or Angel Number string ('111', '444', etc.)
+
+    Returns:
+        str: Formatted CTA with number placeholder replaced
+    """
+    if content_type == 'life_path':
+        cta_template = random.choice(LIFE_PATH_CTAS)
+        # Replace emoji placeholder with random emoji for variety
+        emoji = random.choice(CTA_EMOJIS)
+        cta = cta_template.replace('{emoji}', emoji)
+    else:
+        cta_template = random.choice(ANGEL_NUMBER_CTAS)
+        cta = cta_template
+
+    # Replace {number} placeholder with actual number
+    cta = cta.replace('{number}', str(number))
+
+    return cta
 
 
 # Legacy hashtag lists (kept for backwards compatibility)
@@ -861,14 +917,15 @@ def generate_caption(content_spec, content_data):
 
 def generate_life_path_caption(content_spec, content_data):
     """
-    Generate caption for Life Path content with SMART CONTEXTUAL HASHTAGS.
+    Generate caption for Life Path content with SMART CONTEXTUAL HASHTAGS
+    and DYNAMIC ENGAGEMENT CTAs.
 
     Args:
         content_spec: dict with life_path_number, angle, variation
         content_data: dict with hook, meaning, action, cta
 
     Returns:
-        str: Instagram caption with exactly 5 relevant hashtags
+        str: Instagram caption with exactly 5 relevant hashtags and engagement CTA
     """
     life_path_num = content_spec['life_path_number']
     angle = content_spec['angle']
@@ -881,6 +938,9 @@ def generate_life_path_caption(content_spec, content_data):
     hashtag_list = get_contextual_hashtags(content_identifier, content_data)
     hashtags = format_hashtags_for_caption(hashtag_list)
 
+    # Get dynamic engagement CTA
+    engagement_cta = get_engagement_cta('life_path', life_path_num)
+
     # Build caption with ACTUAL blank lines (not \n escape characters)
     caption = f"""Life Path {life_path_num}: {lp_data['name']}
 
@@ -890,9 +950,10 @@ def generate_life_path_caption(content_spec, content_data):
 
 {content_data.get('action', '')}
 
+{engagement_cta}
+
 👇 What's YOUR Life Path Number?
 📍 Calculate yours: seventhlifepath.com
-👇 Comment your number below!
 
 New here? Watch my intro (pinned post) 📍
 
@@ -903,20 +964,24 @@ New here? Watch my intro (pinned post) 📍
 
 def generate_angel_number_caption(content_spec, content_data):
     """
-    Generate caption for Angel Number content with SMART CONTEXTUAL HASHTAGS.
+    Generate caption for Angel Number content with SMART CONTEXTUAL HASHTAGS
+    and DYNAMIC ENGAGEMENT CTAs.
 
     Args:
         content_spec: dict with angel_number, style
         content_data: dict with hook, meaning, action, cta
 
     Returns:
-        str: Instagram caption with exactly 5 relevant hashtags
+        str: Instagram caption with exactly 5 relevant hashtags and engagement CTA
     """
     angel_number = content_spec['angel_number']
 
     # Get EXACTLY 5 contextual hashtags based on angel number themes
     hashtag_list = get_contextual_hashtags(angel_number, content_data)
     hashtags = format_hashtags_for_caption(hashtag_list)
+
+    # Get dynamic engagement CTA
+    engagement_cta = get_engagement_cta('angel_number', angel_number)
 
     # Build caption with ACTUAL blank lines (not \n escape characters)
     caption = f"""Seeing {angel_number}?
@@ -927,11 +992,10 @@ def generate_angel_number_caption(content_spec, content_data):
 
 {content_data.get('action', '')}
 
-{content_data.get('cta', '')}
+{engagement_cta}
 
 👇 What's YOUR Life Path Number?
 📍 Calculate yours: seventhlifepath.com
-👇 Comment your number below!
 
 New here? Watch my intro (pinned post) 📍
 
