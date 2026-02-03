@@ -10,3 +10,6 @@ output/*.mp3
 logs/
 logs/*.log
 .DS_Store
+
+# Instagram session credentials
+src/config/
