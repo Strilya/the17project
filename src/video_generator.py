@@ -18,6 +18,10 @@ from moviepy.video.VideoClip import VideoClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.audio.AudioClip import CompositeAudioClip
 from PIL import Image, ImageDraw, ImageFont
+
+# Detect moviepy version for compatibility
+import moviepy
+MOVIEPY_V2 = int(moviepy.__version__.split('.')[0]) >= 2
 import numpy as np
 
 from video_sources import VideoSourceManager
@@ -96,6 +100,47 @@ class VideoGenerator:
 
         # Download Bebas Neue font if not exists
         self._ensure_font()
+
+    # ===== MoviePy 2.x Compatibility Helpers =====
+    def _clip_subclip(self, clip, t1, t2):
+        """Get subclip - moviepy 2.x uses subclipped()"""
+        if MOVIEPY_V2:
+            return clip.subclipped(t1, t2)
+        return clip.subclip(t1, t2)
+
+    def _clip_set_duration(self, clip, duration):
+        """Set duration - moviepy 2.x uses with_duration()"""
+        if MOVIEPY_V2:
+            return clip.with_duration(duration)
+        return clip.set_duration(duration)
+
+    def _clip_set_start(self, clip, start_time):
+        """Set start time - moviepy 2.x uses with_start()"""
+        if MOVIEPY_V2:
+            return clip.with_start(start_time)
+        return clip.set_start(start_time)
+
+    def _clip_set_mask(self, clip, mask):
+        """Set mask - moviepy 2.x uses with_mask()"""
+        if MOVIEPY_V2:
+            return clip.with_mask(mask)
+        return clip.set_mask(mask)
+
+    def _clip_set_audio(self, clip, audio):
+        """Set audio - moviepy 2.x uses with_audio()"""
+        if MOVIEPY_V2:
+            return clip.with_audio(audio)
+        return clip.set_audio(audio)
+
+    def _create_mask_clip(self, make_mask_func, duration):
+        """Create a mask clip - moviepy 2.x doesn't use ismask parameter"""
+        if MOVIEPY_V2:
+            from moviepy.video.VideoClip import ImageClip
+            # In moviepy 2.x, create mask as regular clip
+            return VideoClip(make_mask_func, duration=duration)
+        else:
+            return VideoClip(make_mask_func, duration=duration, ismask=True)
+    # =============================================
 
     def _ensure_font(self):
         """Download Bebas Neue Bold font if missing"""
@@ -349,11 +394,68 @@ class VideoGenerator:
                     stroke_fill=(0, 0, 0, alpha)
                 )
 
-            return np.array(img)
+            # Convert RGBA to RGB and extract alpha as separate mask
+            # moviepy 1.0.3 requires explicit RGB + mask, not RGBA
+            img_array = np.array(img)
+            return img_array[:, :, :3]  # Return RGB only
+
+        def make_mask(t):
+            # Create same image to extract alpha channel
+            img = Image.new('RGBA', (1080, 1920), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+            if not os.path.exists(font_path):
+                font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+            font = ImageFont.truetype(font_path, font_size)
+
+            alpha = 255
+            fade_duration = min(0.2, duration * 0.15)
+            if t < fade_duration:
+                alpha = int(255 * (t / fade_duration))
+            elif t > duration - fade_duration:
+                alpha = int(255 * ((duration - t) / fade_duration))
+
+            # Same positioning logic as make_frame
+            line_height = 60
+            total_text_height = len(lines) * line_height
+            y_start = 1400 - (total_text_height // 2)
+
+            # Draw all lines with alternating colors (same as make_frame)
+            for i, line in enumerate(lines):
+                if not line:
+                    continue
+
+                bbox = draw.textbbox((0, 0), line, font=font)
+                text_width = bbox[2] - bbox[0]
+                x = (1080 - text_width) // 2
+                y = y_start + (i * line_height)
+
+                # Alternate colors: odd lines = white, even lines = accent color
+                if i % 2 == 0:
+                    fill_color = (255, 255, 255, alpha)
+                else:
+                    fill_color = (*text_color, alpha)
+
+                draw.text(
+                    (x, y),
+                    line,
+                    font=font,
+                    fill=fill_color,
+                    stroke_width=3,
+                    stroke_fill=(0, 0, 0, alpha)
+                )
+
+            # Extract and normalize alpha channel for mask (0-1 range)
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0  # Return alpha channel normalized
 
         # Create clip with proper duration and timing
         clip = VideoClip(make_frame, duration=duration)
-        clip = clip.with_start(start_time)
+        mask = self._create_mask_clip(make_mask, duration)
+        clip = self._clip_set_mask(clip, mask)
+        clip = self._clip_set_start(clip, start_time)
 
         return clip
 
@@ -430,24 +532,25 @@ class VideoGenerator:
                 [background] + text_clips + [brand_watermark, source_watermark],
                 size=self.size
             )
-            main_composite = main_composite.with_duration(main_duration)
+            main_composite = self._clip_set_duration(main_composite, main_duration)
 
             # Create 2-second end card
             print(f"   ✅ Creating 2-second end card...")
             end_card = self._create_end_card(text_color)
-            end_card = end_card.with_start(main_duration)
+            end_card = self._clip_set_start(end_card, main_duration)
 
             # Combine main video + end card
             total_duration = main_duration + 2  # Add 2 seconds for end card
             final_video = CompositeVideoClip(
                 [main_composite, end_card],
                 size=self.size
-            ).with_duration(total_duration)
+            )
+            final_video = self._clip_set_duration(final_video, total_duration)
 
             # Add audio with music that covers full duration (including end card)
             print(f"   🎵 Mixing audio for {total_duration:.1f}s (voice + music)...")
             final_audio = self._mix_audio(voice_audio, total_duration)
-            final_video = final_video.with_audio(final_audio)
+            final_video = self._clip_set_audio(final_video, final_audio)
 
             # Render HIGH QUALITY for Instagram (Slack will compress on upload)
             print(f"   ⏳ Rendering HIGH QUALITY video for Instagram...")
@@ -491,6 +594,19 @@ class VideoGenerator:
 
         for i, clip_path in enumerate(video_clips):
             clip = VideoFileClip(clip_path)
+
+            # CRITICAL: Convert to RGB (remove alpha channel if present)
+            # moviepy 1.0.3 has issues compositing RGBA video clips
+            def rgb_converter(frame):
+                if len(frame.shape) == 3 and frame.shape[2] == 4:
+                    return frame[:, :, :3]  # Strip alpha channel
+                return frame
+
+            # Apply RGB conversion (moviepy 2.x uses image_transform, 1.x uses fl_image)
+            if MOVIEPY_V2:
+                clip = clip.image_transform(rgb_converter)
+            else:
+                clip = clip.fl_image(rgb_converter)
             clip_aspect = clip.w / clip.h
 
             # Fix aspect ratio - CROP, don't squish
@@ -499,29 +615,41 @@ class VideoGenerator:
                     # Too wide - crop sides
                     new_width = int(clip.h * target_aspect)
                     x_center = clip.w / 2
-                    clip = clip.cropped(x1=(x_center - new_width/2), x2=(x_center + new_width/2))
+                    if MOVIEPY_V2:
+                        clip = clip.cropped(x1=(x_center - new_width/2), x2=(x_center + new_width/2))
+                    else:
+                        import moviepy.video.fx.all as vfx
+                        clip = clip.fx(vfx.crop, x1=(x_center - new_width/2), x2=(x_center + new_width/2))
                 else:
                     # Too tall - crop top/bottom
                     new_height = int(clip.w / target_aspect)
                     y_center = clip.h / 2
-                    clip = clip.cropped(y1=(y_center - new_height/2), y2=(y_center + new_height/2))
+                    if MOVIEPY_V2:
+                        clip = clip.cropped(y1=(y_center - new_height/2), y2=(y_center + new_height/2))
+                    else:
+                        import moviepy.video.fx.all as vfx
+                        clip = clip.fx(vfx.crop, y1=(y_center - new_height/2), y2=(y_center + new_height/2))
 
             # Resize to exact dimensions
-            clip = clip.resized(self.size)
+            if MOVIEPY_V2:
+                clip = clip.resized(new_size=self.size)
+            else:
+                import moviepy.video.fx.all as vfx
+                clip = clip.fx(vfx.resize, newsize=self.size)
 
             # Extract segment
             if clip.duration >= clip_duration:
                 start_time = max(0, (clip.duration - clip_duration) / 2)
-                clip = clip.subclipped(start_time, start_time + clip_duration)
+                clip = self._clip_subclip(clip, start_time, start_time + clip_duration)
             else:
-                clip = clip.with_duration(clip_duration)
+                clip = self._clip_set_duration(clip, clip_duration)
 
             # Set start time
-            clip = clip.with_start(i * clip_duration)
+            clip = self._clip_set_start(clip, i * clip_duration)
             processed_clips.append(clip)
 
         final_montage = CompositeVideoClip(processed_clips, size=self.size)
-        return final_montage.with_duration(target_duration)
+        return self._clip_set_duration(final_montage, target_duration)
 
     def _create_brand_watermark(self, duration):
         """Create THE17PROJECT watermark (below captions, one third from top)"""
@@ -555,9 +683,43 @@ class VideoGenerator:
                 stroke_fill=(0, 0, 0, 255)  # BLACK stroke
             )
 
-            return np.array(img)
+            # Convert RGBA to RGB (moviepy 1.0.3 compatibility)
+            img_array = np.array(img)
+            return img_array[:, :, :3]
 
-        return VideoClip(make_frame, duration=duration)
+        def make_mask(t):
+            img = Image.new('RGBA', self.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+            if not os.path.exists(font_path):
+                font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+            font = ImageFont.truetype(font_path, 28)
+
+            text = "The17Project"
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+
+            x = (self.size[0] - text_width) // 2
+            y = int(self.size[1] / 3) + 120
+
+            draw.text(
+                (x, y),
+                text,
+                font=font,
+                fill=(255, 255, 255, 255),
+                stroke_width=2,
+                stroke_fill=(0, 0, 0, 255)
+            )
+
+            # Extract alpha channel for mask
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0
+
+        clip = VideoClip(make_frame, duration=duration)
+        mask = self._create_mask_clip(make_mask, duration)
+        return self._clip_set_mask(clip, mask)
 
     def _create_static_brand_watermark(self, duration):
         """Create static THE17PROJECT watermark (always visible, no fade)"""
@@ -590,9 +752,42 @@ class VideoGenerator:
                 stroke_fill=(0, 0, 0, 255)  # Full opacity black outline
             )
 
-            return np.array(img)
+            # Convert RGBA to RGB (moviepy 1.0.3 compatibility)
+            img_array = np.array(img)
+            return img_array[:, :, :3]
 
-        return VideoClip(make_frame, duration=duration)
+        def make_mask(t):
+            img = Image.new('RGBA', self.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+            if not os.path.exists(font_path):
+                font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+            watermark_font = ImageFont.truetype(font_path, 28)
+            watermark = "The17Project"
+
+            bbox = draw.textbbox((0, 0), watermark, font=watermark_font)
+            w_width = bbox[2] - bbox[0]
+            w_x = (1080 - w_width) // 2
+            w_y = 1500
+
+            draw.text(
+                (w_x, w_y),
+                watermark,
+                font=watermark_font,
+                fill=(255, 255, 255, 255),
+                stroke_width=2,
+                stroke_fill=(0, 0, 0, 255)
+            )
+
+            # Extract alpha channel for mask
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0
+
+        clip = VideoClip(make_frame, duration=duration)
+        mask = self._create_mask_clip(make_mask, duration)
+        return self._clip_set_mask(clip, mask)
 
     def _create_source_watermark(self, source_name, duration):
         """Create barely visible source watermark (BOTTOM LEFT)"""
@@ -614,9 +809,31 @@ class VideoGenerator:
             # Semi-transparent white (barely visible)
             draw.text((x, y), text, font=font, fill=(255, 255, 255, 100))
 
-            return np.array(img)
+            # Convert RGBA to RGB (moviepy 1.0.3 compatibility)
+            img_array = np.array(img)
+            return img_array[:, :, :3]
 
-        return VideoClip(make_frame, duration=duration)
+        def make_mask(t):
+            img = Image.new('RGBA', self.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
+
+            font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+            font = ImageFont.truetype(font_path, 16)
+
+            text = f"Source: {source_name}"
+
+            x = 15
+            y = 1880
+
+            draw.text((x, y), text, font=font, fill=(255, 255, 255, 100))
+
+            # Extract alpha channel for mask
+            img_array = np.array(img)
+            return img_array[:, :, 3] / 255.0
+
+        clip = VideoClip(make_frame, duration=duration)
+        mask = self._create_mask_clip(make_mask, duration)
+        return self._clip_set_mask(clip, mask)
 
     def _create_end_card(self, text_color=(255, 200, 0)):
         """
@@ -761,7 +978,8 @@ class VideoGenerator:
 
         if end_card_duration > 0:
             silence = AudioClip(lambda t: [0, 0], duration=end_card_duration)
-            extended_voice = CompositeAudioClip([voice_audio, silence.with_start(voice_duration)])
+            silence = self._clip_set_start(silence, voice_duration)
+            extended_voice = CompositeAudioClip([voice_audio, silence])
         else:
             extended_voice = voice_audio
 
@@ -794,7 +1012,7 @@ class VideoGenerator:
                 music_audio = concatenate_audioclips(music_clips)
 
             # Trim to exact duration
-            music_audio = music_audio.subclipped(0, total_duration)
+            music_audio = self._clip_subclip(music_audio, 0, total_duration)
 
             # Set music volume to 15% by wrapping get_frame
             original_get_frame = music_audio.get_frame
@@ -831,3 +1049,149 @@ class VideoGenerator:
         except Exception as e:
             print(f"   ⚠️  Download failed: {e}")
             return False
+
+    def generate_thumbnail(self, content_identifier, output_path, text_color=(255, 200, 0)):
+        """
+        Generate a thumbnail image with consistent sizing for all content types.
+        Sized to fit worst-case: "LIFE PATH 33" + "SHADOW WORK & HEALING" or "ANGEL NUMBER 1111"
+
+        Args:
+            content_identifier: The angel number (e.g., "1111") or life path (e.g., "LP7-career")
+            output_path: Where to save the thumbnail image
+            text_color: RGB tuple for accent color
+        """
+        from PIL import Image, ImageDraw, ImageFont
+
+        # Create dark gradient background
+        img = Image.new('RGB', self.size, (15, 15, 30))
+        draw = ImageDraw.Draw(img)
+
+        # Add subtle gradient effect
+        for y in range(self.size[1]):
+            ratio = y / self.size[1]
+            r = int(15 + (25 * ratio))
+            g = int(15 + (10 * ratio))
+            b = int(30 + (20 * ratio))
+            draw.line([(0, y), (self.size[0], y)], fill=(r, g, b))
+
+        # Load font
+        font_path = os.path.join(self.fonts_dir, "BebasNeue-Regular.ttf")
+        if not os.path.exists(font_path):
+            font_path = os.path.join(self.fonts_dir, "Montserrat-Bold.ttf")
+
+        # Safe zone: 10% margin from edges = 80% usable width
+        safe_margin_x = int(self.size[0] * 0.10)
+        max_text_width = self.size[0] - (2 * safe_margin_x)
+
+        # Fixed Y positions (percentage of screen height)
+        label_y = int(self.size[1] * 0.25)   # 25% from top - label
+        number_y = int(self.size[1] * 0.40)  # 40% from top - number
+        topic_y = int(self.size[1] * 0.60)   # 60% from top - topic
+
+        # Parse content identifier
+        is_life_path = str(content_identifier).startswith("LP")
+
+        if is_life_path:
+            lp_part = str(content_identifier).replace("LP", "")
+            if "-" in lp_part:
+                main_text = lp_part.split("-")[0]
+                topic_text = lp_part.split("-")[1].upper().replace("_", " ")
+            else:
+                main_text = lp_part
+                topic_text = ""
+            label_text = "LIFE PATH"
+        else:
+            label_text = "ANGEL NUMBER"
+            main_text = str(content_identifier)
+            topic_text = ""
+
+        # ===== FIXED FONT SIZES (same for ALL content types) =====
+        # Sized to fit worst case: "ANGEL NUMBER", "1111", "SHADOW WORK & HEALING"
+        # These are FIXED - no scaling - ensures identical layout for LP and Angel Number
+        LABEL_FONT_SIZE = 70    # Fits "ANGEL NUMBER" (longest label)
+        NUMBER_FONT_SIZE = 200  # Fits "1111" or "2255" (4-digit numbers)
+        TOPIC_FONT_SIZE = 65    # Fits "SHADOW WORK & HEALING" (longest topic)
+
+        # Create fonts with fixed sizes
+        label_font = ImageFont.truetype(font_path, LABEL_FONT_SIZE)
+        number_font = ImageFont.truetype(font_path, NUMBER_FONT_SIZE)
+        topic_font = ImageFont.truetype(font_path, TOPIC_FONT_SIZE)
+
+        # ===== DRAW LABEL ("LIFE PATH" or "ANGEL NUMBER") =====
+        bbox = draw.textbbox((0, 0), label_text, font=label_font)
+        label_width = bbox[2] - bbox[0]
+        label_x = (self.size[0] - label_width) // 2
+
+        draw.text(
+            (label_x, label_y),
+            label_text,
+            font=label_font,
+            fill=(255, 255, 255),
+            stroke_width=2,
+            stroke_fill=(0, 0, 0)
+        )
+
+        # ===== DRAW MAIN NUMBER =====
+        bbox = draw.textbbox((0, 0), main_text, font=number_font)
+        number_width = bbox[2] - bbox[0]
+        number_x = (self.size[0] - number_width) // 2
+
+        # Glow effect
+        for offset in range(8, 0, -2):
+            glow_alpha = int(50 * (1 - offset / 8))
+            draw.text(
+                (number_x, number_y),
+                main_text,
+                font=number_font,
+                fill=(*text_color, glow_alpha),
+                stroke_width=offset + 4,
+                stroke_fill=(0, 0, 0, glow_alpha)
+            )
+
+        # Main number
+        draw.text(
+            (number_x, number_y),
+            main_text,
+            font=number_font,
+            fill=text_color,
+            stroke_width=4,
+            stroke_fill=(0, 0, 0)
+        )
+
+        # ===== DRAW TOPIC TEXT (if present) =====
+        if topic_text:
+            bbox = draw.textbbox((0, 0), topic_text, font=topic_font)
+            topic_width = bbox[2] - bbox[0]
+            topic_x = (self.size[0] - topic_width) // 2
+
+            draw.text(
+                (topic_x, topic_y),
+                topic_text,
+                font=topic_font,
+                fill=(200, 200, 200),
+                stroke_width=2,
+                stroke_fill=(0, 0, 0)
+            )
+
+        # Draw "THE17PROJECT" watermark at bottom
+        watermark_font = ImageFont.truetype(font_path, 35)
+        watermark = "The17Project"
+        bbox = draw.textbbox((0, 0), watermark, font=watermark_font)
+        w_width = bbox[2] - bbox[0]
+        w_x = (self.size[0] - w_width) // 2
+        w_y = 1350
+
+        draw.text(
+            (w_x, w_y),
+            watermark,
+            font=watermark_font,
+            fill=(147, 112, 219, 255),  # Purple
+            stroke_width=2,
+            stroke_fill=(0, 0, 0, 255)
+        )
+
+        # Save thumbnail
+        img.save(output_path, "JPEG", quality=95)
+        print(f"   🖼️  Thumbnail generated: {output_path}")
+
+        return output_path

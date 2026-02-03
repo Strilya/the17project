@@ -14,6 +14,7 @@ from voice_generator import VoiceGenerator
 from video_generator import VideoGenerator
 from sheets_logger import SheetsLogger
 from slack_notifier import SlackNotifier
+from instagram_poster import InstagramPoster
 from angel_numbers_db import get_all_angel_numbers, get_angel_number_meaning
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 
@@ -22,6 +23,9 @@ from content_flow_manager import get_day_type, get_content_plan_for_day, generat
 from life_path_generator import LifePathGenerator
 
 load_dotenv()
+
+# Instagram posting control (can be disabled for testing)
+INSTAGRAM_AUTO_POST = os.getenv('INSTAGRAM_AUTO_POST', 'true').lower() == 'true'
 
 # Configuration: Set to True for full day (3 reels), False for single test reel
 GENERATE_FULL_DAY = False  # Scheduled runs use --reel-number to generate specific reel
@@ -113,6 +117,23 @@ def main(reel_number=None, test_mode=False):
     print("\n🔌 Setting up integrations...")
     sheets_logger = SheetsLogger()
     slack_notifier = SlackNotifier()
+
+    # Initialize Instagram poster (if enabled)
+    instagram_poster = None
+    if INSTAGRAM_AUTO_POST:
+        try:
+            print("   📱 Initializing Instagram poster...")
+            instagram_poster = InstagramPoster()
+            print("   ✅ Instagram poster ready")
+        except ValueError as e:
+            print(f"   ⚠️  Instagram disabled: {e}")
+            instagram_poster = None  # Disable by setting to None
+        except Exception as e:
+            print(f"   ⚠️  Instagram login failed: {e}")
+            print("   ⚠️  Continuing without Instagram posting")
+            instagram_poster = None
+    else:
+        print("   ⚠️  Instagram auto-post disabled (set INSTAGRAM_AUTO_POST=true to enable)")
 
     # Determine output directory (use absolute path)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -272,6 +293,26 @@ def main(reel_number=None, test_mode=False):
             # Generate proper caption for Instagram (before logging)
             caption = generate_caption(reel_spec, content)
 
+            # Generate thumbnail with angel number prominently displayed
+            thumbnail_path = f"{output_base}/{content_identifier}_thumb_{timestamp}.jpg"
+            video_gen.generate_thumbnail(content_identifier, thumbnail_path, text_color)
+
+            # Post to Instagram (if enabled and not in test mode)
+            instagram_url = None
+            if instagram_poster and not test_mode:
+                print(f"\n📱 Posting to Instagram...")
+                instagram_result = instagram_poster.post_reel(
+                    video_path=video_path,
+                    caption=caption,
+                    thumbnail_path=thumbnail_path
+                )
+
+                if instagram_result:
+                    instagram_url = instagram_result['url']
+                    print(f"   ✅ Posted to Instagram: {instagram_url}")
+                else:
+                    print(f"   ❌ Instagram posting failed")
+
             # Log to Google Sheets (updated to handle both types)
             print(f"\n📊 Logging to integrations...")
             # Use "TEST" identifier in test mode to avoid affecting rotation tracking
@@ -284,25 +325,50 @@ def main(reel_number=None, test_mode=False):
                 video_path=video_path,
                 duration=total_duration,
                 video_sources=["Pexels", "Pixabay"],
-                custom_caption=caption  # Use generated caption for both types
+                custom_caption=caption,  # Use generated caption for both types
+                instagram_url=instagram_url  # Add Instagram URL if posted
             )
 
-            # Send Slack notification (with full caption)
+            # Send Slack notification
             if caption:
-                slack_notifier.send_reel_notification(
-                    angel_number=content_identifier,
-                    style=content_type,
-                    content=content,
-                    hashtags=caption,  # Full caption with hashtags
-                    video_path=video_path,
-                    duration=total_duration
-                )
+                if instagram_url:
+                    # Success notification with Instagram link (no video attachment)
+                    slack_notifier.send_success_notification(
+                        content_type=content_type,
+                        content_identifier=content_identifier,
+                        instagram_url=instagram_url,
+                        caption=caption,
+                        duration=total_duration
+                    )
+                elif instagram_poster and not test_mode:
+                    # Instagram posting was attempted but failed
+                    slack_notifier.send_error_notification(
+                        content_type=content_type,
+                        content_identifier=content_identifier,
+                        error="Instagram posting failed - check logs"
+                    )
+                else:
+                    # Instagram posting disabled or test mode - send old notification with video
+                    slack_notifier.send_reel_notification(
+                        angel_number=content_identifier,
+                        style=content_type,
+                        content=content,
+                        hashtags=caption,  # Full caption with hashtags
+                        video_path=video_path,
+                        duration=total_duration,
+                        test_mode=test_mode
+                    )
 
             # Cleanup temp files
             try:
                 if os.path.exists(temp_voice_path):
                     os.remove(temp_voice_path)
-                    print(f"\n🗑️  Cleaned up temp voice file")
+                # Keep thumbnail in test mode so user can verify it
+                if os.path.exists(thumbnail_path) and not test_mode:
+                    os.remove(thumbnail_path)
+                elif test_mode and os.path.exists(thumbnail_path):
+                    print(f"\n🖼️  Thumbnail saved: {thumbnail_path}")
+                print(f"\n🗑️  Cleaned up temp files")
             except Exception as e:
                 pass
 
@@ -310,6 +376,7 @@ def main(reel_number=None, test_mode=False):
             print(f"✅ REEL {reel_num}/{reel_count} DONE!")
             if test_mode:
                 print(f"🧪 TEST MODE - Not tracked in rotation")
+                print(f"🖼️  Thumbnail: {thumbnail_path}")
             print(f"{'=' * 70}")
             print(f"Video: {video_path}")
             if caption:

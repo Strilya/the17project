@@ -2,12 +2,12 @@ name: Generate Angel Number Reel
 
 on:
   schedule:
-    # 8 AM EST = 1 PM UTC (13:00) - During DST: 8 AM EDT = 12 PM UTC (12:00)
-    - cron: '0 13 * * *'
-    # 2 PM EST = 7 PM UTC (19:00) - During DST: 2 PM EDT = 6 PM UTC (18:00)
-    - cron: '0 19 * * *'
-    # 7 PM EST = 12 AM UTC next day (00:00) - During DST: 7 PM EDT = 11 PM UTC (23:00)
-    - cron: '0 0 * * *'
+    # 4 AM EST = 9 AM UTC → targets ~6-7 AM EST after GitHub delay
+    - cron: '0 9 * * *'
+    # 11 AM EST = 4 PM UTC → targets ~1-2 PM EST after GitHub delay
+    - cron: '0 16 * * *'
+    # 4 PM EST = 9 PM UTC → targets ~6-7 PM EST after GitHub delay
+    - cron: '0 21 * * *'
 
   workflow_dispatch:  # Manual trigger button in GitHub Actions UI
 
@@ -54,7 +54,13 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
+          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+          INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: |
+          # Create config directory first
+          mkdir -p config
+
           # Create .env file
           echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" > .env
           echo "PEXELS_API_KEY=$PEXELS_API_KEY" >> .env
@@ -62,9 +68,11 @@ jobs:
           echo "GOOGLE_SHEET_ID=$GOOGLE_SHEET_ID" >> .env
           echo "SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN" >> .env
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
-
-          # Create config directory
-          mkdir -p config
+          echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
+          echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
+          echo "INSTAGRAM_AUTO_POST=true" >> .env
+          # Decode and restore Instagram session file
+          echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
 
           # Create Google Cloud credentials (for TTS and Sheets)
           if [ -z "$GOOGLE_CLOUD_CREDENTIALS" ]; then
@@ -86,19 +94,27 @@ jobs:
           # Use same credentials for Google Sheets (same service account)
           echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
+          # Restore Instagram session file from GitHub Secret (base64 decode)
+          if [ -n "$INSTAGRAM_SESSION" ]; then
+            echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
+            echo "✅ Instagram session restored"
+          else
+            echo "⚠️ No Instagram session found - will attempt fresh login (may fail on GitHub Actions)"
+          fi
+
       - name: Generate reel
         id: generate
         run: |
           # Determine which reel to generate based on schedule
-          # 8 AM EST (13:00 UTC) = Reel 1
-          # 2 PM EST (19:00 UTC) = Reel 2
-          # 7 PM EST (00:00 UTC) = Reel 3
+          # 4 AM EST (09:00 UTC) = Reel 1 → targets ~6 AM EST
+          # 11 AM EST (16:00 UTC) = Reel 2 → targets ~1 PM EST
+          # 4 PM EST (21:00 UTC) = Reel 3 → targets ~6 PM EST
           HOUR=$(date -u +%H)
-          if [ "$HOUR" -eq 13 ] || [ "$HOUR" -eq 12 ]; then
+          if [ "$HOUR" -ge 9 ] && [ "$HOUR" -le 11 ]; then
             REEL_NUM=1
-          elif [ "$HOUR" -eq 19 ] || [ "$HOUR" -eq 18 ]; then
+          elif [ "$HOUR" -ge 16 ] && [ "$HOUR" -le 18 ]; then
             REEL_NUM=2
-          elif [ "$HOUR" -eq 0 ] || [ "$HOUR" -eq 23 ]; then
+          elif [ "$HOUR" -ge 21 ] || [ "$HOUR" -le 1 ]; then
             REEL_NUM=3
           else
             # Manual trigger - generate all 3 reels

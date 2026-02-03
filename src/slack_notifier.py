@@ -40,7 +40,7 @@ class SlackNotifier:
             print(f"   ⚠️  Slack setup failed: {e}")
             self.enabled = False
 
-    def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration):
+    def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration, test_mode=False):
         """Send Slack notification with ready-to-copy caption
 
         Args:
@@ -50,6 +50,7 @@ class SlackNotifier:
             hashtags: Either hashtags string OR full Instagram caption (for Life Path)
             video_path: Path to video file
             duration: Video duration in seconds
+            test_mode: If True, marks notification as TEST
         """
 
         if not self.enabled:
@@ -76,13 +77,14 @@ class SlackNotifier:
                 full_caption = f"{caption_text}\n\n{hashtags}"
                 content_label = "Angel Number"
 
-            # Format the Slack message
+            # Format the Slack message header with info
+            header_text = "🧪 TEST REEL GENERATED!" if test_mode else "🎬 NEW REEL GENERATED!"
             message_blocks = [
                 {
                     "type": "header",
                     "text": {
                         "type": "plain_text",
-                        "text": "🎬 NEW REEL GENERATED!",
+                        "text": header_text,
                         "emoji": True
                     }
                 },
@@ -109,28 +111,30 @@ class SlackNotifier:
                 },
                 {
                     "type": "divider"
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*📝 COPY THIS CAPTION FOR INSTAGRAM:*"
-                    }
-                },
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"```{full_caption}```"
-                    }
                 }
             ]
 
-            # Send message with blocks
+            # Send header message with blocks
             response = self.client.chat_postMessage(
                 channel=self.channel_id,
                 blocks=message_blocks,
                 text=f"New reel generated: {angel_number} ({style})"  # Fallback text
+            )
+
+            # Send caption as pure plain text without markdown formatting
+            # This preserves exact line breaks when copying to Instagram
+            caption_header = "📝 INSTAGRAM CAPTION - Copy this text below:"
+
+            # Build the complete message with actual line breaks (not escape sequences)
+            caption_message = f"""{caption_header}
+
+{full_caption}"""
+
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=caption_message,
+                thread_ts=response['ts'],
+                mrkdwn=False  # Disable markdown processing to preserve formatting
             )
 
             # Upload video file - compress if over 10MB
@@ -197,5 +201,79 @@ class SlackNotifier:
 
         except SlackApiError as e:
             print(f"   ⚠️  Slack notification failed: {e.response['error']}")
+        except Exception as e:
+            print(f"   ⚠️  Slack notification failed: {e}")
+
+    def send_success_notification(self, content_type, content_identifier, instagram_url, caption, duration):
+        """
+        Send success notification after Instagram posting
+        NO video attachment - just confirmation and link
+
+        Args:
+            content_type: 'life_path' or 'angel_number'
+            content_identifier: Life Path number or Angel Number
+            instagram_url: URL of posted Instagram reel
+            caption: The caption that was posted
+            duration: Video duration in seconds
+        """
+        if not self.enabled:
+            return
+
+        # Format content type for display
+        if content_type == 'life_path':
+            content_label = f"Life Path {content_identifier}"
+        else:
+            content_label = f"Angel Number {content_identifier}"
+
+        # Build message with actual line breaks
+        message = f"""✅ REEL POSTED TO INSTAGRAM
+
+📱 Content: {content_label}
+🔗 View: {instagram_url}
+⏱️ Duration: {duration}s
+
+📝 Caption:
+{caption}
+
+---
+Posted via automation 🤖
+"""
+
+        try:
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=message,
+                mrkdwn=False  # Disable markdown to preserve caption formatting
+            )
+            print("   ✅ Slack success notification sent")
+        except Exception as e:
+            print(f"   ⚠️  Slack notification failed: {e}")
+
+    def send_error_notification(self, content_type, content_identifier, error):
+        """
+        Send error notification if Instagram posting fails
+
+        Args:
+            content_type: 'life_path' or 'angel_number'
+            content_identifier: Life Path number or Angel Number
+            error: Error message
+        """
+        if not self.enabled:
+            return
+
+        message = f"""❌ INSTAGRAM POSTING FAILED
+
+📱 Content: {content_type} - {content_identifier}
+🚨 Error: {error}
+
+Please check logs and post manually if needed.
+"""
+
+        try:
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=message
+            )
+            print("   ✅ Slack error notification sent")
         except Exception as e:
             print(f"   ⚠️  Slack notification failed: {e}")

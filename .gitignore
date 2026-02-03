@@ -1,6 +1,7 @@
 .env
 config/credentials.json
 config/sheets_credentials.json
+config/instagram_session.json
 __pycache__/
 *.pyc
 output/
@@ -9,3 +10,6 @@ output/*.mp3
 logs/
 logs/*.log
 .DS_Store
+
+# Instagram session credentials
+src/config/

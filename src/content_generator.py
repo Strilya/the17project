@@ -47,11 +47,22 @@ STRUCTURE (strict word counts - DO NOT EXCEED):
 - Action (25-30 words max): Practical mental/emotional guidance, what to BE AWARE OF, trust your intuition (NO RITUALS)
 - CTA (8-10 words max): Strong follow + engagement question
 
-HOOK EXAMPLES (POSITIVE):
-- "Saw {angel_number} right before my biggest breakthrough. Here's what it meant..."
-- "Woke up at {angel_number} the night before landing my dream job. Not random..."
-- "Kept seeing {angel_number} during my search. Then I met my soulmate. Here's why..."
-- "Kept seeing {angel_number} everywhere before my life completely transformed. Here's why..."
+HOOK EXAMPLES - HIGH URGENCY/CURIOSITY (pick one randomly):
+- "STOP scrolling if you keep seeing {angel_number}..."
+- "WAIT - if {angel_number} keeps appearing, this is urgent..."
+- "If you're seeing {angel_number}, the universe needs you to hear this NOW..."
+- "PAUSE. You seeing {angel_number} is NOT a coincidence..."
+- "{angel_number} is literally stalking you. Here's why..."
+- "The REAL reason {angel_number} won't leave you alone..."
+- "What they don't tell you about seeing {angel_number}..."
+- "I ignored {angel_number} for months. Biggest mistake ever..."
+- "Your guides are SCREAMING {angel_number} at you because..."
+- "The hidden message behind {angel_number} that changes everything..."
+- "If {angel_number} keeps finding you, you're being chosen..."
+- "{angel_number} appearing means your life is about to shift..."
+- "POV: You finally understand why {angel_number} follows you..."
+- "That feeling when {angel_number} appears? Trust it..."
+- "You're not crazy for noticing {angel_number}. You're awakening..."
 
 MEANING EXAMPLES (GROUNDED - NO BULLSHIT):
 - "Seeing {angel_number} means you're exactly where you need to be. Trust your path and keep going."
@@ -74,12 +85,12 @@ Return ONLY valid JSON:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
-            temperature=0.95,
+            temperature=0.7,
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        return self._parse_json(response.content[0].text)
-    
+
+        return self._fix_angel_number(self._parse_json(response.content[0].text), angel_number)
+
     def generate_practical(self, angel_number):
         """Practical tips - myth-busting, what to actually do"""
 
@@ -108,10 +119,22 @@ STRUCTURE (strict word counts - DO NOT EXCEED):
 - Action (25-30 words max): Specific technique or ritual to do RIGHT NOW
 - CTA (8-10 words max): Follow + share your experience prompt
 
-HOOK EXAMPLES (POSITIVE):
-- "Stop making wishes at {angel_number}. That's not how it works. Here's the POWERFUL truth..."
-- "Everyone thinks {angel_number} means wait. They're missing the OPPORTUNITY. Listen..."
-- "You're seeing {angel_number} but nothing manifests? You're ONE step from breakthrough..."
+HOOK EXAMPLES - HIGH URGENCY/MYTH-BUSTING (pick one randomly):
+- "STOP wishing on {angel_number}. Do THIS instead..."
+- "Everyone gets {angel_number} WRONG. Here's the truth..."
+- "You're seeing {angel_number} but nothing happens? You're missing THIS..."
+- "{angel_number} isn't luck. It's a WARNING to act NOW..."
+- "The universe sent {angel_number} because you're IGNORING something..."
+- "I tested this {angel_number} method. Results were INSANE..."
+- "{angel_number} on repeat means ONE thing. And it's urgent..."
+- "NOBODY talks about this {angel_number} secret..."
+- "{angel_number} is literally screaming at you. Here's why..."
+- "Seeing {angel_number}? Your manifestation window closes SOON..."
+- "{angel_number} just exposed what you need to do next..."
+- "The {angel_number} truth that spiritual gurus WON'T tell you..."
+- "{angel_number} is your FINAL sign. Stop waiting..."
+- "Why {angel_number} keeps appearing until you DO this..."
+- "{angel_number} chose YOU. Here's what that actually means..."
 
 MEANING EXAMPLES (myth-busting - POSITIVE):
 - "{angel_number} doesn't mean 'make a wish' - it means your manifestation window is OPEN for the next 17 minutes"
@@ -134,12 +157,12 @@ Return ONLY valid JSON:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
-            temperature=0.95,
+            temperature=0.7,
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        return self._parse_json(response.content[0].text)
-    
+
+        return self._fix_angel_number(self._parse_json(response.content[0].text), angel_number)
+
     def generate_insights(self, angel_number):
         """Client stories - transformation, real examples, emotional weight"""
 
@@ -168,10 +191,22 @@ STRUCTURE (strict word counts - DO NOT EXCEED):
 - Action (25-30 words max): What they did and the POSITIVE outcome
 - CTA (8-10 words max): Follow for stories + share yours prompt
 
-HOOK EXAMPLES (POSITIVE):
-- "Client saw {angel_number} every single day for three months straight. Then landed her DREAM job..."
-- "She finally listened to {angel_number}. Made the leap. Doubled her income in 6 months..."
-- "Woke up at {angel_number} for 30 days in a row. Finally listened. Met her soulmate..."
+HOOK EXAMPLES - STORY-BASED URGENCY (pick one randomly):
+- "She ignored {angel_number} for weeks. Then THIS happened..."
+- "He finally listened to {angel_number}. His life will NEVER be the same..."
+- "{angel_number} appeared before her biggest breakthrough. Coincidence? NO..."
+- "What happens when you ACTUALLY trust {angel_number}? Watch this..."
+- "I tracked {angel_number} for 30 days. What I found was SHOCKING..."
+- "{angel_number} kept appearing. She finally acted. Now she's living her DREAM..."
+- "The moment he trusted {angel_number}, EVERYTHING changed..."
+- "{angel_number} was trying to tell her something. She almost missed it..."
+- "True story: {angel_number} saved her from making a HUGE mistake..."
+- "She saw {angel_number} right before meeting her soulmate. Here's what happened..."
+- "{angel_number} appeared 7 times in one day. The message was CLEAR..."
+- "He ignored {angel_number}. Then regretted it. Don't make his mistake..."
+- "{angel_number} showed up when she needed it MOST. This is powerful..."
+- "The {angel_number} pattern that predicted her entire breakthrough..."
+- "After seeing {angel_number}, she quit her job. Best decision EVER..."
 
 MEANING EXAMPLES (revelation - POSITIVE):
 - "{angel_number} was guiding her toward the breakthrough she couldn't see yet - the universe knew"
@@ -194,12 +229,12 @@ Return ONLY valid JSON:
         response = self.client.messages.create(
             model=self.model,
             max_tokens=1000,
-            temperature=0.95,
+            temperature=0.7,
             messages=[{"role": "user", "content": prompt}]
         )
-        
-        return self._parse_json(response.content[0].text)
-    
+
+        return self._fix_angel_number(self._parse_json(response.content[0].text), angel_number)
+
     def _parse_json(self, text):
         """Extract JSON from Claude's response"""
         try:
@@ -210,4 +245,23 @@ Return ONLY valid JSON:
             if start != -1 and end > start:
                 return json.loads(text[start:end])
             raise ValueError(f"Could not parse JSON from response: {text}")
+
+    def _fix_angel_number(self, content, correct_number):
+        """Replace any wrong angel numbers in content with the correct one"""
+        import re
+        # Pattern to find 3-4 digit numbers that look like angel numbers
+        angel_pattern = r'\b(\d{3,4})\b'
+
+        for key in ['hook', 'meaning', 'action', 'cta']:
+            if key in content and content[key]:
+                text = content[key]
+                # Find all number matches
+                matches = re.findall(angel_pattern, text)
+                for match in matches:
+                    # If it's a different angel number (not time like 11, 17, etc.)
+                    if match != correct_number and len(match) >= 3:
+                        text = text.replace(match, correct_number)
+                        print(f"   ⚠️  Fixed wrong number {match} → {correct_number} in {key}")
+                content[key] = text
+        return content
 

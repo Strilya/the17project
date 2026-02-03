@@ -338,73 +338,266 @@ COLOR_ROTATION_ORDER = ['yellow', 'pink', 'purple', 'coral', 'orange', 'skyblue'
 
 
 # ============================================================================
-# HASHTAG SETS - Relevant to content type
+# SMART CONTEXTUAL HASHTAG SYSTEM
+# Selects EXACTLY 5 relevant hashtags based on content theme
 # ============================================================================
 
+# Theme-based hashtag pools (select 3 from matching theme)
+THEME_HASHTAGS = {
+    'manifestation': ['manifestation', 'lawofattraction', 'abundance', 'manifest', 'attracting'],
+    'protection': ['divineprotection', 'spiritualguidance', 'angelsigns', 'guided', 'protected'],
+    'transformation': ['transformation', 'change', 'spiritualjourney', 'awakening', 'evolving'],
+    'love': ['twinflame', 'soulmate', 'divinelove', 'loveenergy', 'heartchakra'],
+    'new_beginnings': ['newbeginnings', 'freshstart', 'opportunity', 'starting', 'rebirth'],
+    'intuition': ['intuition', 'innerwisdom', 'trustyourself', 'innerknowing', 'gutfeeling'],
+    'alignment': ['alignment', 'synchronicity', 'divinetiming', 'flow', 'inflow'],
+    'abundance': ['abundance', 'prosperity', 'wealthy', 'receiving', 'blessed'],
+    'spiritual_growth': ['spiritualgrowth', 'ascension', 'higherself', 'consciousness', 'enlightenment'],
+    'action': ['divineaction', 'takeaction', 'movingforward', 'momentum', 'progress'],
+    'trust': ['trusttheuniverse', 'faith', 'believing', 'surrender', 'lettinggo'],
+    'clarity': ['clarity', 'clearpath', 'vision', 'insight', 'understanding'],
+}
+
+# ============================================================================
+# ENGAGEMENT CTA SYSTEM
+# Dynamic calls-to-action that rotate randomly to boost engagement
+# Use {number} placeholder - will be replaced with actual Life Path/Angel number
+# ============================================================================
+
+LIFE_PATH_CTAS = [
+    "Drop a {emoji} if you're Life Path {number}!",
+    "Tag a Life Path {number} who needs to hear this",
+    "Life Path {number}s: Does this resonate? Comment below 👇",
+    "What's YOUR Life Path number? Calculate: seventhlifepath.com",
+    "Double tap if this describes you perfectly 🎯",
+    "Life Path {number} checking in? 🙋‍♂️ Share your experience!",
+    "Which trait resonates most? Comment 1, 2, or 3",
+    "Save this if you're on your Life Path {number} journey 🔖",
+]
+
+ANGEL_NUMBER_CTAS = [
+    "Seen {number} lately? Comment where! 👇",
+    "Save this for when you see {number} again 🔖",
+    "Share with someone who needs this message today ✨",
+    "Drop a ✨ if you keep seeing {number}",
+    "Tag someone whose Angel Number is {number}",
+    "What does {number} mean to YOU? Share below 💭",
+    "Screenshot this and share your {number} story!",
+]
+
+# Emoji rotation for Life Path CTAs (adds variety)
+CTA_EMOJIS = ['🔥', '✨', '💫', '⭐', '🙌', '💪', '🎯', '💯']
+
+# Angel number to primary theme mapping
+ANGEL_NUMBER_THEMES = {
+    # 1s - New beginnings, manifestation, leadership
+    '111': ['manifestation', 'new_beginnings', 'alignment'],
+    '1111': ['manifestation', 'new_beginnings', 'spiritual_growth'],
+    '11': ['intuition', 'spiritual_growth', 'alignment'],
+
+    # 2s - Balance, relationships, partnerships
+    '222': ['love', 'trust', 'alignment'],
+    '2222': ['love', 'trust', 'alignment'],
+    '22': ['alignment', 'trust', 'manifestation'],
+
+    # 3s - Creativity, communication, growth
+    '333': ['spiritual_growth', 'alignment', 'trust'],
+    '3333': ['spiritual_growth', 'manifestation', 'abundance'],
+    '33': ['spiritual_growth', 'intuition', 'clarity'],
+
+    # 4s - Protection, stability, foundation
+    '444': ['protection', 'trust', 'alignment'],
+    '4444': ['protection', 'abundance', 'trust'],
+    '44': ['protection', 'alignment', 'trust'],
+
+    # 5s - Change, transformation, freedom
+    '555': ['transformation', 'new_beginnings', 'action'],
+    '5555': ['transformation', 'action', 'new_beginnings'],
+    '55': ['transformation', 'action', 'clarity'],
+
+    # 6s - Balance, harmony, love
+    '666': ['love', 'alignment', 'trust'],
+    '6666': ['love', 'abundance', 'alignment'],
+    '66': ['love', 'trust', 'alignment'],
+
+    # 7s - Spirituality, intuition, inner wisdom
+    '777': ['spiritual_growth', 'intuition', 'alignment'],
+    '7777': ['spiritual_growth', 'intuition', 'abundance'],
+    '77': ['intuition', 'spiritual_growth', 'clarity'],
+
+    # 8s - Abundance, success, power
+    '888': ['abundance', 'manifestation', 'action'],
+    '8888': ['abundance', 'manifestation', 'new_beginnings'],
+    '88': ['abundance', 'action', 'manifestation'],
+
+    # 9s - Completion, endings, humanitarianism
+    '999': ['transformation', 'spiritual_growth', 'new_beginnings'],
+    '9999': ['transformation', 'spiritual_growth', 'trust'],
+    '99': ['transformation', 'clarity', 'trust'],
+
+    # 0s - Infinite potential, divine connection
+    '000': ['spiritual_growth', 'new_beginnings', 'trust'],
+    '0000': ['spiritual_growth', 'manifestation', 'alignment'],
+    '00': ['spiritual_growth', 'intuition', 'alignment'],
+
+    # Mixed sequences
+    '1010': ['new_beginnings', 'spiritual_growth', 'action'],
+    '1212': ['manifestation', 'alignment', 'new_beginnings'],
+    '1234': ['action', 'new_beginnings', 'manifestation'],
+    '911': ['transformation', 'new_beginnings', 'spiritual_growth'],
+    '711': ['spiritual_growth', 'intuition', 'manifestation'],
+    '411': ['protection', 'new_beginnings', 'action'],
+    '311': ['spiritual_growth', 'manifestation', 'action'],
+    '611': ['love', 'new_beginnings', 'alignment'],
+    '811': ['abundance', 'new_beginnings', 'manifestation'],
+    '1717': ['spiritual_growth', 'manifestation', 'intuition'],
+    '1818': ['abundance', 'manifestation', 'new_beginnings'],
+    '1919': ['transformation', 'new_beginnings', 'action'],
+    '2020': ['trust', 'alignment', 'clarity'],
+    '2121': ['new_beginnings', 'love', 'manifestation'],
+    '2323': ['spiritual_growth', 'love', 'trust'],
+    '3434': ['protection', 'spiritual_growth', 'alignment'],
+    '4545': ['transformation', 'protection', 'action'],
+    '5656': ['transformation', 'love', 'new_beginnings'],
+    '6767': ['spiritual_growth', 'love', 'intuition'],
+    '7878': ['spiritual_growth', 'abundance', 'intuition'],
+    '8989': ['abundance', 'transformation', 'action'],
+    '1313': ['spiritual_growth', 'transformation', 'action'],
+    '1414': ['protection', 'new_beginnings', 'manifestation'],
+    '1515': ['transformation', 'new_beginnings', 'action'],
+    '1616': ['love', 'new_beginnings', 'alignment'],
+}
+
+# Life Path number to primary theme mapping
+LIFE_PATH_THEMES = {
+    1: ['new_beginnings', 'action', 'manifestation'],      # Leader, pioneer
+    2: ['love', 'intuition', 'alignment'],                  # Diplomat, peacemaker
+    3: ['spiritual_growth', 'manifestation', 'abundance'],  # Creative, communicator
+    4: ['protection', 'trust', 'action'],                   # Builder, organizer
+    5: ['transformation', 'action', 'new_beginnings'],      # Adventurer, freedom
+    6: ['love', 'protection', 'alignment'],                 # Nurturer, healer
+    7: ['spiritual_growth', 'intuition', 'clarity'],        # Seeker, analyst
+    8: ['abundance', 'manifestation', 'action'],            # Achiever, powerhouse
+    9: ['spiritual_growth', 'transformation', 'love'],      # Humanitarian, old soul
+    11: ['intuition', 'spiritual_growth', 'manifestation'], # Master intuitive
+    22: ['manifestation', 'abundance', 'action'],           # Master builder
+    33: ['love', 'spiritual_growth', 'alignment'],          # Master teacher
+}
+
+# Default themes for unknown numbers
+DEFAULT_THEMES = ['spiritual_growth', 'alignment', 'trust']
+
+
+def get_contextual_hashtags(content_identifier, content_data=None):
+    """
+    Generate EXACTLY 5 contextually relevant hashtags based on content theme.
+
+    Args:
+        content_identifier: Angel number (e.g., "1111") or life path (e.g., "LP7")
+        content_data: Optional dict with hook, meaning, action, cta for additional context
+
+    Returns:
+        list: Exactly 5 hashtags (without # prefix)
+    """
+    hashtags = []
+
+    # Determine if Life Path or Angel Number
+    is_life_path = str(content_identifier).startswith('LP')
+
+    if is_life_path:
+        # Life Path content
+        lp_num = int(str(content_identifier).replace('LP', '').split('-')[0])
+        themes = LIFE_PATH_THEMES.get(lp_num, DEFAULT_THEMES)
+
+        # 1. Core hashtag: numerology
+        hashtags.append('numerology')
+
+        # 2. Number-specific hashtag
+        hashtags.append(f'lifepath{lp_num}')
+
+    else:
+        # Angel Number content
+        angel_number = str(content_identifier)
+        themes = ANGEL_NUMBER_THEMES.get(angel_number, DEFAULT_THEMES)
+
+        # 1. Core hashtag: angelnumbers
+        hashtags.append('angelnumbers')
+
+        # 2. Number-specific hashtag
+        hashtags.append(angel_number)
+
+    # 3-5. Select 3 theme-relevant hashtags (one from each theme)
+    used_hashtags = set(hashtags)
+
+    for theme in themes[:3]:  # Use up to 3 themes
+        theme_pool = THEME_HASHTAGS.get(theme, [])
+        # Pick one hashtag from this theme that we haven't used
+        available = [h for h in theme_pool if h not in used_hashtags]
+        if available:
+            selected = random.choice(available)
+            hashtags.append(selected)
+            used_hashtags.add(selected)
+
+    # If we don't have 5 yet, fill with spiritual defaults
+    fallback_pool = ['spiritualawakening', 'divinetiming', 'universe', 'signs', 'guided']
+    while len(hashtags) < 5:
+        for fallback in fallback_pool:
+            if fallback not in used_hashtags and len(hashtags) < 5:
+                hashtags.append(fallback)
+                used_hashtags.add(fallback)
+
+    return hashtags[:5]  # Ensure exactly 5
+
+
+def format_hashtags_for_caption(hashtags):
+    """
+    Format hashtags with # prefix for caption use.
+
+    Args:
+        hashtags: list of hashtag strings (without #)
+
+    Returns:
+        str: Space-separated hashtags with # prefix
+    """
+    return ' '.join([f'#{tag}' for tag in hashtags])
+
+
+def get_engagement_cta(content_type, number):
+    """
+    Select a random engagement CTA based on content type.
+
+    Args:
+        content_type: 'life_path' or 'angel_number'
+        number: The Life Path number (1-9, 11, 22, 33) or Angel Number string ('111', '444', etc.)
+
+    Returns:
+        str: Formatted CTA with number placeholder replaced
+    """
+    if content_type == 'life_path':
+        cta_template = random.choice(LIFE_PATH_CTAS)
+        # Replace emoji placeholder with random emoji for variety
+        emoji = random.choice(CTA_EMOJIS)
+        cta = cta_template.replace('{emoji}', emoji)
+    else:
+        cta_template = random.choice(ANGEL_NUMBER_CTAS)
+        cta = cta_template
+
+    # Replace {number} placeholder with actual number
+    cta = cta.replace('{number}', str(number))
+
+    return cta
+
+
+# Legacy hashtag lists (kept for backwards compatibility)
 LIFE_PATH_HASHTAGS = [
-    'numerology',
-    'lifepath',
-    'lifepathumber',
-    'spirituality',
-    'selfdiscovery',
-    'manifestation',
-    'lawofattraction',
-    'spiritualawakening',
-    'numerologyreading',
-    'birthdatenumerology',
-    'knowyourself',
-    'personalgrowth',
-    'selfawareness',
-    'astrology',
-    'zodiac',
-    'birthchart',
-    'soulgrowth',
-    'spiritualjourney',
-    'consciousness',
-    'awakening',
-    'innerwork',
-    'selfmastery',
-    'lifepurpose',
-    'destinynumber',
-    'soulpurpose',
-    'spiritualgrowth',
-    'mindfulness',
-    'transformation',
-    'healing',
-    'enlightenment'
+    'numerology', 'lifepath', 'lifepathumber', 'spirituality', 'selfdiscovery',
+    'manifestation', 'lawofattraction', 'spiritualawakening', 'numerologyreading',
+    'birthdatenumerology', 'knowyourself', 'personalgrowth', 'selfawareness'
 ]
 
 ANGEL_NUMBER_HASHTAGS = [
-    'numerology',
-    'angelnumbers',
-    'angelmessages',
-    'divineguidance',
-    'synchronicity',
-    'signs',
-    'universe',
-    'spiritualguidance',
-    'divinity',
-    'spirituality',
-    'manifestation',
-    'lawofattraction',
-    'spiritualawakening',
-    'universesigns',
-    'divinesigns',
-    'angelicguidance',
-    'spiritualsigns',
-    'awakening',
-    'consciousness',
-    'highervibration',
-    'energyhealing',
-    'lightworker',
-    'starseed',
-    'raiseyourvibration',
-    'spiritualpath',
-    'divinetiming',
-    'trusttheuniverse',
-    'innerwisdom',
-    'intuition',
-    'spiritualjourney'
+    'angelnumbers', 'angelmessages', 'divineguidance', 'synchronicity', 'signs',
+    'universe', 'spiritualguidance', 'spirituality', 'manifestation', 'lawofattraction'
 ]
 
 
@@ -724,40 +917,31 @@ def generate_caption(content_spec, content_data):
 
 def generate_life_path_caption(content_spec, content_data):
     """
-    Generate caption for Life Path content
-    
+    Generate caption for Life Path content with SMART CONTEXTUAL HASHTAGS
+    and DYNAMIC ENGAGEMENT CTAs.
+
     Args:
         content_spec: dict with life_path_number, angle, variation
         content_data: dict with hook, meaning, action, cta
-        
+
     Returns:
-        str: Instagram caption
+        str: Instagram caption with exactly 5 relevant hashtags and engagement CTA
     """
     life_path_num = content_spec['life_path_number']
     angle = content_spec['angle']
-    
+
     # Get Life Path data
     lp_data = get_life_path_data(life_path_num)
-    
-    # Pick template for this angle
-    templates = CAPTION_TEMPLATES.get(angle, CAPTION_TEMPLATES['identity'])
-    template = random.choice(templates)
-    
-    # Build hashtags - add specific Life Path tag + shuffle for variety
-    specific_hashtags = [
-        f'lifepath{life_path_num}',
-        'numerology',
-        'lifepath'
-    ]
 
-    # Shuffle and select random hashtags from life path pool (exclude already used ones)
-    available_tags = [tag for tag in LIFE_PATH_HASHTAGS if tag not in specific_hashtags]
-    random_tags = random.sample(available_tags, min(12, len(available_tags)))
-    all_hashtags = specific_hashtags + random_tags
-    hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
-    
-    # Simple caption that doesn't rely on complex template variables
-    # We'll use the actual generated content
+    # Get EXACTLY 5 contextual hashtags based on life path themes
+    content_identifier = f"LP{life_path_num}"
+    hashtag_list = get_contextual_hashtags(content_identifier, content_data)
+    hashtags = format_hashtags_for_caption(hashtag_list)
+
+    # Get dynamic engagement CTA
+    engagement_cta = get_engagement_cta('life_path', life_path_num)
+
+    # Build caption with ACTUAL blank lines (not \n escape characters)
     caption = f"""Life Path {life_path_num}: {lp_data['name']}
 
 {content_data.get('hook', '')}
@@ -766,69 +950,58 @@ def generate_life_path_caption(content_spec, content_data):
 
 {content_data.get('action', '')}
 
-👇 What's YOUR Life Path Number?
+{engagement_cta}
 
-Calculate: seventhlifepath.com
-Comment your number below!
+👇 What's YOUR Life Path Number?
+📍 Calculate yours: seventhlifepath.com
 
 New here? Watch my intro (pinned post) 📍
 
 {hashtags}"""
 
-    return caption.strip()
+    return caption
 
 
 def generate_angel_number_caption(content_spec, content_data):
     """
-    Generate caption for Angel Number content
-    
+    Generate caption for Angel Number content with SMART CONTEXTUAL HASHTAGS
+    and DYNAMIC ENGAGEMENT CTAs.
+
     Args:
         content_spec: dict with angel_number, style
         content_data: dict with hook, meaning, action, cta
-        
+
     Returns:
-        str: Instagram caption
+        str: Instagram caption with exactly 5 relevant hashtags and engagement CTA
     """
     angel_number = content_spec['angel_number']
-    
-    # Build hashtags - shuffle for variety across posts
-    specific_hashtags = [
-        f'angelnumber{angel_number}',
-        f'{angel_number}',
-        'angelnumbers',
-        'synchronicity',
-        'signs'
-    ]
 
-    # Shuffle and select random hashtags from angel number pool
-    available_tags = [tag for tag in ANGEL_NUMBER_HASHTAGS if tag not in specific_hashtags]
-    random_tags = random.sample(available_tags, min(10, len(available_tags)))
-    all_hashtags = specific_hashtags + random_tags
-    hashtags = ' '.join([f'#{tag}' for tag in all_hashtags[:15]])
-    
-    # Build full transcript caption
-    caption_parts = [
-        f"Seeing {angel_number}?",
-        content_data.get('hook', ''),
-        content_data.get('meaning', ''),
-        content_data.get('action', ''),
-        content_data.get('cta', '')
-    ]
+    # Get EXACTLY 5 contextual hashtags based on angel number themes
+    hashtag_list = get_contextual_hashtags(angel_number, content_data)
+    hashtags = format_hashtags_for_caption(hashtag_list)
 
-    # Join parts with double line breaks, then add CTA and hashtags
-    full_transcript = '\n\n'.join([part for part in caption_parts if part])
-    caption = f"""{full_transcript}
+    # Get dynamic engagement CTA
+    engagement_cta = get_engagement_cta('angel_number', angel_number)
+
+    # Build caption with ACTUAL blank lines (not \n escape characters)
+    caption = f"""Seeing {angel_number}?
+
+{content_data.get('hook', '')}
+
+{content_data.get('meaning', '')}
+
+{content_data.get('action', '')}
+
+{engagement_cta}
 
 👇 What's YOUR Life Path Number?
-
-Calculate: seventhlifepath.com
-Comment your number below!
+📍 Calculate yours: seventhlifepath.com
 
 New here? Watch my intro (pinned post) 📍
 
 {hashtags}"""
 
-    return caption.strip()
+    return caption
 
 
 # ============================================================================
