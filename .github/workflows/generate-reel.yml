@@ -70,9 +70,7 @@ jobs:
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
           echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
           echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
-          # Disabled: Instagram blocks sessions from new IPs (GitHub servers)
-          # Post locally using: python3 src/main.py
-          echo "INSTAGRAM_AUTO_POST=false" >> .env
+          echo "INSTAGRAM_AUTO_POST=true" >> .env
           # Decode and restore Instagram session file
           echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
 

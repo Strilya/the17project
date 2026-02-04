@@ -59,9 +59,7 @@ jobs:
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
           echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
           echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
-          # Disabled: Instagram blocks sessions from new IPs (GitHub servers)
-          # Post locally using: python3 src/carousel_main.py
-          echo "INSTAGRAM_AUTO_POST=false" >> .env
+          echo "INSTAGRAM_AUTO_POST=true" >> .env
 
           # Create Google Cloud credentials (for Sheets)
           printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > config/credentials.json
