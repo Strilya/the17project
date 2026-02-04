@@ -277,3 +277,46 @@ Please check logs and post manually if needed.
             print("   ✅ Slack error notification sent")
         except Exception as e:
             print(f"   ⚠️  Slack notification failed: {e}")
+
+    def send_carousel_notification(self, carousel_id, carousel_type, instagram_url, slide_count):
+        """
+        Send notification when a carousel is posted
+
+        Args:
+            carousel_id: Unique carousel identifier (e.g., "LP1_breakdown")
+            carousel_type: Type of carousel (e.g., "life_path_breakdown")
+            instagram_url: URL of posted Instagram carousel
+            slide_count: Number of slides in the carousel
+        """
+        if not self.enabled:
+            return
+
+        # Format carousel type for display
+        type_labels = {
+            'life_path_breakdown': '📊 Life Path Breakdown',
+            'life_path_compatibility': '💕 Compatibility Guide',
+            'life_path_career': '💼 Career Deep Dive',
+            'life_path_love': '❤️ Love & Relationships',
+            'angel_number': '🔮 Angel Number Guide'
+        }
+        type_label = type_labels.get(carousel_type, carousel_type)
+
+        message = f"""✅ CAROUSEL POSTED TO INSTAGRAM
+
+📱 Type: {type_label}
+🆔 ID: {carousel_id}
+📸 Slides: {slide_count}
+🔗 View: {instagram_url}
+
+---
+Posted via automation 🤖
+"""
+
+        try:
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=message
+            )
+            print("   ✅ Slack carousel notification sent")
+        except Exception as e:
+            print(f"   ⚠️  Slack notification failed: {e}")

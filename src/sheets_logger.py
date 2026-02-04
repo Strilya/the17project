@@ -239,3 +239,98 @@ class SheetsLogger:
         except Exception as e:
             print(f"   ⚠️  Failed to log to Google Sheets: {e}")
             return None
+
+    def _get_or_create_carousel_sheet(self):
+        """Get or create the carousels worksheet"""
+        try:
+            creds_path = os.getenv('GOOGLE_SHEETS_CREDS')
+            sheet_id = os.getenv('GOOGLE_SHEET_ID')
+
+            if not creds_path or not sheet_id:
+                return None
+
+            if not os.path.isabs(creds_path):
+                project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                creds_path = os.path.join(project_root, creds_path)
+
+            scopes = [
+                'https://www.googleapis.com/auth/spreadsheets',
+                'https://www.googleapis.com/auth/drive'
+            ]
+
+            creds = Credentials.from_service_account_file(creds_path, scopes=scopes)
+            client = gspread.authorize(creds)
+            spreadsheet = client.open_by_key(sheet_id)
+
+            try:
+                return spreadsheet.worksheet("The17Project_Carousels")
+            except:
+                # Create new worksheet with headers
+                carousel_sheet = spreadsheet.add_worksheet(
+                    title="The17Project_Carousels",
+                    rows=500,
+                    cols=6
+                )
+                headers = [
+                    "Date/Time",
+                    "Carousel ID",
+                    "Type",
+                    "Instagram URL",
+                    "Status"
+                ]
+                carousel_sheet.append_row(headers)
+                return carousel_sheet
+
+        except Exception as e:
+            print(f"   ⚠️  Failed to get carousel sheet: {e}")
+            return None
+
+    def log_carousel(self, carousel_id, carousel_type, instagram_url=None):
+        """Log generated carousel to Google Sheets
+
+        Args:
+            carousel_id: Unique carousel identifier (e.g., "LP1_breakdown")
+            carousel_type: Type of carousel (e.g., "life_path_breakdown")
+            instagram_url: URL of posted Instagram carousel (default: None)
+        """
+        carousel_sheet = self._get_or_create_carousel_sheet()
+        if not carousel_sheet:
+            return
+
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            row_data = [
+                timestamp,
+                carousel_id,
+                carousel_type,
+                instagram_url or "",
+                "Posted" if instagram_url else "Generated"
+            ]
+
+            carousel_sheet.append_row(row_data)
+            print(f"   ✅ Carousel logged to Google Sheets")
+
+        except Exception as e:
+            print(f"   ⚠️  Failed to log carousel: {e}")
+
+    def get_posted_carousels(self):
+        """Get list of carousel IDs that have been posted"""
+        carousel_sheet = self._get_or_create_carousel_sheet()
+        if not carousel_sheet:
+            return []
+
+        try:
+            all_data = carousel_sheet.get_all_values()
+            carousel_ids = []
+
+            # Skip header row
+            for row in all_data[1:]:
+                if len(row) >= 2:
+                    carousel_ids.append(row[1])  # Column B: Carousel ID
+
+            return carousel_ids
+
+        except Exception as e:
+            print(f"   ⚠️  Failed to fetch posted carousels: {e}")
+            return []
