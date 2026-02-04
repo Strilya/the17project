@@ -22,23 +22,62 @@ class InstagramPoster:
         self._login()
 
     def _login(self):
-        """Login to Instagram with session persistence"""
-        try:
-            # Try to load existing session
-            if os.path.exists(self.session_file):
+        """Login to Instagram with session persistence and validation"""
+        session_loaded = False
+
+        # Try to load existing session first
+        if os.path.exists(self.session_file):
+            try:
                 print("   Loading existing Instagram session...")
                 self.client.load_settings(self.session_file)
                 self.client.login(self.username, self.password)
-                print("   ✅ Instagram session loaded successfully")
-            else:
-                # Fresh login
-                print("   Fresh Instagram login...")
-                self.client.login(self.username, self.password)
 
-                # Create config directory if it doesn't exist
-                os.makedirs(os.path.dirname(self.session_file), exist_ok=True)
-                self.client.dump_settings(self.session_file)
-                print("   ✅ Instagram login successful, session saved")
+                # Validate session by making a simple API call
+                if self._validate_session():
+                    print("   ✅ Instagram session loaded and validated")
+                    session_loaded = True
+                else:
+                    print("   ⚠️  Session expired, refreshing...")
+                    self._clear_session()
+
+            except Exception as e:
+                print(f"   ⚠️  Session load failed: {e}")
+                self._clear_session()
+
+        # Fresh login if no valid session
+        if not session_loaded:
+            self._fresh_login()
+
+    def _validate_session(self):
+        """Check if session is still valid by fetching account info"""
+        try:
+            # Simple API call to verify session works
+            self.client.account_info()
+            return True
+        except Exception:
+            return False
+
+    def _clear_session(self):
+        """Delete stale session file"""
+        try:
+            if os.path.exists(self.session_file):
+                os.remove(self.session_file)
+                print("   🗑️  Cleared stale session")
+        except Exception:
+            pass
+        # Reset client
+        self.client = Client()
+
+    def _fresh_login(self):
+        """Perform fresh login and save session"""
+        try:
+            print("   Fresh Instagram login...")
+            self.client.login(self.username, self.password)
+
+            # Create config directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.session_file), exist_ok=True)
+            self.client.dump_settings(self.session_file)
+            print("   ✅ Instagram login successful, session saved")
 
         except TwoFactorRequired:
             print("   ❌ Two-factor authentication required. Please disable 2FA or provide code.")
@@ -95,6 +134,52 @@ class InstagramPoster:
 
         except Exception as e:
             print(f"   ❌ Failed to post reel: {e}")
+            return None
+
+    def post_carousel(self, image_paths, caption):
+        """
+        Post a carousel (album) to Instagram
+
+        Args:
+            image_paths: List of paths to image files (2-10 images)
+            caption: Instagram caption with line breaks preserved
+
+        Returns:
+            dict: Posted media info or None if failed
+        """
+        try:
+            if len(image_paths) < 2:
+                print(f"   ❌ Carousel requires at least 2 images, got {len(image_paths)}")
+                return None
+
+            if len(image_paths) > 10:
+                print(f"   ⚠️  Instagram allows max 10 images, truncating to 10")
+                image_paths = image_paths[:10]
+
+            print(f"   📤 Uploading carousel to Instagram...")
+            print(f"      Images: {len(image_paths)}")
+            print(f"      Caption length: {len(caption)} chars")
+
+            # Upload carousel (instagrapi handles all Instagram requirements)
+            media = self.client.album_upload(
+                paths=image_paths,
+                caption=caption
+            )
+
+            print(f"   ✅ Carousel posted successfully!")
+            print(f"      Media ID: {media.id}")
+            print(f"      URL: https://www.instagram.com/p/{media.code}/")
+
+            return {
+                'media_id': media.id,
+                'code': media.code,
+                'url': f"https://www.instagram.com/p/{media.code}/",
+                'posted_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+                'image_count': len(image_paths)
+            }
+
+        except Exception as e:
+            print(f"   ❌ Failed to post carousel: {e}")
             return None
 
     def verify_post(self, media_code):
