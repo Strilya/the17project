@@ -70,7 +70,9 @@ jobs:
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
           echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
           echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
-          echo "INSTAGRAM_AUTO_POST=true" >> .env
+          # TEMPORARILY DISABLED - Instagram session needs refresh (Feb 4, 2026)
+          # Change to 'true' once session is fixed
+          echo "INSTAGRAM_AUTO_POST=false" >> .env
           # Decode and restore Instagram session file
           echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
 
