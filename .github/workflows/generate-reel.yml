@@ -1,15 +1,17 @@
 name: Generate Angel Number Reel
 
 on:
-  schedule:
-    # 4 AM EST = 9 AM UTC → targets ~6-7 AM EST after GitHub delay
-    - cron: '0 9 * * *'
-    # 11 AM EST = 4 PM UTC → targets ~1-2 PM EST after GitHub delay
-    - cron: '0 16 * * *'
-    # 4 PM EST = 9 PM UTC → targets ~6-7 PM EST after GitHub delay
-    - cron: '0 21 * * *'
+  # TEMPORARILY DISABLED - Instagram session needs refresh (Feb 4, 2026)
+  # Uncomment when session is fixed:
+  # schedule:
+  #   # 4 AM EST = 9 AM UTC → targets ~6-7 AM EST after GitHub delay
+  #   - cron: '0 9 * * *'
+  #   # 11 AM EST = 4 PM UTC → targets ~1-2 PM EST after GitHub delay
+  #   - cron: '0 16 * * *'
+  #   # 4 PM EST = 9 PM UTC → targets ~6-7 PM EST after GitHub delay
+  #   - cron: '0 21 * * *'
 
-  workflow_dispatch:  # Manual trigger button in GitHub Actions UI
+  workflow_dispatch:  # Manual trigger - keep enabled for testing
 
 jobs:
   generate-reel:
