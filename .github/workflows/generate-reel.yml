@@ -1,15 +1,13 @@
 name: Generate Angel Number Reel
 
 on:
-  # TEMPORARILY DISABLED - Instagram session needs refresh (Feb 4, 2026)
-  # Uncomment when session is fixed:
-  # schedule:
-  #   # 4 AM EST = 9 AM UTC → targets ~6-7 AM EST after GitHub delay
-  #   - cron: '0 9 * * *'
-  #   # 11 AM EST = 4 PM UTC → targets ~1-2 PM EST after GitHub delay
-  #   - cron: '0 16 * * *'
-  #   # 4 PM EST = 9 PM UTC → targets ~6-7 PM EST after GitHub delay
-  #   - cron: '0 21 * * *'
+  schedule:
+    # 4 AM EST = 9 AM UTC → targets ~6-7 AM EST after GitHub delay
+    - cron: '0 9 * * *'
+    # 11 AM EST = 4 PM UTC → targets ~1-2 PM EST after GitHub delay
+    - cron: '0 16 * * *'
+    # 4 PM EST = 9 PM UTC → targets ~6-7 PM EST after GitHub delay
+    - cron: '0 21 * * *'
 
   workflow_dispatch:  # Manual trigger - keep enabled for testing
 
@@ -56,8 +54,6 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
-          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
-          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
           INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: |
           # Create config directory first
@@ -70,13 +66,7 @@ jobs:
           echo "GOOGLE_SHEET_ID=$GOOGLE_SHEET_ID" >> .env
           echo "SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN" >> .env
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
-          echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
-          echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
-          # TEMPORARILY DISABLED - Instagram session needs refresh (Feb 4, 2026)
-          # Change to 'true' once session is fixed
-          echo "INSTAGRAM_AUTO_POST=false" >> .env
-          # Decode and restore Instagram session file
-          echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
+          echo "INSTAGRAM_AUTO_POST=true" >> .env
 
           # Create Google Cloud credentials (for TTS and Sheets)
           if [ -z "$GOOGLE_CLOUD_CREDENTIALS" ]; then
@@ -98,12 +88,13 @@ jobs:
           # Use same credentials for Google Sheets (same service account)
           echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
-          # Restore Instagram session file from GitHub Secret (base64 decode)
+          # Restore Instagram session from GitHub Secret (NO LOGIN, just load session)
           if [ -n "$INSTAGRAM_SESSION" ]; then
-            echo "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
+            echo "$INSTAGRAM_SESSION" > config/instagram_session.json
             echo "✅ Instagram session restored"
           else
-            echo "⚠️ No Instagram session found - will attempt fresh login (may fail on GitHub Actions)"
+            echo "⚠️  No INSTAGRAM_SESSION secret found"
+            exit 1
           fi
 
       - name: Generate reel
@@ -148,7 +139,7 @@ jobs:
           rm -rf output/temp_*
           rm -rf output/*TEMP*
           rm -f config/credentials.json
-          rm -f config/sheets_credentials.json
+          rm -f config/instagram_session.json
           rm -f .env
 
       - name: Notify Slack on failure
