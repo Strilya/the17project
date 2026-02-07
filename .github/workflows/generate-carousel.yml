@@ -1,11 +1,9 @@
 name: Generate Daily Carousel
 
 on:
-  # TEMPORARILY DISABLED - Instagram session needs refresh (Feb 4, 2026)
-  # Uncomment when session is fixed:
-  # schedule:
-  #   # 12 PM EST = 5 PM UTC → targets ~12 PM EST (lunchtime engagement)
-  #   - cron: '0 17 * * *'
+  schedule:
+    # 12 PM EST = 5 PM UTC → targets ~12 PM EST (lunchtime engagement)
+    - cron: '0 17 * * *'
 
   workflow_dispatch:  # Manual trigger - keep enabled for testing
 
