@@ -470,14 +470,14 @@ class VideoGenerator:
 
         voice_audio = AudioFileClip(voice_path)
         main_duration = voice_audio.duration
-        opening_card_duration = 1.5  # Opening card duration
+        opening_card_duration = 1.0  # Opening card duration
 
         print(f"   🎙️  Voice duration: {main_duration:.1f}s")
         if voice_timings:
             print(f"   🎯 Text will be synced with speaker timing")
 
         # Duration validation - includes opening card + content + end card
-        total_duration = opening_card_duration + main_duration + 2  # 1.5s opening + voice + 2s end card
+        total_duration = opening_card_duration + main_duration + 2  # 1s opening + voice + 2s end card
         if main_duration > 28:
             print(f"   ⚠️  WARNING: Voice is {main_duration:.1f}s (over 28s limit)")
             print(f"   ⚠️  Final reel will be ~{total_duration:.1f}s with opening + end cards")
