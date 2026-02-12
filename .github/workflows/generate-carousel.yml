@@ -47,6 +47,8 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
+          INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
           INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: |
           mkdir -p config
@@ -56,15 +58,36 @@ jobs:
           echo "SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN" >> .env
           echo "SLACK_CHANNEL_ID=$SLACK_CHANNEL_ID" >> .env
           echo "INSTAGRAM_AUTO_POST=true" >> .env
+          echo "INSTAGRAM_USERNAME=$INSTAGRAM_USERNAME" >> .env
+          echo "INSTAGRAM_PASSWORD=$INSTAGRAM_PASSWORD" >> .env
 
           # Create Google Cloud credentials (for Sheets)
           printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > config/credentials.json
           echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
-          # Restore Instagram session from GitHub Secret (NO LOGIN, just load session)
+          # Restore Instagram session from GitHub Secret (base64 decode)
           if [ -n "$INSTAGRAM_SESSION" ]; then
-            echo "$INSTAGRAM_SESSION" > config/instagram_session.json
-            echo "✅ Instagram session restored"
+            # Use printf instead of echo to avoid newline issues
+            printf '%s' "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
+
+            # Verify decode worked
+            if [ -s config/instagram_session.json ]; then
+              FILE_SIZE=$(wc -c < config/instagram_session.json)
+              echo "✅ Instagram session restored ($FILE_SIZE bytes)"
+
+              # Validate JSON
+              if python3 -m json.tool config/instagram_session.json > /dev/null 2>&1; then
+                echo "✅ Session is valid JSON"
+              else
+                echo "❌ Session decode failed - invalid JSON"
+                echo "First 100 chars:"
+                head -c 100 config/instagram_session.json
+                exit 1
+              fi
+            else
+              echo "❌ Session file is empty - base64 decode failed"
+              exit 1
+            fi
           else
             echo "⚠️  No INSTAGRAM_SESSION secret found"
             exit 1
