@@ -280,22 +280,22 @@ def main(reel_number=None, test_mode=False):
         color_name, text_color = select_text_color()
         print(f"   🎨 Text color: {color_name.upper()} {text_color}")
 
-        # Generate professional video (SAME for both types)
+        # Generate thumbnail/opening card BEFORE video (with angel number/life path styled)
+        thumbnail_path = f"{output_base}/{content_identifier}_thumb_{timestamp}.jpg"
+        video_gen.generate_thumbnail(content_identifier, thumbnail_path, text_color)
+
+        # Generate professional video (SAME for both types) - passes opening card path
         video_filename = f"{content_identifier}_reel_{timestamp}.mp4"
         video_path = f"{output_base}/{video_filename}"
-        result = video_gen.generate_video(content, temp_voice_path, video_path, style_name, voice_timings, text_color)
+        result = video_gen.generate_video(content, temp_voice_path, video_path, style_name, voice_timings, text_color, opening_card_path=thumbnail_path)
 
         if result:
             print(f"\n✅ PROFESSIONAL REEL CREATED: {video_path}")
-            print(f"   Duration: {total_duration:.1f}s (voice + 2s end card)")
-            print(f"   Features: Multiple clips, synced captions, watermarks, music, end card")
+            print(f"   Duration: {total_duration:.1f}s (opening card + voice + 2s end card)")
+            print(f"   Features: Opening card, multiple clips, synced captions, watermarks, music, end card")
 
             # Generate proper caption for Instagram (before logging)
             caption = generate_caption(reel_spec, content)
-
-            # Generate thumbnail with angel number prominently displayed
-            thumbnail_path = f"{output_base}/{content_identifier}_thumb_{timestamp}.jpg"
-            video_gen.generate_thumbnail(content_identifier, thumbnail_path, text_color)
 
             # Post to Instagram (if enabled and not in test mode)
             instagram_url = None

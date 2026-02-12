@@ -459,26 +459,28 @@ class VideoGenerator:
 
         return clip
 
-    def generate_video(self, content, voice_path, output_path, style_name, voice_timings=None, text_color=(255, 200, 0)):
+    def generate_video(self, content, voice_path, output_path, style_name, voice_timings=None, text_color=(255, 200, 0), opening_card_path=None):
         """
         Generate video reel with synced text
 
         Args:
             text_color: RGB tuple for the accent text color (default: yellow/orange)
+            opening_card_path: Path to opening card image (thumbnail with angel number/life path)
         """
 
         voice_audio = AudioFileClip(voice_path)
         main_duration = voice_audio.duration
+        opening_card_duration = 1.5  # Opening card duration
 
         print(f"   🎙️  Voice duration: {main_duration:.1f}s")
         if voice_timings:
             print(f"   🎯 Text will be synced with speaker timing")
 
-        # Duration validation
-        total_duration = main_duration + 2  # Add 2s end card
+        # Duration validation - includes opening card + content + end card
+        total_duration = opening_card_duration + main_duration + 2  # 1.5s opening + voice + 2s end card
         if main_duration > 28:
             print(f"   ⚠️  WARNING: Voice is {main_duration:.1f}s (over 28s limit)")
-            print(f"   ⚠️  Final reel will be ~{total_duration:.1f}s with end card")
+            print(f"   ⚠️  Final reel will be ~{total_duration:.1f}s with opening + end cards")
             if total_duration > 35:
                 print(f"   ❌ ERROR: Total duration {total_duration:.1f}s exceeds 35s hard limit")
                 print(f"   ❌ Content is too long. Please regenerate with shorter content.")
@@ -513,43 +515,69 @@ class VideoGenerator:
         print(f"   ✅ Downloaded {len(video_clips)} clips")
 
         try:
+            # Load opening card (thumbnail with angel number/life path styling)
+            if opening_card_path and os.path.exists(opening_card_path):
+                from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
+                from moviepy.video.VideoClip import ImageClip
+
+                print(f"   ✅ Loading opening card: {opening_card_path}")
+                opening_card = ImageClip(opening_card_path)
+                opening_card = self._clip_set_duration(opening_card, opening_card_duration)
+                opening_card = self._clip_set_start(opening_card, 0)
+            else:
+                print(f"   ⚠️  No opening card provided, skipping")
+                opening_card = None
+                opening_card_duration = 0
+
             # Create properly cropped video montage
             background = self._create_proper_montage(video_clips, main_duration)
+            # Shift background to start after opening card
+            if opening_card:
+                background = self._clip_set_start(background, opening_card_duration)
 
             # Create text clips synced with voice timing (or equal distribution if no timings)
             text_clips = self.create_text_clips(content, main_duration, voice_timings, text_color)
+            # Shift all text clips to start after opening card
+            if opening_card:
+                text_clips = [self._clip_set_start(clip, clip.start + opening_card_duration) for clip in text_clips]
 
-            # Create static THE17PROJECT watermark (always visible)
+            # Create static THE17PROJECT watermark (always visible during main content)
             brand_watermark = self._create_static_brand_watermark(main_duration)
+            if opening_card:
+                brand_watermark = self._clip_set_start(brand_watermark, opening_card_duration)
             print(f"   ✅ Added static THE17PROJECT watermark")
 
             # Create barely visible source watermark (bottom left)
             source_watermark = self._create_source_watermark(video_sources[0], main_duration)
+            if opening_card:
+                source_watermark = self._clip_set_start(source_watermark, opening_card_duration)
             print(f"   ✅ Added source watermark (bottom left, barely visible)")
-
-            # Composite: video + text + watermarks
-            main_composite = CompositeVideoClip(
-                [background] + text_clips + [brand_watermark, source_watermark],
-                size=self.size
-            )
-            main_composite = self._clip_set_duration(main_composite, main_duration)
 
             # Create 2-second end card
             print(f"   ✅ Creating 2-second end card...")
             end_card = self._create_end_card(text_color)
-            end_card = self._clip_set_start(end_card, main_duration)
+            end_card_start_time = (opening_card_duration if opening_card else 0) + main_duration
+            end_card = self._clip_set_start(end_card, end_card_start_time)
 
-            # Combine main video + end card
-            total_duration = main_duration + 2  # Add 2 seconds for end card
+            # Combine opening card + main video + end card
+            total_duration = (opening_card_duration if opening_card else 0) + main_duration + 2
+            clips_to_composite = []
+            if opening_card:
+                clips_to_composite.append(opening_card)
+            clips_to_composite.extend([background] + text_clips + [brand_watermark, source_watermark, end_card])
+
             final_video = CompositeVideoClip(
-                [main_composite, end_card],
+                clips_to_composite,
                 size=self.size
             )
             final_video = self._clip_set_duration(final_video, total_duration)
 
-            # Add audio with music that covers full duration (including end card)
-            print(f"   🎵 Mixing audio for {total_duration:.1f}s (voice + music)...")
-            final_audio = self._mix_audio(voice_audio, total_duration)
+            # Add audio with music that covers full duration (including opening + end cards)
+            print(f"   🎵 Mixing audio for {total_duration:.1f}s (opening card + voice + music + end card)...")
+            if opening_card:
+                final_audio = self._mix_audio_with_opening(voice_audio, total_duration, opening_card_duration)
+            else:
+                final_audio = self._mix_audio(voice_audio, total_duration)
             final_video = self._clip_set_audio(final_video, final_audio)
 
             # Render HIGH QUALITY for Instagram (Slack will compress on upload)
@@ -1015,6 +1043,82 @@ class VideoGenerator:
             music_audio = self._clip_subclip(music_audio, 0, total_duration)
 
             # Set music volume to 15% by wrapping get_frame
+            original_get_frame = music_audio.get_frame
+
+            def get_frame_lowvolume(t):
+                return 0.15 * original_get_frame(t)
+
+            music_audio_quiet = AudioClip(get_frame_lowvolume, duration=total_duration, fps=music_audio.fps)
+
+            # Mix voice + music
+            final_audio = CompositeAudioClip([extended_voice, music_audio_quiet])
+
+            # Cleanup temp music file if it was from Pixabay
+            if music_path and 'temp_music.mp3' in music_path and os.path.exists(music_path):
+                try:
+                    os.remove(music_path)
+                except:
+                    pass
+
+            return final_audio
+
+        except Exception as e:
+            print(f"   ⚠️  Audio mixing failed: {e}")
+            return extended_voice
+
+    def _mix_audio_with_opening(self, voice_audio, total_duration, opening_card_duration):
+        """Mix voice with background music, including opening card silence"""
+
+        from moviepy.audio.AudioClip import AudioClip
+
+        # Create silence for opening card
+        opening_silence = AudioClip(lambda t: [0, 0], duration=opening_card_duration)
+
+        # Position voice audio to start after opening card
+        voice_with_start = self._clip_set_start(voice_audio, opening_card_duration)
+
+        # Extend with silence for end card
+        voice_duration = voice_audio.duration
+        end_card_duration = total_duration - opening_card_duration - voice_duration
+
+        if end_card_duration > 0:
+            end_silence = AudioClip(lambda t: [0, 0], duration=end_card_duration)
+            end_silence = self._clip_set_start(end_silence, opening_card_duration + voice_duration)
+            extended_voice = CompositeAudioClip([opening_silence, voice_with_start, end_silence])
+        else:
+            extended_voice = CompositeAudioClip([opening_silence, voice_with_start])
+
+        # Try to fetch music from Pixabay first
+        music_path = self.fetch_background_music()
+
+        # Fall back to local music if Pixabay fails
+        if not music_path:
+            music_files = glob.glob(os.path.join(self.music_dir, "*.mp3")) + \
+                          glob.glob(os.path.join(self.music_dir, "*.wav"))
+
+            if music_files:
+                music_path = random.choice(music_files)
+                print(f"   ✅ Using local music: {os.path.basename(music_path)}")
+            else:
+                print(f"   ⚠️  No music available, using voice only")
+                return extended_voice
+
+        try:
+            from moviepy.audio.AudioClip import AudioClip
+
+            music_audio = AudioFileClip(music_path)
+
+            # Loop music if needed to cover full duration (including opening + end cards)
+            if music_audio.duration < total_duration:
+                loops_needed = int(total_duration / music_audio.duration) + 1
+                music_clips = [music_audio] * loops_needed
+                from moviepy.audio.AudioClip import concatenate_audioclips
+                music_audio = concatenate_audioclips(music_clips)
+
+            # Trim to exact duration
+            music_audio = self._clip_subclip(music_audio, 0, total_duration)
+
+            # Set music volume to 15%
             original_get_frame = music_audio.get_frame
 
             def get_frame_lowvolume(t):
