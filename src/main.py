@@ -297,9 +297,11 @@ def main(reel_number=None, test_mode=False):
             # Generate proper caption for Instagram (before logging)
             caption = generate_caption(reel_spec, content)
 
-            # Post to Instagram (if enabled and not in test mode)
+            # Post to Instagram (TEMPORARILY DISABLED - rebuilding trust through manual posting)
             instagram_url = None
-            if instagram_poster and not test_mode:
+            INSTAGRAM_AUTO_POST_ENABLED = False  # Set to True to re-enable auto-posting
+
+            if INSTAGRAM_AUTO_POST_ENABLED and instagram_poster and not test_mode:
                 print(f"\n📱 Posting to Instagram...")
                 instagram_result = instagram_poster.post_reel(
                     video_path=video_path,
@@ -312,6 +314,8 @@ def main(reel_number=None, test_mode=False):
                     print(f"   ✅ Posted to Instagram: {instagram_url}")
                 else:
                     print(f"   ❌ Instagram posting failed")
+            else:
+                print(f"\n⏸️  Instagram auto-posting disabled - video will be sent to Slack for manual posting")
 
             # Log to Google Sheets (updated to handle both types)
             print(f"\n📊 Logging to integrations...")
