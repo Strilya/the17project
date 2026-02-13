@@ -123,12 +123,14 @@ class SlackNotifier:
 
             # Send caption as pure plain text without markdown formatting
             # This preserves exact line breaks when copying to Instagram
-            caption_header = "📝 INSTAGRAM CAPTION - Copy this text below:"
+            caption_header = "📝 INSTAGRAM CAPTION - Ready for manual posting (copy text below):"
 
             # Build the complete message with actual line breaks (not escape sequences)
             caption_message = f"""{caption_header}
 
-{full_caption}"""
+{full_caption}
+
+⏸️ Auto-posting temporarily disabled - post this manually to rebuild Instagram trust"""
 
             self.client.chat_postMessage(
                 channel=self.channel_id,
