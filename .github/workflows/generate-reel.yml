@@ -92,27 +92,23 @@ jobs:
           # Use same credentials for Google Sheets (same service account)
           echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
 
-          # Restore Instagram session from GitHub Secret (base64 decode)
+          # Restore Instagram session from GitHub Secret (raw JSON)
           if [ -n "$INSTAGRAM_SESSION" ]; then
-            # Use printf instead of echo to avoid newline issues
-            printf '%s' "$INSTAGRAM_SESSION" | base64 -d > config/instagram_session.json
+            printf '%s' "$INSTAGRAM_SESSION" > config/instagram_session.json
 
-            # Verify decode worked
+            # Verify it's valid JSON
             if [ -s config/instagram_session.json ]; then
               FILE_SIZE=$(wc -c < config/instagram_session.json)
               echo "✅ Instagram session restored ($FILE_SIZE bytes)"
 
-              # Validate JSON
               if python3 -m json.tool config/instagram_session.json > /dev/null 2>&1; then
                 echo "✅ Session is valid JSON"
               else
-                echo "❌ Session decode failed - invalid JSON"
-                echo "First 100 chars:"
-                head -c 100 config/instagram_session.json
+                echo "❌ Invalid JSON in session file"
                 exit 1
               fi
             else
-              echo "❌ Session file is empty - base64 decode failed"
+              echo "❌ Session file is empty"
               exit 1
             fi
           else
