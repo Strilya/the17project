@@ -118,22 +118,9 @@ def main(reel_number=None, test_mode=False):
     sheets_logger = SheetsLogger()
     slack_notifier = SlackNotifier()
 
-    # Initialize Instagram poster (if enabled)
+    # Instagram auto-posting disabled - videos will be sent to Slack for manual posting
     instagram_poster = None
-    if INSTAGRAM_AUTO_POST:
-        try:
-            print("   📱 Initializing Instagram poster...")
-            instagram_poster = InstagramPoster()
-            print("   ✅ Instagram poster ready")
-        except ValueError as e:
-            print(f"   ⚠️  Instagram disabled: {e}")
-            instagram_poster = None  # Disable by setting to None
-        except Exception as e:
-            print(f"   ⚠️  Instagram login failed: {e}")
-            print("   ⚠️  Continuing without Instagram posting")
-            instagram_poster = None
-    else:
-        print("   ⚠️  Instagram auto-post disabled (set INSTAGRAM_AUTO_POST=true to enable)")
+    print("   ⏸️  Instagram auto-posting disabled - videos will be sent to Slack")
 
     # Determine output directory (use absolute path)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -297,21 +284,10 @@ def main(reel_number=None, test_mode=False):
             # Generate proper caption for Instagram (before logging)
             caption = generate_caption(reel_spec, content)
 
-            # Post to Instagram
+            # Instagram auto-posting disabled - send to Slack for manual posting
             instagram_url = None
-            if instagram_poster and not test_mode:
-                print(f"\n📱 Posting to Instagram...")
-                instagram_result = instagram_poster.post_reel(
-                    video_path=video_path,
-                    caption=caption,
-                    thumbnail_path=thumbnail_path
-                )
-
-                if instagram_result:
-                    instagram_url = instagram_result['url']
-                    print(f"   ✅ Posted to Instagram: {instagram_url}")
-                else:
-                    print(f"   ❌ Instagram posting failed")
+            print(f"\n⏸️  Instagram auto-posting disabled")
+            print(f"📁 Video saved: {video_path}")
 
             # Log to Google Sheets (updated to handle both types)
             print(f"\n📊 Logging to integrations...")
@@ -329,35 +305,27 @@ def main(reel_number=None, test_mode=False):
                 instagram_url=instagram_url  # Add Instagram URL if posted
             )
 
-            # Send Slack notification
-            if caption:
-                if instagram_url:
-                    # Success notification with Instagram link (no video attachment)
-                    slack_notifier.send_success_notification(
-                        content_type=content_type,
-                        content_identifier=content_identifier,
-                        instagram_url=instagram_url,
-                        caption=caption,
-                        duration=total_duration
-                    )
-                elif instagram_poster and not test_mode:
-                    # Instagram posting was attempted but failed
-                    slack_notifier.send_error_notification(
-                        content_type=content_type,
-                        content_identifier=content_identifier,
-                        error="Instagram posting failed - check logs"
-                    )
-                else:
-                    # Instagram posting disabled or test mode - send old notification with video
-                    slack_notifier.send_reel_notification(
-                        angel_number=content_identifier,
-                        style=content_type,
-                        content=content,
-                        hashtags=caption,  # Full caption with hashtags
-                        video_path=video_path,
-                        duration=total_duration,
-                        test_mode=test_mode
-                    )
+            # Send video and caption to Slack for manual posting
+            if caption and not test_mode:
+                print(f"\n📤 Sending to Slack for manual posting...")
+                slack_notifier.send_reel_for_manual_posting(
+                    video_path=video_path,
+                    caption=caption,
+                    content_type=content_type,
+                    content_identifier=content_identifier,
+                    duration=total_duration
+                )
+            elif test_mode:
+                # Test mode - send standard notification
+                slack_notifier.send_reel_notification(
+                    angel_number=content_identifier,
+                    style=content_type,
+                    content=content,
+                    hashtags=caption,
+                    video_path=video_path,
+                    duration=total_duration,
+                    test_mode=test_mode
+                )
 
             # Cleanup temp files
             try:
