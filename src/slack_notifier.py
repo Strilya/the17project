@@ -40,6 +40,147 @@ class SlackNotifier:
             print(f"   ⚠️  Slack setup failed: {e}")
             self.enabled = False
 
+    def send_reel_for_manual_posting(self, video_path, caption, content_type, content_identifier, duration):
+        """
+        Send video file and caption to Slack for manual Instagram posting
+
+        Args:
+            video_path: Path to the generated video file
+            caption: Full Instagram caption text
+            content_type: Type of content (angel_number or life_path)
+            content_identifier: Content ID (e.g., "1111" or "LP7")
+            duration: Video duration in seconds
+        """
+        if not self.enabled:
+            print("   ⚠️  Slack disabled - cannot send for manual posting")
+            return
+
+        try:
+            timestamp = datetime.now().strftime("%b %d, %Y %I:%M %p")
+
+            # Format header message
+            message_blocks = [
+                {
+                    "type": "header",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "📹 VIDEO READY FOR MANUAL POSTING",
+                        "emoji": True
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Content:*\n{content_identifier}"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Type:*\n{content_type.replace('_', ' ').title()}"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Duration:*\n{duration:.1f}s"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Created:*\n{timestamp}"
+                        }
+                    ]
+                },
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "⏸️ *Auto-posting disabled* - Post this video manually to Instagram"
+                    }
+                },
+                {
+                    "type": "divider"
+                }
+            ]
+
+            # Send header message
+            response = self.client.chat_postMessage(
+                channel=self.channel_id,
+                blocks=message_blocks,
+                text=f"Video ready for manual posting: {content_identifier}"
+            )
+
+            # Send caption as plain text for easy copy/paste
+            caption_message = f"""📝 INSTAGRAM CAPTION - Copy text below:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{caption}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏸️ Auto-posting disabled - post manually to rebuild Instagram trust"""
+
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=caption_message,
+                thread_ts=response['ts'],
+                mrkdwn=False
+            )
+
+            # Upload video file
+            file_size = os.path.getsize(video_path) / (1024 * 1024)
+            upload_path = video_path
+
+            # Compress if over 10MB for Slack
+            if file_size >= 10:
+                print(f"   📦 Compressing video for Slack ({file_size:.1f}MB -> <10MB)...")
+                compressed_path = video_path.replace('.mp4', '_slack.mp4')
+
+                try:
+                    subprocess.run([
+                        'ffmpeg', '-i', video_path,
+                        '-vf', 'scale=1080:1920',
+                        '-c:v', 'libx264',
+                        '-preset', 'medium',
+                        '-b:v', '2500k',
+                        '-maxrate', '2800k',
+                        '-bufsize', '5600k',
+                        '-b:a', '96k',
+                        '-y',
+                        compressed_path
+                    ], check=True, capture_output=True)
+
+                    compressed_size = os.path.getsize(compressed_path) / (1024 * 1024)
+                    upload_path = compressed_path
+                    print(f"   ✅ Compressed to {compressed_size:.1f}MB")
+                except Exception as e:
+                    print(f"   ⚠️  Compression failed: {e}")
+                    upload_path = video_path if file_size < 10 else None
+
+            if upload_path and os.path.exists(upload_path):
+                final_size = os.path.getsize(upload_path) / (1024 * 1024)
+                print(f"   📤 Uploading video to Slack ({final_size:.1f}MB)...")
+
+                self.client.files_upload_v2(
+                    channels=self.channel_id,
+                    file=upload_path,
+                    filename=os.path.basename(video_path),
+                    title=f"{content_identifier} - Ready for Manual Posting",
+                    thread_ts=response['ts']
+                )
+
+                print(f"   ✅ Video uploaded to Slack")
+
+                # Cleanup compressed file if created
+                if upload_path != video_path and os.path.exists(upload_path):
+                    os.remove(upload_path)
+            else:
+                print(f"   ❌ Video file too large or missing, cannot upload")
+
+        except SlackApiError as e:
+            print(f"   ❌ Slack upload failed: {e.response['error']}")
+            raise
+        except Exception as e:
+            print(f"   ❌ Failed to send to Slack: {e}")
+            raise
+
     def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration, test_mode=False):
         """Send Slack notification with ready-to-copy caption
 
