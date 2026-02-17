@@ -158,28 +158,30 @@ class SlackNotifier:
                 final_size = os.path.getsize(upload_path) / (1024 * 1024)
                 print(f"   📤 Uploading video to Slack ({final_size:.1f}MB)...")
 
-                self.client.files_upload_v2(
-                    channels=self.channel_id,
-                    file=upload_path,
-                    filename=os.path.basename(video_path),
-                    title=f"{content_identifier} - Ready for Manual Posting",
-                    thread_ts=response['ts']
-                )
-
-                print(f"   ✅ Video uploaded to Slack")
+                try:
+                    self.client.files_upload_v2(
+                        channel=self.channel_id,
+                        file=upload_path,
+                        filename=os.path.basename(video_path),
+                        title=f"{content_identifier} - Ready for Manual Posting",
+                        thread_ts=response['ts']
+                    )
+                    print(f"   ✅ Video uploaded to Slack")
+                except Exception as upload_err:
+                    print(f"   ❌ Video upload failed: {upload_err}")
+                    print(f"   📁 Video still saved at: {video_path}")
 
                 # Cleanup compressed file if created
                 if upload_path != video_path and os.path.exists(upload_path):
                     os.remove(upload_path)
             else:
-                print(f"   ❌ Video file too large or missing, cannot upload")
+                print(f"   ❌ Video file too large or missing, cannot upload to Slack")
+                print(f"   📁 Video saved at: {video_path}")
 
         except SlackApiError as e:
-            print(f"   ❌ Slack upload failed: {e.response['error']}")
-            raise
+            print(f"   ❌ Slack error: {e.response['error']}")
         except Exception as e:
             print(f"   ❌ Failed to send to Slack: {e}")
-            raise
 
     def send_reel_notification(self, angel_number, style, content, hashtags, video_path, duration, test_mode=False):
         """Send Slack notification with ready-to-copy caption

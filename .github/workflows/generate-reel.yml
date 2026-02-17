@@ -146,12 +146,13 @@ jobs:
         continue-on-error: true
 
       - name: Upload video artifact (7 day backup)
-        if: steps.generate.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: reel-${{ github.run_number }}
           path: output/*.mp4
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: Cleanup temp files
         if: always()
