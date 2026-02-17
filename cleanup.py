@@ -72,7 +72,7 @@ def cleanup_project():
 
         load_dotenv()
 
-        creds_path = os.path.join(os.getcwd(), 'config/credentials.json')
+        creds_path = os.path.join(os.getcwd(), 'src/config/credentials.json')
         scopes = [
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive'

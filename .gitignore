@@ -1,7 +1,4 @@
 .env
-config/credentials.json
-config/sheets_credentials.json
-config/instagram_session.json
 instagram_session.json
 instagram_session_b64.txt
 __pycache__/

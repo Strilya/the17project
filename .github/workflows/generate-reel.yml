@@ -78,20 +78,20 @@ jobs:
             echo "ERROR: GOOGLE_CLOUD_CREDENTIALS secret is empty!"
             exit 1
           fi
-          printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > config/credentials.json
+          printf '%s' "$GOOGLE_CLOUD_CREDENTIALS" > src/config/credentials.json
 
           # Validate JSON
-          if ! python3 -m json.tool config/credentials.json > /dev/null 2>&1; then
+          if ! python3 -m json.tool src/config/credentials.json > /dev/null 2>&1; then
             echo "ERROR: Google Cloud credentials.json is not valid JSON!"
-            echo "File size: $(wc -c < config/credentials.json) bytes"
-            head -c 200 config/credentials.json
+            echo "File size: $(wc -c < src/config/credentials.json) bytes"
+            head -c 200 src/config/credentials.json
             exit 1
           fi
 
-          echo "GOOGLE_APPLICATION_CREDENTIALS=config/credentials.json" >> .env
+          echo "GOOGLE_APPLICATION_CREDENTIALS=src/config/credentials.json" >> .env
 
           # Use same credentials for Google Sheets (same service account)
-          echo "GOOGLE_SHEETS_CREDS=config/credentials.json" >> .env
+          echo "GOOGLE_SHEETS_CREDS=src/config/credentials.json" >> .env
 
           # Restore Instagram session from GitHub Secret (raw JSON)
           if [ -n "$INSTAGRAM_SESSION" ]; then
@@ -158,8 +158,8 @@ jobs:
         run: |
           rm -rf output/temp_*
           rm -rf output/*TEMP*
-          rm -f config/credentials.json
-          rm -f config/instagram_session.json
+          rm -f src/config/credentials.json
+          rm -f src/config/instagram_session.json
           rm -f .env
 
       - name: Notify Slack on failure

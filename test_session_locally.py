@@ -2,14 +2,14 @@
 Test Instagram Session Locally
 ===============================
 
-Verifies that config/instagram_session.json works before using in GitHub Actions.
+Verifies that src/config/instagram_session.json works before using in GitHub Actions.
 """
 
 from instagrapi import Client
 import os
 import sys
 
-session_file = 'config/instagram_session.json'
+session_file = 'src/config/instagram_session.json'
 
 print("=" * 70)
 print("TESTING INSTAGRAM SESSION LOCALLY")

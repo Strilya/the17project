@@ -20,14 +20,14 @@ python login_instagram.py
 
 This will:
 - Login to Instagram using your credentials
-- Save session to `config/instagram_session.json`
-- Output a **base64-encoded** string for GitHub Secrets
+- Save session to `src/config/instagram_session.json`
+- Output the **raw JSON** for GitHub Secrets
 - Display next steps
 
-### 3. Copy the base64 string:
-The script will output a base64-encoded string. Copy the **entire string** (it will be a long single line of random characters).
+### 3. Copy the raw JSON:
+The script will output the raw JSON content. Copy the **entire JSON** (it will be a multi-line JSON object).
 
-**DO NOT** copy the JSON file content directly - use the base64 string from the script output.
+Copy the JSON file content exactly as shown in the script output.
 
 ## GitHub Secrets Setup
 
@@ -42,10 +42,10 @@ Go to: GitHub repo → Settings → Secrets and variables → Actions → New re
 - Value: `your_instagram_password`
 
 **INSTAGRAM_SESSION** ⭐ CRITICAL
-- Value: Paste the **base64-encoded string** from the login script output
-- This is a long single-line string (base64 encoded JSON)
+- Value: Paste the **raw JSON** from the login script output
+- This is the entire JSON object (multi-line format is OK)
 - DO NOT modify or format it - paste exactly as-is
-- DO NOT paste the JSON file content directly - use the base64 string
+- Paste the complete JSON content from the script output
 
 ## How It Works
 
@@ -85,14 +85,14 @@ GitHub Actions workflow fails with one of these errors:
 python login_instagram.py
 ```
 
-**2. Copy the base64 string from output:**
-The script will print a long base64 string between `===` lines. Copy the entire string.
+**2. Copy the raw JSON from output:**
+The script will print the raw JSON content. Copy the entire JSON object.
 
 **3. Update GitHub Secret:**
 - Go to: **GitHub repo → Settings → Secrets and variables → Actions**
 - Find `INSTAGRAM_SESSION` in the list
 - Click **Update**
-- Paste the new base64 string
+- Paste the raw JSON
 - Click **Update secret**
 
 **4. Verify the fix:**
@@ -110,14 +110,14 @@ python login_instagram.py
 python src/main.py --test
 
 # Check session file exists
-ls -lh config/instagram_session.json
+ls -lh src/config/instagram_session.json
 ```
 
 That's it. The workflow will use the new session on next run.
 
 ## Security Notes
 
-- Never commit `config/instagram_session.json` to git (already in .gitignore)
+- Never commit `src/config/instagram_session.json` to git (already in .gitignore)
 - Never commit `.env` file to git (already in .gitignore)
 - Session files contain authentication cookies - treat like passwords
 - Disable Instagram 2FA temporarily if login fails
@@ -152,4 +152,4 @@ This will generate 1 video and post it to Instagram.
 
 **GitHub Actions: Session not found**
 - Ensure `INSTAGRAM_SESSION` secret exists
-- Verify JSON is valid (use `python -m json.tool config/instagram_session.json`)
+- Verify JSON is valid (use `python -m json.tool src/config/instagram_session.json`)
