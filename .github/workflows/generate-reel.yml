@@ -58,8 +58,9 @@ jobs:
           INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
           INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: |
-          # Create config directory first
+          # Create config directories
           mkdir -p config
+          mkdir -p src/config
 
           # Create .env file
           echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" > .env
@@ -94,14 +95,14 @@ jobs:
 
           # Restore Instagram session from GitHub Secret (raw JSON)
           if [ -n "$INSTAGRAM_SESSION" ]; then
-            printf '%s' "$INSTAGRAM_SESSION" > config/instagram_session.json
+            printf '%s' "$INSTAGRAM_SESSION" > src/config/instagram_session.json
 
             # Verify it's valid JSON
-            if [ -s config/instagram_session.json ]; then
-              FILE_SIZE=$(wc -c < config/instagram_session.json)
+            if [ -s src/config/instagram_session.json ]; then
+              FILE_SIZE=$(wc -c < src/config/instagram_session.json)
               echo "✅ Instagram session restored ($FILE_SIZE bytes)"
 
-              if python3 -m json.tool config/instagram_session.json > /dev/null 2>&1; then
+              if python3 -m json.tool src/config/instagram_session.json > /dev/null 2>&1; then
                 echo "✅ Session is valid JSON"
               else
                 echo "❌ Invalid JSON in session file"

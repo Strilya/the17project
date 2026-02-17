@@ -64,33 +64,33 @@ try:
     cl.login(username, password)
 
     # Save session
-    os.makedirs('config', exist_ok=True)
-    cl.dump_settings("config/instagram_session.json")
+    os.makedirs('src/config', exist_ok=True)
+    cl.dump_settings("src/config/instagram_session.json")
 
     print("\n" + "=" * 70)
     print("✅ LOGIN SUCCESSFUL!")
     print("=" * 70)
-    print(f"✅ Session saved to config/instagram_session.json")
+    print(f"✅ Session saved to src/config/instagram_session.json")
     print(f"")
 
-    # Generate base64 for GitHub Secret
-    print("GITHUB SECRET - Copy this entire string:")
+    # Show raw JSON for GitHub Secret
+    print("GITHUB SECRET - Copy the raw JSON below:")
     print("-" * 70)
     try:
-        b64 = subprocess.check_output(
-            ['sh', '-c', "cat config/instagram_session.json | base64 | tr -d '\\n'"],
+        raw_json = subprocess.check_output(
+            ['cat', 'src/config/instagram_session.json'],
             text=True
         )
-        print(b64)
+        print(raw_json)
     except:
-        print("(Run manually: cat config/instagram_session.json | base64 | tr -d '\\n')")
+        print("(Run manually: cat src/config/instagram_session.json)")
 
     print("-" * 70)
     print("\nNEXT STEPS:")
-    print("1. Copy the base64 string above")
+    print("1. Copy the RAW JSON above (entire content)")
     print("2. Go to: GitHub → Settings → Secrets → Actions")
     print("3. Update secret: INSTAGRAM_SESSION")
-    print("4. Paste the base64 string")
+    print("4. Paste the RAW JSON (no base64 encoding)")
     print("5. Run workflow manually to test")
     print("=" * 70)
 
@@ -123,23 +123,23 @@ except ChallengeRequired as e:
         cl.login(username, password)
 
         # Save session
-        os.makedirs('config', exist_ok=True)
-        cl.dump_settings("config/instagram_session.json")
+        os.makedirs('src/config', exist_ok=True)
+        cl.dump_settings("src/config/instagram_session.json")
 
         print("\n✅ LOGIN SUCCESSFUL AFTER CHALLENGE!")
-        print("✅ Session saved to config/instagram_session.json")
+        print("✅ Session saved to src/config/instagram_session.json")
 
-        # Generate base64
-        print("\nGITHUB SECRET:")
+        # Show raw JSON
+        print("\nGITHUB SECRET - RAW JSON:")
         print("-" * 70)
         try:
-            b64 = subprocess.check_output(
-                ['sh', '-c', "cat config/instagram_session.json | base64 | tr -d '\\n'"],
+            raw_json = subprocess.check_output(
+                ['cat', 'src/config/instagram_session.json'],
                 text=True
             )
-            print(b64)
+            print(raw_json)
         except:
-            print("(Run: cat config/instagram_session.json | base64 | tr -d '\\n')")
+            print("(Run: cat src/config/instagram_session.json)")
         print("-" * 70)
 
     except Exception as e2:
