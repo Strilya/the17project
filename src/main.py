@@ -124,11 +124,7 @@ def main(reel_number=None, test_mode=False):
 
     # Determine output directory (use absolute path)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    if os.path.exists('/mnt/user-data/outputs'):
-        output_base = '/mnt/user-data/outputs'
-    else:
-        output_base = os.path.join(project_root, 'output')
+    output_base = os.path.join(project_root, 'output')
 
     os.makedirs(output_base, exist_ok=True)
 
