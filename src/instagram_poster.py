@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class InstagramPoster:
     def __init__(self):
         self.client = Client()
-        self.session_file = 'config/instagram_session.json'
+        self.session_file = 'src/config/instagram_session.json'
 
         # Load session or fail
         if not os.path.exists(self.session_file):
