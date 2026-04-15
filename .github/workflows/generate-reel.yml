@@ -1,15 +1,13 @@
 name: Generate Angel Number Reel
 
 on:
-  schedule:
-    # 4 AM EST = 9 AM UTC → targets ~6-7 AM EST after GitHub delay
-    - cron: '0 9 * * *'
-    # 11 AM EST = 4 PM UTC → targets ~1-2 PM EST after GitHub delay
-    - cron: '0 16 * * *'
-    # 4 PM EST = 9 PM UTC → targets ~6-7 PM EST after GitHub delay
-    - cron: '0 21 * * *'
+  # SCHEDULE DISABLED - re-enable when ready
+  # schedule:
+  #   - cron: '0 9 * * *'
+  #   - cron: '0 16 * * *'
+  #   - cron: '0 21 * * *'
 
-  workflow_dispatch:  # Manual trigger - keep enabled for testing
+  workflow_dispatch:  # Manual trigger only
 
 jobs:
   generate-reel:
@@ -172,7 +170,7 @@ jobs:
             ❌ REEL GENERATION FAILED
 
             Run: ${{ github.run_number }}
-            Time: ${{ github.event.schedule || 'Manual trigger' }}
+            Time: ${{ github.event.inputs && 'Manual trigger' || 'Unknown' }}
             Workflow: ${{ github.workflow }}
 
             Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
