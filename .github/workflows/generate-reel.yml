@@ -1,16 +1,17 @@
 name: Generate Angel Number Reel
 
 on:
-  # SCHEDULE DISABLED - re-enable when ready
+  # FULLY DISABLED - uncomment to re-enable
   # schedule:
   #   - cron: '0 9 * * *'
   #   - cron: '0 16 * * *'
   #   - cron: '0 21 * * *'
 
-  workflow_dispatch:  # Manual trigger only
+  workflow_dispatch:
 
 jobs:
   generate-reel:
+    if: false  # DISABLED - remove this line to re-enable
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

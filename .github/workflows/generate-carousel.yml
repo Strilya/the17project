@@ -1,14 +1,15 @@
 name: Generate Daily Carousel
 
 on:
-  schedule:
-    # 12 PM EST = 5 PM UTC → targets ~12 PM EST (lunchtime engagement)
-    - cron: '0 17 * * *'
+  # FULLY DISABLED - uncomment to re-enable
+  # schedule:
+  #   - cron: '0 17 * * *'
 
-  workflow_dispatch:  # Manual trigger - keep enabled for testing
+  workflow_dispatch:
 
 jobs:
   generate-carousel:
+    if: false  # DISABLED - remove this line to re-enable
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -121,7 +122,7 @@ jobs:
             ❌ CAROUSEL GENERATION FAILED
 
             Run: ${{ github.run_number }}
-            Time: ${{ github.event.schedule || 'Manual trigger' }}
+            Time: Manual trigger
 
             Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         env:
